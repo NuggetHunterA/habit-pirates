@@ -10,6 +10,10 @@ import MapPanel from './components/MapPanel'
 import ChestScene from './components/ChestScene'
 import AddHabitSheet from './components/AddHabitSheet'
 import MenuSheet from './components/MenuSheet'
+import Equipment from './components/Equipment'
+import Shop from './components/Shop'
+import TabBar, { type Tab } from './components/TabBar'
+import { RULES, windAvailable } from './game/rules'
 
 type Left = 'woche' | 'tag'
 type Right = 'karte' | 'truhe'
@@ -33,8 +37,8 @@ export default function App() {
   const wide = useWide()
   const [left, setLeft] = useState<Left>('tag')
   const [right, setRight] = useState<Right>('karte')
-  /** zugeklappt: welche Seite gerade sichtbar ist */
-  const [focusSide, setFocusSide] = useState<'left' | 'right'>('left')
+  /** Untere Tab-Leiste. Aufgeklappt steht "Deck" immer links, rechts die anderen Tabs. */
+  const [tab, setTab] = useState<Tab>('deck')
   const [toast, setToast] = useState('')
   const [sheet, setSheet] = useState<null | 'add' | 'menu'>(null)
   const addCb = useRef<((id: string) => void) | null>(null)
@@ -61,11 +65,13 @@ export default function App() {
 
   const goMap = () => {
     setRight('karte')
-    setFocusSide('right')
+    setTab('karte')
   }
 
-  const showLeft = wide || focusSide === 'left' || needsWeek
-  const showRight = wide || (!needsWeek && focusSide === 'right')
+  const rightTab: Tab = tab === 'deck' ? 'karte' : tab
+  const showLeft = wide || tab === 'deck'
+  const showRight = wide || tab !== 'deck'
+  const wind = save ? windAvailable(save) : 0
 
   return (
     <div className={`app ${wide ? 'app--open' : ''}`}>
@@ -73,6 +79,14 @@ export default function App() {
         <div className="topbar__title">Habit Pirates</div>
         {game.save && (
           <div className="topbar__right">
+            <div className="pill pill--wind" aria-label={`${Math.max(0, wind)} Wind`}>
+              <svg className="pill__icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 9h11a3 3 0 1 0-3-3M3 14h15a3 3 0 1 1-3 3M3 19h7" />
+              </svg>
+              <motion.span key={wind} initial={{ scale: 1.5 }} animate={{ scale: 1 }}>
+                {Math.max(0, wind)}
+              </motion.span>
+            </div>
             <div className="pill" aria-label={`${game.save.game.gold} Gold`}>
               <span className="coin" />
               <motion.span key={game.save.game.gold} initial={{ scale: 1.5, color: '#FFFFFF' }} animate={{ scale: 1, color: '#F4D58D' }}>
@@ -116,8 +130,12 @@ export default function App() {
             </div>
           )}
           {showRight && (
-            <div className="col-right">
-              {rightShown === 'truhe' ? (
+            <div className={`col-right ${rightTab === 'karte' ? '' : 'col-right--scroll'}`}>
+              {rightTab === 'ausruestung' ? (
+                <Equipment game={game} say={say} onShop={() => setTab('laden')} />
+              ) : rightTab === 'laden' ? (
+                <Shop game={game} say={say} onGear={() => setTab('ausruestung')} />
+              ) : rightShown === 'truhe' ? (
                 <ChestScene
                   key={field}
                   title={CHAPTER_1[field].name}
@@ -128,11 +146,20 @@ export default function App() {
                   }}
                 />
               ) : (
-                <MapPanel game={game} say={say} onChest={() => setRight('truhe')} onBack={wide ? undefined : () => setFocusSide('left')} />
+                <MapPanel game={game} say={say} onChest={() => setRight('truhe')} onShop={() => setTab('laden')} />
               )}
             </div>
           )}
         </main>
+      )}
+
+      {game.save && (
+        <TabBar
+          tab={wide && tab === 'deck' ? 'karte' : tab}
+          wide={wide}
+          onTab={setTab}
+          badges={{ karte: chestAvailable || wind >= RULES.windPerField, deck: needsWeek }}
+        />
       )}
 
       <AnimatePresence>

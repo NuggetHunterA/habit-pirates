@@ -203,7 +203,7 @@ export default function ChestScene({ title, onCollect }: Props) {
                   animate={{ y: 0, scale: 1, rotate: 0, opacity: 1 }}
                   transition={{ type: 'spring', stiffness: 200, damping: 15 }}
                 >
-                  <ItemIcon slot={it.slot} rarity={it.rarity} />
+                  <ItemIcon itemKey={it.key} slot={it.slot} rarity={it.rarity} size={60} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 900, fontSize: 16 }}>{it.name}</div>
                     <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
