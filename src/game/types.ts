@@ -1,0 +1,57 @@
+export type HabitKind = 'tap' | 'lassen' | 'drink'
+export type Glass = 'w' | 'f'
+
+export interface Habit {
+  id: string
+  name: string
+  kind: HabitKind
+  /** Dauer-Habit: ist jede Woche automatisch aktiv */
+  always?: boolean
+}
+
+export interface WeekPlan {
+  /** Montag der Woche, YYYY-MM-DD */
+  weekStart: string
+  habitIds: string[]
+  focusIds: string[]
+  /** Ab welchem Tag ein Habit zaehlt (fuer Habits, die unter der Woche dazukommen) */
+  activeFrom: Record<string, string>
+}
+
+export interface DayLog {
+  done: Record<string, boolean>
+  glasses: Glass[]
+}
+
+export type Rarity = 'gewoehnlich' | 'selten' | 'episch' | 'legendaer'
+export type Slot = 'waffe' | 'hut' | 'kleidung' | 'talisman' | 'schiff'
+
+export interface Item {
+  uid: string
+  key: string
+  name: string
+  slot: Slot
+  rarity: Rarity
+  stats: string
+}
+
+export interface GameState {
+  gold: number
+  /** Wind, der geschenkt wurde (Start, Testmodus) */
+  windGift: number
+  windSpent: number
+  /** Index des Feldes, auf dem das Schiff liegt */
+  field: number
+  looted: number[]
+  inventory: Item[]
+}
+
+export interface Save {
+  version: 1
+  profile: string
+  createdAt: string
+  habits: Habit[]
+  weeks: Record<string, WeekPlan>
+  logs: Record<string, DayLog>
+  game: GameState
+}
