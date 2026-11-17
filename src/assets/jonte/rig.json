@@ -1,0 +1,120 @@
+{
+ "mantel_l": {
+  "img": "mantel_l",
+  "x": 142.0,
+  "y": 239.5,
+  "px": 75.0,
+  "py": 5.0,
+  "z": 1
+ },
+ "mantel_r": {
+  "img": "mantel_r",
+  "x": 295.5,
+  "y": 238.0,
+  "px": 10.0,
+  "py": 5.0,
+  "z": 1
+ },
+ "ober_l": {
+  "img": "ober_l",
+  "x": 144.5,
+  "y": 263.0,
+  "px": 75.0,
+  "py": 12.5,
+  "z": 3
+ },
+ "unter_l": {
+  "img": "unter_l",
+  "x": 144.5,
+  "y": 348.0,
+  "px": 63.0,
+  "py": 14.5,
+  "z": 3.1,
+  "parent": "ober_l"
+ },
+ "ober_r": {
+  "img": "ober_r",
+  "x": 272.5,
+  "y": 262.5,
+  "px": 35.0,
+  "py": 12.5,
+  "z": 3
+ },
+ "unter_r": {
+  "img": "unter_r",
+  "x": 272.5,
+  "y": 348.0,
+  "px": 45.0,
+  "py": 14.5,
+  "z": 3.1,
+  "parent": "ober_r"
+ },
+ "oberarm_b": {
+  "img": "oberarm_b",
+  "x": 160.0,
+  "y": 125.5,
+  "px": 52.5,
+  "py": 10.0,
+  "z": 4
+ },
+ "unterarm_b": {
+  "img": "unterarm_b",
+  "x": 160.0,
+  "y": 195.5,
+  "px": 25.0,
+  "py": 7.0,
+  "z": 4.1,
+  "parent": "oberarm_b"
+ },
+ "torso": {
+  "img": "torso",
+  "x": 201.0,
+  "y": 105.0,
+  "px": 58.5,
+  "py": 165.0,
+  "z": 5
+ },
+ "kopf": {
+  "img": "kopf",
+  "x": 219.0,
+  "y": 26.0,
+  "px": 44.0,
+  "py": 97.5,
+  "z": 7
+ },
+ "hut": {
+  "img": "hut",
+  "x": 201.5,
+  "y": 4.5,
+  "px": 62.5,
+  "py": 50.0,
+  "z": 8,
+  "parent": "kopf"
+ },
+ "oberarm_f": {
+  "img": "oberarm_f",
+  "x": 300.0,
+  "y": 126.0,
+  "px": 20.0,
+  "py": 12.5,
+  "z": 6
+ },
+ "saebel": {
+  "img": "saebel",
+  "x": 407.5,
+  "y": 90.5,
+  "px": 13.5,
+  "py": 185.0,
+  "z": 6.4,
+  "parent": "unterarm_f"
+ },
+ "unterarm_f": {
+  "img": "unterarm_f",
+  "x": 366.0,
+  "y": 233.5,
+  "px": 5.0,
+  "py": 7.5,
+  "z": 6.5,
+  "parent": "oberarm_f"
+ }
+}
