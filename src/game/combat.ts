@@ -200,7 +200,7 @@ function strike(b: Battle, me: Fighter, t: Fighter, mult: number, ev: FightEvent
   if (t.hp === 0) ev.push({ t: 'besiegt', who: t.id })
 }
 
-function useAbility(b: Battle, me: Fighter, ev: FightEvent[]) {
+function castAbility(b: Battle, me: Fighter, ev: FightEvent[]) {
   me.energy = 0
   const foes = alive(b, me.side === 'crew' ? 'feind' : 'crew')
   switch (me.ability) {
@@ -272,7 +272,7 @@ export function step(b: Battle, wants: Set<string>): FightEvent[] {
   const caster = alive(b, 'crew').find((f) => wants.has(f.id) && abilityReady(f))
   if (caster) {
     wants.delete(caster.id)
-    useAbility(b, caster, ev)
+    castAbility(b, caster, ev)
     checkEnd(b, ev)
     return ev
   }
