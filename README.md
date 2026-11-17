@@ -29,4 +29,4 @@ npm run assets       # Grafiken aus dem Design-Ordner neu aufbereiten (braucht P
 - `src/components/` Bildschirme und Bausteine (Seekarte, Truhe, Jonte als Einzelteil-Animation)
 - `src/assets/` aufbereitete Grafiken im Anime-Stil C (aus `scripts/prepare_assets.py`)
 
-Bei jedem Push auf `main` wird die App über GitHub Actions auf GitHub Pages veröffentlicht.
+Gehostet auf Vercel: Jeder Push auf `main` geht live, jeder Pull Request bekommt eine Vorschau-Adresse.
