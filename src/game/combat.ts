@@ -19,8 +19,18 @@ export interface FighterStats {
 
 export type Side = 'crew' | 'feind'
 export type Row = 'vorne' | 'hinten'
-export type AbilityId = 'sturmklinge' | 'kapitaensruf' | 'donnerbuechse' | 'kettenkugel'
-export type Look = 'jonte' | 'kanonier' | 'krabbenbandit' | 'krabbenmatrose'
+export type AbilityId =
+  | 'sturmklinge'
+  | 'kapitaensruf'
+  | 'donnerbuechse'
+  | 'kettenkugel'
+  | 'sternenkurs'
+  | 'windstille'
+  | 'kombuesenfeuer'
+  | 'eintopf'
+  | 'adlerauge'
+  | 'sturzflug'
+export type Look = 'jonte' | 'kanonier' | 'navigatorin' | 'smutje' | 'ausguck' | 'krabbenbandit' | 'krabbenmatrose'
 
 export interface Ability {
   id: AbilityId
@@ -49,6 +59,12 @@ export const ABILITIES: Record<AbilityId, Ability> = {
     name: 'Kettenkugel',
     text: '260 % Schaden an einem Ziel, halbiert seine Rüstung bis Kampfende.',
   },
+  sternenkurs: { id: 'sternenkurs', name: 'Sternenkurs', text: 'Blitzsprung: 200 % Schaden am schwächsten Gegner, danach 2 Züge lang +40 % Ausweichen.' },
+  windstille: { id: 'windstille', name: 'Windstille', text: 'Alle Gegner verlieren Tempo: ihre nächsten Züge kommen deutlich später.' },
+  kombuesenfeuer: { id: 'kombuesenfeuer', name: 'Kombüsenfeuer', text: 'Heilt die ganze Crew um 22 % Leben.' },
+  eintopf: { id: 'eintopf', name: 'Kraft-Eintopf', text: 'Die Crew bekommt +30 % Angriff für 3 Züge und lädt 20 % Energie auf.' },
+  adlerauge: { id: 'adlerauge', name: 'Adlerauge', text: 'Markiert den stärksten Gegner: Er nimmt bis Kampfende 30 % mehr Schaden.' },
+  sturzflug: { id: 'sturzflug', name: 'Sturzflug', text: '150 % Schaden an zwei zufälligen Gegnern.' },
 }
 
 export type Trait = 'ankerschild' | 'scherenwirbel' | 'flink'
@@ -83,6 +99,9 @@ export interface Fighter extends FighterDef {
   /** Grossangriff angekuendigt */
   holtAus: boolean
   actions: number
+  markiert: boolean
+  /** Zuege mit +40 % Ausweichen */
+  flink: number
 }
 
 export type FightEvent =
@@ -138,6 +157,8 @@ export function createBattle(defs: FighterDef[], seed = (Math.random() * 2 ** 31
       ruestungHalb: false,
       holtAus: false,
       actions: 0,
+      markiert: false,
+      flink: 0,
     })),
   }
 }
@@ -184,7 +205,7 @@ function armor(t: Fighter) {
 
 /** Schaden mit Ruestung, Krit und Ausweichen */
 function strike(b: Battle, me: Fighter, t: Fighter, mult: number, ev: FightEvent[], opts: { area?: boolean; noDodge?: boolean } = {}) {
-  if (!opts.noDodge && rnd(b) * 100 < t.stats.ausweichen) {
+  if (!opts.noDodge && rnd(b) * 100 < t.stats.ausweichen + (t.flink > 0 ? 40 : 0)) {
     ev.push({ t: 'verfehlt', who: me.id, target: t.id })
     return
   }
@@ -193,6 +214,7 @@ function strike(b: Battle, me: Fighter, t: Fighter, mult: number, ev: FightEvent
   if (krit) dmg *= KRIT_MULT
   const geblockt = !opts.area && !!t.traits?.includes('ankerschild')
   if (geblockt) dmg *= 0.65
+  if (t.markiert) dmg *= 1.3
   const d = Math.max(1, Math.round(dmg))
   t.hp = Math.max(0, t.hp - d)
   if (t.ability) t.energy = Math.min(100, t.energy + ENERGY_PER_HIT)
@@ -245,6 +267,50 @@ function castAbility(b: Battle, me: Fighter, ev: FightEvent[]) {
       t.ruestungHalb = true
       break
     }
+    case 'sternenkurs': {
+      const t = [...foes].sort((a, c) => a.hp - c.hp)[0]
+      ev.push({ t: 'faehigkeit', who: me.id, ability: 'sternenkurs', targets: [t.id] })
+      strike(b, me, t, 2.0, ev, { noDodge: true })
+      me.flink = 2
+      break
+    }
+    case 'windstille': {
+      ev.push({ t: 'faehigkeit', who: me.id, ability: 'windstille', targets: foes.map((f) => f.id) })
+      for (const t of foes) {
+        t.gauge = Math.max(0, t.gauge - 45)
+        ev.push({ t: 'zurueck', target: t.id })
+      }
+      break
+    }
+    case 'kombuesenfeuer':
+    case 'eintopf': {
+      const crew = alive(b, me.side)
+      ev.push({ t: 'faehigkeit', who: me.id, ability: me.ability, targets: crew.map((f) => f.id) })
+      for (const f of crew) {
+        if (me.ability === 'eintopf') {
+          f.ruf = 3
+          if (f.ability && f.id !== me.id) f.energy = Math.min(100, f.energy + 20)
+        } else {
+          const heal = Math.round(f.stats.leben * 0.22)
+          f.hp = Math.min(f.stats.leben, f.hp + heal)
+          ev.push({ t: 'heilung', target: f.id, amount: heal })
+        }
+      }
+      break
+    }
+    case 'adlerauge': {
+      const t = [...foes].sort((a, c) => c.hp - a.hp)[0]
+      ev.push({ t: 'faehigkeit', who: me.id, ability: 'adlerauge', targets: [t.id] })
+      t.markiert = true
+      strike(b, me, t, 1.0, ev, { noDodge: true })
+      break
+    }
+    case 'sturzflug': {
+      const ts = [...foes].sort(() => rnd(b) - 0.5).slice(0, 2)
+      ev.push({ t: 'faehigkeit', who: me.id, ability: 'sturzflug', targets: ts.map((f) => f.id) })
+      for (const t of ts) strike(b, me, t, 1.5, ev, { noDodge: true })
+      break
+    }
   }
 }
 
@@ -295,6 +361,7 @@ export function step(b: Battle, wants: Set<string>): FightEvent[] {
     }
   }
   if (me.ruf > 0) me.ruf--
+  if (me.flink > 0) me.flink--
 
   if (me.side === 'feind' && me.traits?.includes('scherenwirbel')) {
     if (me.holtAus) {

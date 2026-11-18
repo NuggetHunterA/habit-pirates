@@ -119,6 +119,9 @@ export const ANIM_LEN: Record<AnimKind, number> = {
 const LOOK = {
   jonte: { cx: 260, fy: 487, scale: 0.4, h: 200 },
   kanonier: { cx: 0, fy: 0, scale: 0.6, h: 192 },
+  navigatorin: { cx: 0, fy: 0, scale: 0.6, h: 200 },
+  smutje: { cx: 0, fy: 0, scale: 0.6, h: 192 },
+  ausguck: { cx: 0, fy: 0, scale: 0.6, h: 170 },
   krabbenbandit: { cx: 200, fy: 300, scale: 0.68, h: 155 },
   krabbenmatrose: { cx: 200, fy: 300, scale: 0.47, h: 102 },
 } as const
@@ -152,7 +155,7 @@ export class Stage {
     this.cv = cv
     this.ctx = cv.getContext('2d')!
     this.load(FIGHT_ART.strand)
-    this.load(FIGHT_ART.silhouette)
+    for (const src of Object.values(FIGHT_ART.silhouettes)) this.load(src)
     for (const { parts } of Object.values(FIGHT_ART.rigs)) for (const src of Object.values(parts)) this.load(src)
     this.ro = new ResizeObserver(() => this.resize())
     this.ro.observe(cv)
@@ -585,7 +588,7 @@ export class Stage {
     const { ctx } = this
     if (a.alpha <= 0.01) return
     ctx.globalAlpha = Math.max(0, a.alpha)
-    if (a.look === 'kanonier') this.drawSilhouette(a, V)
+    if (FIGHT_ART.silhouettes[a.look]) this.drawSilhouette(a, V)
     else this.drawRig(a, V)
     ctx.globalAlpha = 1
     ctx.filter = 'none'
@@ -602,7 +605,7 @@ export class Stage {
 
   private drawSilhouette(a: Actor, V: DOMMatrix) {
     const { ctx } = this
-    const im = this.img(FIGHT_ART.silhouette)
+    const im = this.img(FIGHT_ART.silhouettes[a.look])
     if (!im) return
     const t = a.at
     let dx = a.dx

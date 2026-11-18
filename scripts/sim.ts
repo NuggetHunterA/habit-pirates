@@ -1,13 +1,17 @@
 // Balancing-Simulator: npx tsx scripts/sim.ts  (oder node --experimental-strip-types)
-import { simulate } from '../src/game/combat.ts'
+import { simulate, type AbilityId, type Row } from '../src/game/combat.ts'
 import { KRABBENBANDE, crewDefs, type CrewSetup } from '../src/game/foes.ts'
 
 const N = 4000
+const S = (j: [Row, AbilityId], k: [Row, AbilityId]): CrewSetup => [
+  { id: 'jonte', row: j[0], ability: j[1] },
+  { id: 'kanonier', row: k[0], ability: k[1] },
+]
 const setups: [string, CrewSetup][] = [
-  ['Sturmklinge + Donnerbüchse', { jonte: { row: 'vorne', ability: 'sturmklinge' }, kanonier: { row: 'hinten', ability: 'donnerbuechse' } }],
-  ['Kapitänsruf + Donnerbüchse', { jonte: { row: 'vorne', ability: 'kapitaensruf' }, kanonier: { row: 'hinten', ability: 'donnerbuechse' } }],
-  ['Sturmklinge + Kettenkugel', { jonte: { row: 'vorne', ability: 'sturmklinge' }, kanonier: { row: 'hinten', ability: 'kettenkugel' } }],
-  ['Reihen vertauscht', { jonte: { row: 'hinten', ability: 'sturmklinge' }, kanonier: { row: 'vorne', ability: 'donnerbuechse' } }],
+  ['Sturmklinge + Donnerbüchse', S(['vorne', 'sturmklinge'], ['hinten', 'donnerbuechse'])],
+  ['Kapitänsruf + Donnerbüchse', S(['vorne', 'kapitaensruf'], ['hinten', 'donnerbuechse'])],
+  ['Sturmklinge + Kettenkugel', S(['vorne', 'sturmklinge'], ['hinten', 'kettenkugel'])],
+  ['Reihen vertauscht', S(['hinten', 'sturmklinge'], ['vorne', 'donnerbuechse'])],
 ]
 for (const level of [1, 2, 3]) {
   for (const [name, s] of setups) {

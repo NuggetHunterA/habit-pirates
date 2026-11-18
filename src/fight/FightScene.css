@@ -430,3 +430,95 @@
 .battle__log li:first-child {
   color: var(--gold-text);
 }
+
+/* ---------- Crew-Auswahl ---------- */
+.prep__count {
+  font-family: var(--body);
+  font-size: 14px;
+  color: var(--sea-muted);
+}
+.roster {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 4px;
+}
+.roster__pirate {
+  flex: none;
+  width: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+  border-radius: 14px;
+  border: 2px dashed var(--wood-3);
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+  color: var(--sea-muted);
+}
+.roster__pirate img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top;
+  background: #fff6e2;
+  opacity: 0.55;
+}
+.roster__pirate.is-on {
+  border-style: solid;
+  border-color: var(--gold-hi);
+  background: rgba(226, 167, 58, 0.25);
+  color: var(--gold-text);
+}
+.roster__pirate.is-on img {
+  opacity: 1;
+  box-shadow: 0 0 0 2px var(--gold);
+}
+.roster__pirate:disabled:not(.is-on) {
+  opacity: 0.5;
+  cursor: default;
+}
+.prep-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 16px;
+  background: rgba(6, 34, 44, 0.45);
+}
+.prep-row--vorne {
+  border-left: 4px solid #ff8787;
+}
+.prep-row--hinten {
+  border-left: 4px solid #74c0fc;
+}
+.prep-row__label {
+  font-weight: 900;
+  color: var(--sea-text);
+  display: flex;
+  justify-content: space-between;
+}
+.prep-row__label span {
+  color: var(--sea-muted);
+  font-weight: 700;
+}
+.prep-row__empty {
+  font-size: 13px;
+  color: var(--sea-muted);
+  padding: 4px 2px;
+}
+.prep-pirate__who {
+  flex: 1;
+  min-width: 0;
+}
+.prep-pirate__move {
+  min-height: 40px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+.prep-pirate__move:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

@@ -84,12 +84,15 @@ for name, r in KRIG.items():
 (OUT / 'krabbe/rig.json').write_text(json.dumps(krig, indent=1))
 
 # Zweiter Pirat (Startcrew) bleibt in der Vorschau eine Silhouette, damit die Crew eine Ueberraschung bleibt
-kn = Image.open(SRC / 'crew-geheim/kanonier.png').convert('RGB')
-g = kn.convert('L').point(lambda v: 255 if v < 238 else 0).filter(ImageFilter.MedianFilter(5))
-g = g.crop(g.getbbox())
-sil = Image.new('RGBA', g.size, (14, 30, 40, 255)); sil.putalpha(g)
-sil.thumbnail((300, 300), Image.LANCZOS)
-webp(sil, OUT / 'crew/silhouette.webp', 90)
+for rolle, datei in [('kanonier', 'silhouette'), ('navigatorin', 'silhouette_navigatorin'), ('smutje', 'silhouette_smutje'), ('ausguck', 'silhouette_ausguck')]:
+    kn = Image.open(SRC / f'crew-geheim/{rolle}.png').convert('RGB')
+    g = kn.convert('L').point(lambda v: 255 if v < 238 else 0).filter(ImageFilter.MedianFilter(5))
+    bg = g.copy(); ImageDraw.floodfill(bg, (0, 0), 128)  # Loecher in der Figur fuellen
+    g = bg.point(lambda v: 0 if v == 128 else 255)
+    g = g.crop(g.getbbox())
+    sil = Image.new('RGBA', g.size, (14, 30, 40, 255)); sil.putalpha(g)
+    sil.thumbnail((300, 300), Image.LANCZOS)
+    webp(sil, OUT / f'crew/{datei}.webp', 90)
 print('kampf ok')
 
 # Kampf-Hintergrund Kapitel 1 (Strand)

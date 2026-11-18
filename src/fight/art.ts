@@ -1,5 +1,8 @@
 import strand from '../assets/kampf/strand.webp'
 import silhouette from '../assets/crew/silhouette.webp'
+import silNavigatorin from '../assets/crew/silhouette_navigatorin.webp'
+import silSmutje from '../assets/crew/silhouette_smutje.webp'
+import silAusguck from '../assets/crew/silhouette_ausguck.webp'
 import krabbePortrait from '../assets/krabbe.webp'
 import krabbeRig from '../assets/krabbe/rig.json'
 import { ART, JONTE_PARTS, JONTE_RIG } from '../assets'
@@ -25,10 +28,14 @@ const KRABBE_PARTS: Record<string, string> = Object.fromEntries(
 
 export const FIGHT_ART = {
   strand,
-  silhouette,
+  /** Noch nicht enthuellte Crew: dunkle Silhouetten */
+  silhouettes: { kanonier: silhouette, navigatorin: silNavigatorin, smutje: silSmutje, ausguck: silAusguck } as Record<string, string>,
   portraits: {
     jonte: ART.portrait,
     kanonier: silhouette,
+    navigatorin: silNavigatorin,
+    smutje: silSmutje,
+    ausguck: silAusguck,
     krabbenbandit: krabbePortrait,
     krabbenmatrose: krabbePortrait,
   },
