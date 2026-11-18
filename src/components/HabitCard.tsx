@@ -7,7 +7,6 @@ interface Props {
   habit: Habit
   done: boolean
   focus: boolean
-  wind: number
   glasses: Glass[]
   onToggle: () => void
   onAddGlass: (g: Glass) => void
@@ -76,12 +75,11 @@ function GlassIcon({ kind, index, filled }: { kind?: Glass; index: number; fille
   )
 }
 
-export default function HabitCard({ habit, done, focus, wind, glasses, onToggle, onAddGlass, onPopGlass }: Props) {
+export default function HabitCard({ habit, done, focus, glasses, onToggle, onAddGlass, onPopGlass }: Props) {
   const [burst, setBurst] = useState(0)
   const isDrink = habit.kind === 'drink'
   const isLassen = habit.kind === 'lassen'
   const water = glasses.filter((g) => g === 'w').length
-  const windWord = `+${wind} Wind`
 
   const toggle = () => {
     if (!done) setBurst((b) => b + 1)
@@ -89,10 +87,14 @@ export default function HabitCard({ habit, done, focus, wind, glasses, onToggle,
   }
 
   const sub = isDrink
-    ? `${Math.min(glasses.length, RULES.drinkGlasses)} von ${RULES.drinkGlasses} Gläsern · ${water} Wasser (mind. ${RULES.drinkMinWater}) · ${windWord}`
+    ? `${Math.min(glasses.length, RULES.drinkGlasses)} von ${RULES.drinkGlasses} Gläsern · ${water} Wasser (mind. ${RULES.drinkMinWater})`
     : isLassen
-      ? `Lassen · abends bestätigen · ${windWord}`
-      : windWord
+      ? 'Lassen · abends bestätigen'
+      : focus
+        ? 'Fokus · zählt doppelt'
+        : done
+          ? 'Erledigt'
+          : 'Abhaken'
 
   return (
     <motion.div layout className={`card habit ${done ? 'habit--done' : ''} ${focus ? 'habit--focus' : ''}`}>
@@ -150,7 +152,7 @@ export default function HabitCard({ habit, done, focus, wind, glasses, onToggle,
               transition={{ duration: 1.1 }}
               style={{ position: 'absolute', right: 18, color: '#1F6F8B', fontWeight: 900, fontSize: 18, pointerEvents: 'none' }}
             >
-              {windWord}
+              Wind!
             </motion.span>
           )}
         </AnimatePresence>

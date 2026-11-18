@@ -92,9 +92,10 @@ const between = ([a, b]: [number, number]) => a + Math.floor(Math.random() * (b 
 
 /**
  * Truhe oeffnen. goldBonus: Goldene-Moewe-Set (+25 % Gold aus Truhen).
+ * sure: das erste Item hat mindestens diese Seltenheit (Serien-Truhen).
  * Verflucht: 100 bis 150 Gold, 2 Items, eines mindestens episch mit 20 % Chance auf legendaer.
  */
-export function rollChest(kind: ChestKind = 'holz', chapter = 1, goldBonus = 0): ChestLoot {
+export function rollChest(kind: ChestKind = 'holz', chapter = 1, goldBonus = 0, sure?: Rarity): ChestLoot {
   const items: Item[] = []
   const add = (r: Rarity) => items.push(makeItem(pickDef(r, chapter, items.map((x) => x.key))))
   let gold: number
@@ -105,7 +106,11 @@ export function rollChest(kind: ChestKind = 'holz', chapter = 1, goldBonus = 0):
   } else {
     const c = CHESTS[kind]
     gold = between(c.gold)
-    for (let i = 0; i < c.items; i++) add(rollOdds(c.odds))
+    for (let i = 0; i < c.items; i++) {
+      const r = rollOdds(c.odds)
+      // Serien-Truhe: das erste Item hat mindestens die zugesagte Seltenheit
+      add(i === 0 && sure && RARITY_ORDER.indexOf(r) < RARITY_ORDER.indexOf(sure) ? sure : r)
+    }
   }
   const order: Rarity[] = ['gewoehnlich', 'selten', 'episch', 'legendaer']
   items.sort((a, b) => order.indexOf(a.rarity) - order.indexOf(b.rarity))

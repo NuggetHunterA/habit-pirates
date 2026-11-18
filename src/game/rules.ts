@@ -1,11 +1,20 @@
 import type { DayLog, Habit, Save, WeekPlan } from './types'
-import { daysOfWeek, weekStartOf, addDays } from './dates'
+import { daysOfWeek, weekStartOf, addDays } from './dates.ts'
 
 /** Regeln aus dem Spielkonzept. Feinschliff kommt mit dem Balancing. */
 export const RULES = {
+  /** Gewicht eines Habits im erledigten Anteil (Fokus zaehlt doppelt) */
   windPerHabit: 1,
   windPerFocus: 2,
+  /** Tageswind bei vollem Tag ohne Bonus, erreicht ab fullWindHabits Habits */
+  dayWind: 8,
+  fullWindHabits: 6,
   fullDayBonus: 2,
+  /** Rueckenwind: nach so vielen Tagen ganz ohne Habit gibt es Extra-Wind, sobald die Haelfte erledigt ist */
+  backwindPause: 2,
+  backwindBonus: 3,
+  /** Ein Tag zaehlt fuer die Serie ab so vielen erledigten Habits */
+  streakMin: 2,
   windPerField: 3,
   startWind: 3,
   drinkGlasses: 6,
@@ -41,29 +50,70 @@ export function habitWind(plan: WeekPlan | undefined, h: Habit): number {
 export interface DayResult {
   total: number
   done: number
+  /** Wind des Tages inklusive Bonus und Rueckenwind */
   wind: number
+  /** Hoechstmoeglicher Wind heute (ohne Rueckenwind) */
+  max: number
   allDone: boolean
+  /** Rueckenwind heute verdient */
+  backwind: boolean
 }
 
-export function dayResult(save: Save, day: string): DayResult {
+/** Erledigte Habits und Gewichte eines Tages, ohne Rueckenwind */
+function baseDay(save: Save, day: string) {
   const plan = save.weeks[weekStartOf(day)]
   const hs = activeHabits(save, day)
   const log = save.logs[day]
-  let wind = 0
+  let weight = 0
+  let doneWeight = 0
   let done = 0
   for (const h of hs) {
+    const w = habitWind(plan, h)
+    weight += w
     if (isDone(h, log)) {
       done++
-      wind += habitWind(plan, h)
+      doneWeight += w
     }
   }
-  const allDone = hs.length > 0 && done === hs.length
-  if (allDone) wind += RULES.fullDayBonus
-  return { total: hs.length, done, wind, allDone }
+  const total = hs.length
+  const allDone = total > 0 && done === total
+  const base = (RULES.dayWind * Math.min(total, RULES.fullWindHabits)) / RULES.fullWindHabits
+  const wind = weight ? Math.round((base * doneWeight) / weight) + (allDone ? RULES.fullDayBonus : 0) : 0
+  const max = total ? Math.round(base) + RULES.fullDayBonus : 0
+  return { total, done, wind, max, allDone }
+}
+
+/** Erster Tag, an dem ueberhaupt ein Habit erledigt wurde */
+export function firstActiveDay(save: Save): string | null {
+  const days = Object.keys(save.logs).sort()
+  return days.find((d) => baseDay(save, d).done > 0) ?? null
+}
+
+/** Nach einer Pause (Tage ganz ohne Habit) bekommt dieser Tag Rueckenwind, wenn die Haelfte erledigt ist */
+export function afterPause(save: Save, day: string, first = firstActiveDay(save)): boolean {
+  if (!first || first >= day) return false
+  for (let i = 1; i <= RULES.backwindPause; i++) {
+    const d = addDays(day, -i)
+    if (d <= first || baseDay(save, d).done > 0) return false
+  }
+  return true
+}
+
+export function dayResult(save: Save, day: string, first?: string | null): DayResult {
+  const b = baseDay(save, day)
+  const backwind = b.total > 0 && b.done * 2 >= b.total && afterPause(save, day, first === undefined ? firstActiveDay(save) : first)
+  return { ...b, wind: b.wind + (backwind ? RULES.backwindBonus : 0), backwind }
 }
 
 export function windEarned(save: Save): number {
-  return Object.keys(save.logs).reduce((sum, day) => sum + dayResult(save, day).wind, 0)
+  const first = firstActiveDay(save)
+  return Object.keys(save.logs).reduce((sum, day) => sum + dayResult(save, day, first).wind, 0)
+}
+
+/** Zaehlt der Tag fuer die Serie? */
+export function streakDay(save: Save, day: string): boolean {
+  const b = baseDay(save, day)
+  return b.total > 0 && b.done >= Math.min(RULES.streakMin, b.total)
 }
 
 export function windAvailable(save: Save): number {

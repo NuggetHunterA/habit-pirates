@@ -97,6 +97,8 @@ export interface GameState {
   guardWon?: number[]
   /** Spezialhaendler: Woche (Montag) und dort gekauftes Item */
   trader?: { week: string; bought: string }
+  /** Geoeffnete Belohnungs-Truhen (Serie, Fokus), Schluessel aus game/motivation */
+  claimed?: string[]
 }
 
 export interface Save {

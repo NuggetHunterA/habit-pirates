@@ -12,6 +12,7 @@
     "build:kampf": "vite build --mode kampf",
     "sim": "node --experimental-strip-types scripts/sim.ts",
     "fxcheck": "node --experimental-strip-types scripts/fx-check.ts",
+    "motcheck": "node --experimental-strip-types scripts/motivation-check.ts",
     "assets": "python3 scripts/prepare_assets.py"
   },
   "dependencies": {

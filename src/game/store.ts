@@ -433,6 +433,23 @@ export function useGame() {
       testXp() {
         update((s) => ({ ...s, game: { ...s.game, xp: Math.min(xpTotal(chapterOf(s.game.chapter).cap), s.game.xp + 100) } }))
       },
+      /** Serien- oder Fokus-Truhe geoeffnet */
+      claimReward(key: string, gold: number, items: Item[]) {
+        update((s) =>
+          (s.game.claimed ?? []).includes(key)
+            ? s
+            : {
+                ...s,
+                game: {
+                  ...s.game,
+                  gold: s.game.gold + gold,
+                  claimed: [...(s.game.claimed ?? []), key],
+                  inventory: [...s.game.inventory, ...items],
+                  found: withFound(s.game, items),
+                },
+              },
+        )
+      },
       collectChest(field: number, gold: number, items: Item[]) {
         update((s) =>
           s.game.looted.includes(field)
