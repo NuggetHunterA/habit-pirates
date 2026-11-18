@@ -7,6 +7,10 @@ export interface Field {
   y: number
   /** Zwischenpunkte auf dem Weg HIN zu diesem Feld (Kartenpixel 1200 x 896) */
   via?: [number, number][]
+  /** Kampf auf diesem Feld (Encounter-id aus game/foes) */
+  enc?: string
+  /** Story-Szene oder Ereignis (id aus game/story) */
+  story?: string
 }
 
 export const MAP_W = 1200
@@ -14,30 +18,69 @@ export const MAP_H = 896
 
 /** Kapitel 1. Felder liegen auf dem gemalten Weg der Seekarte. */
 export const CHAPTER_1: Field[] = [
-  { kind: 'start', name: 'Starthafen', x: 318, y: 686 },
+  { kind: 'start', name: 'Starthafen', x: 318, y: 686, story: 'k1_intro' },
   { kind: 'truhe', name: 'Strandtruhe', x: 330, y: 560, via: [[352, 625]] },
-  { kind: 'insel', name: 'Palmeninsel', x: 270, y: 413, via: [[262, 480]] },
-  { kind: 'wrack', name: 'Wrack', x: 448, y: 452, via: [[360, 420]] },
+  { kind: 'insel', name: 'Palmeninsel', x: 270, y: 413, via: [[262, 480]], story: 'k1_palmen' },
+  { kind: 'gegner', name: 'Möwenwrack', x: 448, y: 452, via: [[360, 420]], enc: 'moewen' },
   { kind: 'truhe', name: 'Schatzinsel', x: 672, y: 333, via: [[560, 405]] },
-  { kind: 'gabel', name: 'Weggabelung', x: 752, y: 450, via: [[760, 385]] },
-  { kind: 'insel', name: 'Riff', x: 625, y: 585, via: [[690, 520]] },
-  { kind: 'gegner', name: 'Krabbenbandit', x: 731, y: 757, via: [[608, 680], [650, 740]] },
+  { kind: 'gabel', name: 'Weggabelung', x: 752, y: 450, via: [[760, 385]], story: 'k1_gabel' },
+  { kind: 'insel', name: 'Riff', x: 625, y: 585, via: [[690, 520]], story: 'k1_mara' },
+  { kind: 'gegner', name: 'Krabbenbande', x: 731, y: 757, via: [[608, 680], [650, 740]], enc: 'krabbenbande' },
   { kind: 'hafen', name: 'Handelsschiff', x: 880, y: 728, via: [[805, 750]] },
-  { kind: 'sturm', name: 'Sturmfront', x: 1000, y: 620, via: [[950, 690]] },
+  { kind: 'sturm', name: 'Sturmfront', x: 1000, y: 620, via: [[950, 690]], story: 'k1_sturm' },
   { kind: 'truhe', name: 'Treibgut', x: 1075, y: 470, via: [[1050, 550]] },
-  { kind: 'boss', name: 'Klippenfestung', x: 1007, y: 328, via: [[1065, 390]] },
+  { kind: 'boss', name: 'Klippenfestung', x: 1007, y: 328, via: [[1065, 390]], enc: 'schalbart', story: 'k1_boss' },
 ]
+
+/** Kapitel 2: Nebelriff. Die Route schlaengelt sich in drei Bahnen nach oben. */
+export const CHAPTER_2: Field[] = [
+  { kind: 'start', name: 'Nebelrand', x: 190, y: 725, story: 'k2_intro' },
+  { kind: 'truhe', name: 'Treibende Kiste', x: 400, y: 745 },
+  { kind: 'gegner', name: 'Quallenbucht', x: 610, y: 800, enc: 'quallen' },
+  { kind: 'insel', name: 'Leuchtturm', x: 880, y: 780, story: 'k2_leuchtturm' },
+  { kind: 'hafen', name: 'Nebelhafen', x: 1110, y: 580 },
+  { kind: 'truhe', name: 'Muschelbank', x: 1060, y: 450 },
+  { kind: 'gegner', name: 'Geisterfelsen', x: 800, y: 500, enc: 'geistertrupp' },
+  { kind: 'sturm', name: 'Nebelwirbel', x: 600, y: 560, story: 'k2_wirbel' },
+  { kind: 'insel', name: 'Rauchinsel', x: 330, y: 560, story: 'k2_grummel' },
+  { kind: 'truhe', name: 'Versunkene Truhe', x: 250, y: 420 },
+  { kind: 'gegner', name: 'Geisterschiff', x: 420, y: 230, enc: 'geisterschiff' },
+  { kind: 'wrack', name: 'Altes Wrack', x: 589, y: 290, story: 'k2_wrack' },
+  { kind: 'truhe', name: 'Schmugglerversteck', x: 800, y: 200 },
+  { kind: 'boss', name: 'Glockenhöhle', x: 1040, y: 170, enc: 'grauhand', story: 'k2_boss' },
+]
+
+export interface Chapter {
+  n: number
+  name: string
+  /** Seekarte (Bild-Schluessel in assets) */
+  art: 'kap1' | 'kap2'
+  fields: Field[]
+  /** Hoechste Stufe in diesem Kapitel */
+  cap: number
+  /** Kaempfe fuer Beutezuege vor dem Boss */
+  farm: string[]
+  /** Szene nach dem Bosssieg */
+  outro: string
+}
+
+export const CHAPTERS: Chapter[] = [
+  { n: 1, name: 'Die Krabbenküste', art: 'kap1', fields: CHAPTER_1, cap: 5, farm: ['moewen', 'krabbenbande'], outro: 'k1_ende' },
+  { n: 2, name: 'Das Nebelriff', art: 'kap2', fields: CHAPTER_2, cap: 10, farm: ['quallen', 'geistertrupp', 'geisterschiff'], outro: 'k2_ende' },
+]
+
+export const chapterOf = (n: number | undefined): Chapter => CHAPTERS[Math.min(CHAPTERS.length, Math.max(1, n ?? 1)) - 1]
 
 export const FIELD_TEXT: Record<FieldKind, string> = {
   start: 'Hier beginnt die Reise.',
   truhe: 'Eine Truhe! Was ist wohl drin?',
-  insel: 'Eine Story-Szene wartet. Kommt mit den Story-Kapiteln.',
-  wrack: 'Zufallsereignis: Was liegt im Wrack? Kommt bald.',
-  gabel: 'Hier wählst du später zwischen zwei Routen.',
-  gegner: 'Kampf! Die Kämpfe kommen im nächsten Bauabschnitt.',
-  hafen: 'Laden und Werft. Kommen mit dem Shop.',
-  sturm: 'Zufallsereignis im Sturm. Kommt bald.',
-  boss: 'Der Kapitelboss. Kommt mit den Kämpfen.',
+  insel: 'Hier wartet eine Geschichte.',
+  wrack: 'Ein altes Wrack. Vielleicht ist noch etwas zu holen.',
+  gabel: 'Der Weg teilt sich. Du musst dich entscheiden.',
+  gegner: 'Gegner voraus! Erst nach einem Sieg geht es weiter.',
+  hafen: 'Ein Handelsschiff mit Hafenladen. Hier kannst du einkaufen.',
+  sturm: 'Ein Sturm zieht auf. Mal sehen, was er bringt.',
+  boss: 'Der Kapitelboss wartet.',
 }
 
 type P = [number, number]

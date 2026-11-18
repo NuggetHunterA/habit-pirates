@@ -1,0 +1,545 @@
+.fight {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.fight__prep,
+.fight__battle {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Vorbereitung ---------- */
+.prep {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.prep__top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.prep__title {
+  font-size: 30px;
+  color: var(--gold-text);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+.prep__intro {
+  margin: 0;
+  color: var(--sea-text);
+}
+.prep__foes {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.foe-chip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 14px;
+  background: rgba(138, 46, 30, 0.35);
+  border: 2px solid rgba(250, 82, 82, 0.55);
+}
+.foe-chip img {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #f4e4c1;
+}
+.foe-chip b,
+.foe-chip span {
+  display: block;
+}
+.foe-chip span {
+  font-size: 12px;
+  color: var(--sea-muted);
+}
+.is-matrose {
+  filter: hue-rotate(28deg) saturate(0.85);
+  transform: scale(0.86);
+}
+.is-secret {
+  background: #9fd8e8 !important;
+}
+.prep__traits {
+  margin: 0;
+  padding: 10px 12px 10px 28px;
+  border-radius: 12px;
+  background: rgba(6, 34, 44, 0.6);
+  color: var(--sea-muted);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.prep__crew {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.prep__rowlabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--display);
+  font-size: 22px;
+  color: var(--gold-text);
+}
+.prep__swap {
+  min-height: 40px;
+  padding: 0 12px;
+  font-family: var(--body);
+  font-size: 14px;
+}
+.prep__hint {
+  margin: -4px 0 0;
+  font-size: 13px;
+  color: var(--sea-muted);
+}
+.prep-pirate {
+  background: var(--parch);
+  color: var(--ink);
+  border: 2px solid var(--wood-3);
+  border-radius: 16px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.prep-pirate__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.prep-pirate__head img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top;
+  border: 2px solid var(--brass);
+  background: #fff6e2;
+}
+.prep-pirate__name {
+  font-weight: 900;
+}
+.prep-pirate__row {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.prep-pirate__abilities {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.ability-chip {
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 2px solid #d8c398;
+  background: #fff6e2;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 48px;
+}
+.ability-chip span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.ability-chip[aria-checked='true'] {
+  border-color: var(--sea-3);
+  background: #d0ebff;
+  box-shadow: 0 0 0 2px rgba(31, 111, 139, 0.35);
+}
+.prep__go {
+  margin-top: 4px;
+  font-size: 22px;
+}
+
+/* ---------- Kampf ---------- */
+.battle {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(var(--wood-1), var(--wood-0));
+}
+.battle__order {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  min-height: 52px;
+  background: rgba(6, 34, 44, 0.7);
+}
+.battle__order-label {
+  font-size: 12px;
+  color: var(--sea-muted);
+  margin-right: 4px;
+  white-space: nowrap;
+}
+.order-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top;
+  background: #f4e4c1;
+  border: 2px solid #4dabf7;
+}
+.order-icon--feind {
+  border-color: #fa5252;
+}
+.order-icon.is-next {
+  width: 40px;
+  height: 40px;
+  border-width: 3px;
+  box-shadow: 0 0 10px rgba(255, 212, 59, 0.8);
+}
+.battle__stage {
+  position: relative;
+  flex: 1;
+  min-height: 240px;
+  max-height: max(300px, 105vw);
+  overflow: hidden;
+  background: #7cc6d6;
+}
+.battle__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.battle__banner {
+  position: absolute;
+  left: 50%;
+  top: 12%;
+  translate: -50% 0;
+  padding: 6px 22px 8px;
+  border-radius: 14px;
+  text-align: center;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.battle__banner .display {
+  font-size: 34px;
+  line-height: 1.1;
+}
+.battle__banner small {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+}
+.battle__banner--crew {
+  background: linear-gradient(#1f6f8b, #0b3a4a);
+  border: 2px solid #63e6be;
+  color: #e6fcf5;
+}
+.battle__banner--feind {
+  background: linear-gradient(#8a2e1e, #4a140c);
+  border: 2px solid #ff8787;
+  color: #fff5f5;
+}
+.battle__banner--info {
+  background: rgba(6, 34, 44, 0.85);
+  color: #fff;
+}
+.battle__controls {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  display: flex;
+  gap: 6px;
+}
+.ctl {
+  min-width: 48px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  background: rgba(6, 34, 44, 0.65);
+  color: #fff;
+  font-weight: 900;
+}
+.ctl[aria-pressed='true'] {
+  background: var(--gold);
+  color: var(--ink);
+  border-color: var(--gold-hi);
+}
+.battle__abilities {
+  flex: none;
+  align-content: start;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: linear-gradient(var(--wood-1), var(--wood-0));
+  border-top: 3px solid var(--brass);
+}
+.skill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  min-height: 60px;
+  border-radius: 14px;
+  border: 2px solid var(--wood-3);
+  background: rgba(0, 0, 0, 0.25);
+  text-align: left;
+  color: var(--sea-muted);
+}
+.skill:disabled {
+  cursor: default;
+}
+.skill.is-ready {
+  border-color: var(--gold-hi);
+  background: linear-gradient(#ffd978, var(--gold));
+  color: var(--ink);
+  box-shadow: 0 0 14px rgba(255, 212, 59, 0.6);
+  animation: skill-pulse 1.1s ease-in-out infinite;
+}
+.skill.is-hint {
+  border-color: #63e6be;
+  background: linear-gradient(#96f2d7, #20c997);
+  box-shadow: 0 0 22px rgba(99, 230, 190, 0.9);
+  animation-duration: 0.5s;
+}
+.skill.is-down {
+  opacity: 0.45;
+  animation: none;
+}
+@keyframes skill-pulse {
+  50% {
+    transform: scale(1.03);
+  }
+}
+.skill__ring {
+  --e: 0%;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  padding: 3px;
+  background: conic-gradient(#4dabf7 var(--e), rgba(255, 255, 255, 0.15) 0);
+}
+.skill.is-ready .skill__ring {
+  background: conic-gradient(#fff3bf 100%, transparent 0);
+}
+.skill__ring img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top;
+  background: #fff6e2;
+  display: block;
+}
+.skill__text b,
+.skill__text small {
+  display: block;
+}
+.skill__text b {
+  font-size: 15px;
+  color: inherit;
+}
+.skill:not(.is-ready) .skill__text b {
+  color: #fff;
+}
+.skill__text small {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+/* ---------- Ergebnis ---------- */
+.fight__result {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(4, 18, 26, 0.55);
+}
+.result-card {
+  width: min(360px, 100%);
+  background: var(--parch);
+  color: var(--ink);
+  border: 3px solid var(--wood-3);
+  border-radius: 20px;
+  padding: 16px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+}
+.result-card__title {
+  font-size: 44px;
+  color: var(--red);
+}
+.result-card--win .result-card__title {
+  color: #2b8a3e;
+}
+.result-card p {
+  margin: 6px 0 12px;
+}
+.result-card__loot {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 14px;
+  font-size: 18px;
+}
+.result-card__loot > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.result-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.battle__log {
+  list-style: none;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0 14px 10px;
+  font-size: 13px;
+  color: var(--sea-muted);
+  mask-image: linear-gradient(#000 40%, transparent);
+}
+.battle__log li:first-child {
+  color: var(--gold-text);
+}
+
+/* ---------- Crew-Auswahl ---------- */
+.prep__count {
+  font-family: var(--body);
+  font-size: 14px;
+  color: var(--sea-muted);
+}
+.roster {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 4px;
+}
+.roster__pirate {
+  flex: none;
+  width: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+  border-radius: 14px;
+  border: 2px dashed var(--wood-3);
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+  color: var(--sea-muted);
+}
+.roster__pirate img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top;
+  background: #fff6e2;
+  opacity: 0.55;
+}
+.roster__pirate.is-on {
+  border-style: solid;
+  border-color: var(--gold-hi);
+  background: rgba(226, 167, 58, 0.25);
+  color: var(--gold-text);
+}
+.roster__pirate.is-on img {
+  opacity: 1;
+  box-shadow: 0 0 0 2px var(--gold);
+}
+.roster__pirate:disabled:not(.is-on) {
+  opacity: 0.5;
+  cursor: default;
+}
+.prep-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 16px;
+  background: rgba(6, 34, 44, 0.45);
+}
+.prep-row--vorne {
+  border-left: 4px solid #ff8787;
+}
+.prep-row--hinten {
+  border-left: 4px solid #74c0fc;
+}
+.prep-row__label {
+  font-weight: 900;
+  color: var(--sea-text);
+  display: flex;
+  justify-content: space-between;
+}
+.prep-row__label span {
+  color: var(--sea-muted);
+  font-weight: 700;
+}
+.prep-row__empty {
+  font-size: 13px;
+  color: var(--sea-muted);
+  padding: 4px 2px;
+}
+.prep-pirate__who {
+  flex: 1;
+  min-width: 0;
+}
+.prep-pirate__move {
+  min-height: 40px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+.prep-pirate__move:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.prep__note {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 77, 109, 0.18);
+  color: #ffd6de;
+  font-weight: 800;
+  text-align: center;
+}
+
+.result-card__level {
+  margin: 4px 0 10px;
+  font-size: 24px;
+  color: #1c7ed6;
+  text-align: center;
+}
+
+.result-card .loot {
+  margin-bottom: 12px;
+}

@@ -1,11 +1,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { ART } from '../assets'
-import { CHAPTER_1, MAP_H, MAP_W, legPath, pointAt, routeSvgPath, type Field, type FieldKind } from '../game/map'
+import { ART, MAPS } from '../assets'
+import { MAP_H, MAP_W, legPath, pointAt, routeSvgPath, type Chapter, type Field, type FieldKind } from '../game/map'
 import './SeaMap.css'
 
 interface Props {
+  chapter: Chapter
   field: number
-  looted: number[]
+  /** Erledigte Felder (Truhe geleert, Kampf gewonnen, Szene gesehen): werden blass */
+  done: number[]
   mini?: boolean
   onArrive?: (field: number) => void
   onSailingChange?: (sailing: boolean) => void
@@ -87,8 +89,8 @@ function FieldGlyph({ kind }: { kind: FieldKind }) {
   }
 }
 
-export default function SeaMap({ field, looted, mini = false, onArrive, onSailingChange }: Props) {
-  const fields = CHAPTER_1
+export default function SeaMap({ chapter, field, done: doneFields, mini = false, onArrive, onSailingChange }: Props) {
+  const fields = chapter.fields
   const boxRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLDivElement>(null)
   const shipRef = useRef<HTMLDivElement>(null)
@@ -370,7 +372,7 @@ export default function SeaMap({ field, looted, mini = false, onArrive, onSailin
   return (
     <div ref={boxRef} className={`seamap ${mini ? 'seamap--mini' : ''}`}>
       <div ref={innerRef} className="seamap__inner" style={{ width: MAP_W, height: MAP_H }}>
-        <img src={ART.seekarte} alt="Seekarte von Kapitel 1" className="seamap__img" draggable={false} />
+        <img src={MAPS[chapter.art]} alt={`Seekarte von Kapitel ${chapter.n}`} className="seamap__img" draggable={false} />
         <svg className="seamap__svg" viewBox={`0 0 ${MAP_W} ${MAP_H}`} aria-hidden="true">
           <defs>
             <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
@@ -381,13 +383,13 @@ export default function SeaMap({ field, looted, mini = false, onArrive, onSailin
               </feMerge>
             </filter>
           </defs>
-          <path d={route} fill="none" stroke="rgba(59,36,20,0.55)" strokeWidth="11" strokeLinecap="round" strokeDasharray="0.1 19" />
-          <path d={route} fill="none" stroke="#FFF6E2" strokeWidth="6" strokeLinecap="round" strokeDasharray="0.1 19" />
+          <path d={route} fill="none" stroke="rgba(59,36,20,0.45)" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" />
+          <path d={route} fill="none" stroke="#FFF6E2" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="14 10" />
           <path ref={travelRef} d={travelledLength(field)} fill="none" stroke="#FFD978" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow)" />
           {fields.map((f: Field, i) => {
             const passed = i < field
             const next = i === field + 1
-            const done = f.kind === 'truhe' && looted.includes(i)
+            const done = doneFields.includes(i)
             const r = f.kind === 'boss' ? nodeR + 6 : nodeR
             return (
               <g key={i} transform={`translate(${f.x} ${f.y})`} opacity={passed ? 0.75 : 1}>
