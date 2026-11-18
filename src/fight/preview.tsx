@@ -3,14 +3,14 @@ import { StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import '../styles.css'
 import FightScene, { type FightResult } from './FightScene'
-import { ENCOUNTERS, FULL_CREW, KRABBENBANDE, START_CREW } from '../game/foes'
+import { ENCOUNTERS, FULL_CREW, KRABBENBANDE, START_CREW, seaMonster } from '../game/foes'
 import { setSpoilerFree } from './art'
 import PoseLab from './PoseLab'
 
 const params = new URLSearchParams(location.search)
 // Fuer Tests: ?e=<encounter-id>&lvl=<stufe>&spoiler=0
 setSpoilerFree(params.get('spoiler') !== '0')
-const ENC = ENCOUNTERS[params.get('e') ?? ''] ?? KRABBENBANDE
+const ENC = params.get('e') === 'seeungeheuer' ? seaMonster(Number(params.get('k') ?? 1)) : (ENCOUNTERS[params.get('e') ?? ''] ?? KRABBENBANDE)
 const LVL = Number(params.get('lvl') ?? 1)
 
 function Preview() {

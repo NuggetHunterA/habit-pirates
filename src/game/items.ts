@@ -275,3 +275,6 @@ export function traderOffer(profile: string, week: string, chapter: number, foun
 
 /** Fester Zufallswert 0..1 fuer einen Schluessel (z. B. verfluchte Truhen) */
 export const seededRoll = (key: string) => seeded(key)()
+
+/** Fester Zufallsgenerator fuer einen Schluessel */
+export const seededRng = (key: string) => seeded(key)

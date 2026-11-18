@@ -203,3 +203,14 @@
   padding: 4px 10px;
   flex: none;
 }
+
+.farm__hint {
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fdf6e3;
+  border: 2px solid #e9d8a6;
+  color: #3b2414;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}

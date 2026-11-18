@@ -130,6 +130,11 @@ const HEIGHT: Record<Look, number> = {
   irrlicht: 105,
   schalbart: 265,
   grauhand: 290,
+  seeigel: 112,
+  einsiedlerkrebs: 122,
+  nebelaal: 165,
+  laternenfisch: 112,
+  seeungeheuer: 255,
 }
 
 /** Lebensbalken sitzt ueber der Figur, nicht ueber Waffenspitzen */
@@ -498,7 +503,7 @@ export class Stage {
     if (a.alpha <= 0) return
     ctx.setTransform(V)
     const lift = Math.min(0.6, Math.max(0, -a.dy) / 120)
-    const w = (a.look === 'schalbart' || a.look === 'grauhand' ? 120 : a.look === 'krabbenbandit' ? 95 : a.look === 'krabbenmatrose' ? 62 : 58) * (1 - lift)
+    const w = (a.look === 'schalbart' || a.look === 'grauhand' || a.look === 'seeungeheuer' ? 120 : a.look === 'krabbenbandit' ? 95 : a.look === 'krabbenmatrose' ? 62 : 58) * (1 - lift)
     ctx.globalAlpha = 0.3 * a.alpha
     ctx.fillStyle = '#3b2414'
     ctx.beginPath()
@@ -511,7 +516,7 @@ export class Stage {
     const { ctx } = this
     if (!a.alive && a.alpha < 0.6) return
     const k = this.uiK
-    const w = (a.look === 'schalbart' || a.look === 'grauhand' ? 140 : a.look === 'krabbenbandit' ? 104 : 80) * Math.min(k, 1.25)
+    const w = (a.look === 'schalbart' || a.look === 'grauhand' || a.look === 'seeungeheuer' ? 140 : a.look === 'krabbenbandit' ? 104 : 80) * Math.min(k, 1.25)
     const x = a.x - w / 2
     const y = a.y - a.h - 20 * k
     ctx.globalAlpha = Math.max(0, a.alpha)

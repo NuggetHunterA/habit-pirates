@@ -99,6 +99,8 @@ export interface GameState {
   trader?: { week: string; bought: string }
   /** Geoeffnete Belohnungs-Truhen (Serie, Fokus), Schluessel aus game/motivation */
   claimed?: string[]
+  /** Hinweis aus der Flaschenpost: der naechste Beutezug bringt sicher ein Item, mindestens selten */
+  hint?: boolean
 }
 
 export interface Save {

@@ -22,6 +22,10 @@ export interface FightRequest {
   tier?: FarmTier
   /** Waechter einer verfluchten Truhe */
   guard?: boolean
+  /** Kampf aus einem Zufallsereignis: kostet keinen Wind, Niederlage kostet nichts */
+  event?: boolean
+  /** Hinweis aus der Flaschenpost: dieser Beutezug bringt sicher ein Item, mindestens selten */
+  hint?: boolean
 }
 
 interface Props {
@@ -102,7 +106,7 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
     setMenu(false)
     // Schwer: ohne den groessten Kampf des Kapitels, der waere mit 60 % mehr kaum zu schaffen
     const pool = tier === 'schwer' && chapter.farm.length > 2 ? chapter.farm.slice(0, -1) : chapter.farm
-    onFight({ enc: pick(pool), field: null, boss: false, farm: true, tier })
+    onFight({ enc: pick(pool), field: null, boss: false, farm: true, tier, hint: !!g.hint })
   }
 
   const attackBoss = () => {
@@ -348,6 +352,11 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
                   <span className="farm__cost">≋ {RULES.windPerField}</span>
                 </button>
               ))}
+              {g.hint && (
+                <div className="farm__hint">
+                  <b>Schatzkarte aus der Flaschenpost:</b> Der nächste Beutezug bringt sicher ein Item, mindestens selten.
+                </div>
+              )}
               <p className="muted" style={{ fontSize: 12.5, margin: 0 }}>
                 Der Wind wird beim Start bezahlt. Bei einer Niederlage ist er weg, die Crew bekommt die halbe Erfahrung.
               </p>

@@ -185,6 +185,36 @@ const T: Record<string, FoeTemplate> = {
     stats: { leben: 92, angriff: 14, ruestung: 4, tempo: 11, krit: 8, ausweichen: 10 },
     traits: ['geisterhaft'],
   },
+  // Phase 4: zwei neue Gegner je Kapitel (verdeckt, bis man ihnen begegnet)
+  seeigel: {
+    name: 'Stachelbold',
+    look: 'seeigel',
+    stats: { leben: 50, angriff: 7, ruestung: 3, tempo: 9, krit: 5, ausweichen: 4 },
+    traits: ['stacheln'],
+    mods: { thorns: 0.12 },
+  },
+  einsiedler: {
+    name: 'Einsiedlerkrebs',
+    look: 'einsiedlerkrebs',
+    stats: { leben: 58, angriff: 8, ruestung: 4, tempo: 8, krit: 5, ausweichen: 0 },
+    traits: ['panzer'],
+    mods: { startShield: 0.5 },
+  },
+  aal: {
+    name: 'Nebelaal',
+    look: 'nebelaal',
+    stats: { leben: 78, angriff: 12, ruestung: 3, tempo: 13, krit: 8, ausweichen: 12 },
+    traits: ['laehmend'],
+    mods: { slowChance: 0.4 },
+  },
+  laterne: {
+    name: 'Laternenfisch',
+    look: 'laternenfisch',
+    ranged: true,
+    stats: { leben: 62, angriff: 9, ruestung: 2, tempo: 11, krit: 5, ausweichen: 10 },
+    traits: ['blendend'],
+    mods: { weakChance: 0.25 },
+  },
   irrlicht: {
     name: 'Irrlicht',
     look: 'irrlicht',
@@ -216,9 +246,20 @@ export const KRABBENBANDE: Encounter = {
   name: 'Krabbenbande',
   intro: 'Der Krabbenbandit und seine Matrosen versperren die Durchfahrt!',
   bg: 'strand',
-  foes: [foe('bandit', 'bandit', 'vorne', [1.4, 1.4]), foe('matrose', 'matrose1', 'vorne', [1.4, 1.4]), foe('matrose', 'matrose2', 'hinten', [1.4, 1.4])],
+  foes: [foe('bandit', 'bandit', 'vorne', [1.4, 1.4]), foe('matrose', 'matrose1', 'vorne', [1.4, 1.4]), foe('seeigel', 'seeigel1', 'hinten', [1.4, 1.4])],
   reward: { xp: 45, gold: [18, 30], itemChance: 0.35 },
   outro: 'Die Krabbenbande zieht sich ins Riff zurück. Der Weg ist frei.',
+}
+
+/** Beutezug in Kapitel 1 */
+export const RIFFBANDE: Encounter = {
+  id: 'riffbande',
+  name: 'Riffbande',
+  intro: 'Zwischen den Riffen lauert eine Bande, die alles einsammelt, was glänzt.',
+  bg: 'strand',
+  foes: [foe('einsiedler', 'einsiedler1', 'vorne', [2.8, 2.6]), foe('seeigel', 'seeigel1', 'vorne', [2.8, 2.6]), foe('moewe', 'moewe1', 'hinten', [2.8, 2.6])],
+  reward: { xp: 40, gold: [16, 26], itemChance: 0.35 },
+  outro: 'Die Riffbande verkriecht sich zwischen den Felsen.',
 }
 
 export const SCHALBART: Encounter = {
@@ -250,7 +291,7 @@ export const QUALLEN: Encounter = {
   name: 'Nebelquallen',
   intro: 'Aus dem Nebel schweben leuchtende Quallen heran.',
   bg: 'nebel',
-  foes: [foe('qualle', 'qualle1', 'vorne', [4.8, 4.5]), foe('qualle', 'qualle2', 'vorne', [4.8, 4.5]), foe('qualle', 'qualle3', 'hinten', [4.8, 4.5])],
+  foes: [foe('qualle', 'qualle1', 'vorne', [4.8, 4.5]), foe('qualle', 'qualle2', 'vorne', [4.8, 4.5]), foe('laterne', 'laterne1', 'hinten', [3.8, 3.4])],
   reward: { xp: 60, gold: [24, 36], itemChance: 0.35 },
   outro: 'Die Quallen sinken leuchtend in die Tiefe.',
 }
@@ -260,9 +301,20 @@ export const GEISTERTRUPP: Encounter = {
   name: 'Geistertrupp',
   intro: 'Zwei Geisterpiraten und ein Irrlicht versperren den Weg zum Leuchtturm.',
   bg: 'nebel',
-  foes: [foe('geist', 'geist1', 'vorne', [3.85, 3.5]), foe('geist', 'geist2', 'vorne', [3.85, 3.5]), foe('irrlicht', 'irrlicht1', 'hinten', [3.85, 3.5])],
+  foes: [foe('geist', 'geist1', 'vorne', [3.85, 3.5]), foe('aal', 'aal1', 'vorne', [3.85, 3.5]), foe('irrlicht', 'irrlicht1', 'hinten', [3.85, 3.5])],
   reward: { xp: 75, gold: [30, 44], itemChance: 0.4 },
   outro: 'Die Geister lösen sich im Nebel auf. Nur das Irrlicht kichert noch eine Weile.',
+}
+
+/** Beutezug in Kapitel 2 */
+export const TIEFSEETRUPP: Encounter = {
+  id: 'tiefseetrupp',
+  name: 'Tiefseetrupp',
+  intro: 'Unter dem Nebel leuchtet es. Etwas kommt aus der Tiefe herauf.',
+  bg: 'nebel',
+  foes: [foe('aal', 'aal1', 'vorne', [4.7, 4.3]), foe('qualle', 'qualle1', 'vorne', [4.7, 4.3]), foe('laterne', 'laterne1', 'hinten', [4.7, 4.3])],
+  reward: { xp: 70, gold: [28, 42], itemChance: 0.4 },
+  outro: 'Die Lichter sinken zurück in die Tiefe.',
 }
 
 export const GEISTERSCHIFF: Encounter = {
@@ -301,13 +353,48 @@ export const GRAUHAND: Encounter = {
 
 /** Zufallskaempfe beim Farmen vor dem Boss */
 export const FARM: Record<number, Encounter[]> = {
-  1: [MOEWEN, KRABBENBANDE],
-  2: [QUALLEN, GEISTERTRUPP, GEISTERSCHIFF],
+  1: [MOEWEN, RIFFBANDE, KRABBENBANDE],
+  2: [QUALLEN, TIEFSEETRUPP, GEISTERTRUPP, GEISTERSCHIFF],
 }
 
 export const ENCOUNTERS: Record<string, Encounter> = Object.fromEntries(
-  [MOEWEN, KRABBENBANDE, SCHALBART, QUALLEN, GEISTERTRUPP, GEISTERSCHIFF, GRAUHAND].map((e) => [e.id, e]),
+  [MOEWEN, RIFFBANDE, KRABBENBANDE, SCHALBART, QUALLEN, TIEFSEETRUPP, GEISTERTRUPP, GEISTERSCHIFF, GRAUHAND].map((e) => [e.id, e]),
 )
+
+/** Seeungeheuer aus den Zufallsereignissen: staerker als ein schwerer Beutezug, je Kapitel */
+const UNGEHEUER: Record<number, { leben: number; angriff: number; ruestung: number; xp: number; gold: [number, number] }> = {
+  1: { leben: 2280, angriff: 32, ruestung: 6, xp: 90, gold: [60, 90] },
+  2: { leben: 9450, angriff: 105, ruestung: 7, xp: 170, gold: [120, 170] },
+}
+
+export function seaMonster(chapter: number): Encounter {
+  const u = UNGEHEUER[chapter] ?? UNGEHEUER[2]
+  return {
+    id: 'seeungeheuer',
+    name: 'Seeungeheuer',
+    intro: 'Riesige Tentakel greifen nach dem Schiff!',
+    bg: chapter === 1 ? 'strand' : 'nebel',
+    foes: [
+      {
+        id: 'ungeheuer',
+        name: 'Seeungeheuer',
+        look: 'seeungeheuer',
+        side: 'feind',
+        row: 'vorne',
+        stats: { leben: u.leben, angriff: u.angriff, ruestung: u.ruestung, tempo: 8, krit: 5, ausweichen: 0 },
+        traits: ['ungeheuer'],
+        big: { name: 'Tentakelsturm', every: 3, mult: 1.7 },
+      },
+    ],
+    reward: { xp: u.xp, gold: u.gold, itemChance: 1, min: 'selten' },
+    outro: 'Das Seeungeheuer taucht ab. Zurück bleibt, was es im Maul hatte.',
+  }
+}
+
+/** Geisterschiff aus den Zufallsereignissen (erst ab Kapitel 2): Gold und sicher ein Item */
+export function ghostShipEvent(): Encounter {
+  return { ...GEISTERSCHIFF, id: 'ereignis_geisterschiff', reward: { ...GEISTERSCHIFF.reward, itemChance: 1 } }
+}
 
 /** Gegner staerker machen (Leben und Angriff mal k), z. B. fuer schwere Beutezuege und Truhenwaechter */
 export function strengthen(enc: Encounter, k: number): Encounter {
