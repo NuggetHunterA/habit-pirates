@@ -174,6 +174,12 @@ export type Look =
   | 'nebelaal'
   | 'laternenfisch'
   | 'seeungeheuer'
+  | 'glutkrabbe'
+  | 'aschegeist'
+  | 'lavaschnecke'
+  | 'funkenvogel'
+  | 'obsidiangolem'
+  | 'zunder'
 
 export interface Ability {
   id: AbilityId
@@ -225,6 +231,10 @@ export type Trait =
   | 'laehmend'
   | 'blendend'
   | 'ungeheuer'
+  | 'glutschere'
+  | 'brandfest'
+  | 'obsidian'
+  | 'zunder'
 
 export const TRAIT_TEXT: Record<Trait, string> = {
   ankerschild: 'Ankerschild: nimmt 35 % weniger Schaden von Einzelangriffen. Flächenschaden trifft voll.',
@@ -241,6 +251,10 @@ export const TRAIT_TEXT: Record<Trait, string> = {
   laehmend: 'Lähmend: Treffer verlangsamen oft.',
   blendend: 'Blendend: Treffer schwächen oft den Angriff.',
   ungeheuer: 'Riesig und zäh. Holt mit den Tentakeln gegen die ganze Crew aus. Sturmklinge unterbricht.',
+  glutschere: 'Glutschere: Treffer setzen oft Brand.',
+  brandfest: 'Brandfest: Brand prallt an ihm ab.',
+  obsidian: 'Obsidian: sehr viel Rüstung, aber langsam.',
+  zunder: 'Boss mit zwei Phasen. Ab der Hälfte schützt ihn ein Glutpanzer. Die Feuerwalze trifft alle und setzt Brand. Sturmklinge unterbricht.',
 }
 
 /** Angekuendigter Grossangriff gegen die ganze Crew */
@@ -498,10 +512,12 @@ function heal(t: Fighter, amount: number, ev: FightEvent[]): number {
 }
 
 /** Brand legen: 3 Zuege, Schaden haengt vom Angriff des Verursachers ab */
-export function applyBrand(me: Fighter, t: Fighter) {
+export function applyBrand(me: Fighter, t: Fighter): boolean {
+  if (t.traits?.includes('brandfest')) return false
   t.brand = 3
   t.brandSrc = me.id
   t.brandDmg = Math.max(1, Math.round(Math.min(t.stats.leben * 0.05, me.stats.angriff * 0.6) * (1 + (me.mods?.brandBonus ?? 0))))
+  return true
 }
 
 /** Blutung: stapelt (Standard bis 3), 25 % des Angriffs pro Stapel und Zug. Geisterhafte sind immun. */
@@ -615,8 +631,7 @@ function onHitChances(b: Battle, me: Fighter, t: Fighter, ev: FightEvent[]) {
   const m = me.mods
   if (!m || t.hp <= 0) return
   if (m.burnChance && rnd(b) < m.burnChance) {
-    applyBrand(me, t)
-    ev.push({ t: 'effekt', target: t.id, text: 'Brand', tone: tone(me) })
+    ev.push({ t: 'effekt', target: t.id, text: applyBrand(me, t) ? 'Brand' : 'Brandfest', tone: tone(me) })
   }
   if (m.bleedChance && rnd(b) < m.bleedChance) applyBleed(me, t, ev)
   if (m.poisonChance && rnd(b) < m.poisonChance) {
@@ -647,8 +662,7 @@ function hitBack(b: Battle, me: Fighter, t: Fighter, d: number, ev: FightEvent[]
     }
   }
   if (t.mods?.burnBack && me.brand <= 0 && rnd(b) < t.mods.burnBack) {
-    applyBrand(t, me)
-    ev.push({ t: 'effekt', target: me.id, text: 'Brand', tone: tone(t) })
+    if (applyBrand(t, me)) ev.push({ t: 'effekt', target: me.id, text: 'Brand', tone: tone(t) })
   }
 }
 
@@ -713,6 +727,12 @@ function bossPhase(b: Battle, t: Fighter, ev: FightEvent[]) {
       t.phase = 3
       ev.push({ t: 'phase', who: t.id, text: 'Fürst Schalbart wird wütend!' })
     }
+  }
+  if (t.traits?.includes('zunder') && t.phase === 1 && f < 0.5) {
+    t.phase = 2
+    t.shield = Math.round(t.stats.leben * 0.2)
+    t.stats.tempo = Math.round(t.stats.tempo * 1.25)
+    ev.push({ t: 'phase', who: t.id, text: 'Zunders Haut glüht auf: Glutpanzer!' })
   }
   if (t.traits?.includes('nebelkapitaen')) {
     if (t.phase === 1 && f < 0.55) {
@@ -824,8 +844,7 @@ function castAbility(b: Battle, me: Fighter, ev: FightEvent[]) {
     for (const id of ids) {
       const t = b.fighters.find((f) => f.id === id)
       if (t && t.side !== me.side && t.hp > 0) {
-        applyBrand(me, t)
-        ev.push({ t: 'effekt', target: t.id, text: 'Brand', tone: me.side === 'crew' ? 'gut' : 'schlecht' })
+        ev.push({ t: 'effekt', target: t.id, text: applyBrand(me, t) ? 'Brand' : 'Brandfest', tone: me.side === 'crew' ? 'gut' : 'schlecht' })
       }
     }
   }
@@ -918,7 +937,11 @@ export function step(b: Battle, wants: Set<string>): FightEvent[] {
       me.holtAus = false
       const crew = alive(b, 'crew')
       ev.push({ t: 'wirbel', who: me.id, name: big.name, targets: crew.map((f) => f.id) })
-      for (const t of crew) strike(b, me, t, big.mult, ev, { area: true, noDodge: true })
+      for (const t of crew) {
+        strike(b, me, t, big.mult, ev, { area: true, noDodge: true })
+        // Feuerwalze: setzt Brand auf alle Getroffenen
+        if (me.traits?.includes('zunder') && t.hp > 0 && applyBrand(me, t)) ev.push({ t: 'effekt', target: t.id, text: 'Brand', tone: 'schlecht' })
+      }
       checkEnd(b, ev)
       return ev
     }

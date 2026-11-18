@@ -154,7 +154,7 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
   } else if (boss && bossBeaten) {
     kicker = `Kapitel ${chapter.n} geschafft`
     title = outroPending ? boss.name + ' besiegt!' : nextChapter ? `Auf zu Kapitel ${nextChapter.n}` : 'Fortsetzung folgt'
-    text = outroPending ? 'Die Crew hat etwas gefunden.' : nextChapter ? `${nextChapter.name} wartet.` : 'Kapitel 3 kommt bald. Bis dahin kannst du weiter auf Beutezug gehen.'
+    text = outroPending ? 'Die Crew hat etwas gefunden.' : nextChapter ? `${nextChapter.name} wartet.` : `Kapitel ${chapter.n + 1} kommt bald. Bis dahin kannst du weiter auf Beutezug gehen.`
     portrait = portraitFor(boss.foes[0].look)
   }
 

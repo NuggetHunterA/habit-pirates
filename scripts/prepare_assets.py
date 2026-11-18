@@ -136,6 +136,13 @@ SPRITES = [
     ('gegner-geheim/nebelaal.png', 'figuren/nebelaal', 300, (0.0, 0.42)),
     ('gegner-geheim/laternenfisch.png', 'figuren/laternenfisch', 220, (0.1, 0.7)),
     ('gegner-geheim/seeungeheuer.png', 'figuren/seeungeheuer', 420, (0.05, 0.5)),
+    # Kapitel 3 (verdeckt)
+    ('gegner-geheim/glutkrabbe.png', 'figuren/glutkrabbe', 240, (0.2, 0.6)),
+    ('gegner-geheim/aschegeist.png', 'figuren/aschegeist', 300),
+    ('gegner-geheim/lavaschnecke.png', 'figuren/lavaschnecke', 240, (0.0, 0.55)),
+    ('gegner-geheim/funkenvogel.png', 'figuren/funkenvogel', 260, (0.05, 0.5)),
+    ('gegner-geheim/obsidiangolem.png', 'figuren/obsidiangolem', 340, (0.0, 0.4)),
+    ('gegner-geheim/zunder.png', 'figuren/zunder', 460, (0.0, 0.32)),
 ]
 for src, out, hgt, *por_opt in SPRITES:
     webp(freistellen(SRC / src, hgt), OUT / f'{out}.webp', 88)
@@ -151,9 +158,10 @@ for src, out, hgt, *por_opt in SPRITES:
     por.alpha_composite(sp.crop((cx - side // 2, y0, cx - side // 2 + side, y0 + side)))
     webp(por.resize((128, 128), Image.LANCZOS), OUT / f'{out}_portrait.webp', 86)
 
-bg = Image.open(SRC / 'kampf/kampf_nebel.png').convert('RGB')
-bg.thumbnail((1200, 1200), Image.LANCZOS)
-webp(bg, OUT / 'kampf/nebel.webp', 80)
+for name in ['nebel', 'glut']:
+    bg = Image.open(SRC / f'kampf/kampf_{name}.png').convert('RGB')
+    bg.thumbnail((1200, 1200), Image.LANCZOS)
+    webp(bg, OUT / f'kampf/{name}.webp', 80)
 for k, f in [(2, 'seekarte_kap2_nebelriff.png'), (3, 'seekarte_kap3_glutinseln.png')]:
     m = Image.open(SRC / f'welt/{f}').convert('RGB')
     webp(m, OUT / f'seekarte_kap{k}.webp', 84)

@@ -21,7 +21,7 @@ export interface Choice {
 export interface Story {
   id: string
   title: string
-  bg: 'strand' | 'nebel'
+  bg: 'strand' | 'nebel' | 'glut'
   /** Figuren auf der Buehne: links, rechts */
   cast: [Look, Look?]
   lines: Line[]
@@ -42,6 +42,8 @@ export const SPEAKERS: Record<string, string> = {
   grauhand: 'Kapitän Grauhand',
   moewenpirat: 'Möwenpirat',
   waerterin: 'Leuchtturmwärterin Oda',
+  tante: 'Tante Glimma',
+  zunder: 'Zunder',
 }
 
 const S: Story[] = [
@@ -220,6 +222,110 @@ const S: Story[] = [
     ],
     join: 'ausguck',
     reward: { gold: 80 },
+  },
+  // ---------------- Kapitel 3: Die Glutinseln ----------------
+  {
+    id: 'k3_intro',
+    title: 'Glut am Horizont',
+    bg: 'glut',
+    cast: ['jonte', 'kanonier'],
+    lines: [
+      { who: 'erzaehler', text: 'Das Meer wird warm. Am Horizont glüht ein Vulkan, und Asche rieselt wie grauer Schnee aufs Deck.' },
+      { who: 'navigatorin', text: 'Die Glutinseln. Das dritte Kartenstück liegt hier irgendwo, ganz hinten in einer Höhle.' },
+      { who: 'jonte', text: 'Bolle? Du bist so still. Sonst redest du beim Anlegen immer übers Frühstück.' },
+      { who: 'kanonier', text: 'Ich ... kenne diese Bucht, Käpt’n. Hier bin ich aufgewachsen. Bis der Berg Feuer gespuckt hat.' },
+      { who: 'ausguck', text: 'Da drüben am Ufer winkt jemand. Mit einem Kochlöffel.' },
+    ],
+  },
+  {
+    id: 'k3_dorf',
+    title: 'Bolles Dorf',
+    bg: 'glut',
+    cast: ['kanonier', 'smutje'],
+    lines: [
+      { who: 'erzaehler', text: 'Zwischen schwarzen Felsen stehen kleine Häuser. Eine kräftige Frau rennt auf Bolle zu.' },
+      { who: 'tante', text: 'Bolle! Mein kleiner Bolle! Du bist ja riesig geworden! Hast du auch immer ordentlich gefrühstückt?' },
+      { who: 'kanonier', text: 'Zweimal am Tag, Tante Glimma. Mindestens.' },
+      { who: 'tante', text: 'Dann nimm das hier mit. Das Rezept für unser Feuerpulver. Und was Warmes für unterwegs.' },
+      { who: 'smutje', text: 'Ein Rezept? Darf ich ... nur mal kurz lesen? Für die Kombüse natürlich.' },
+      { who: 'kanonier', text: 'Grummel. Das ist für die Kanone, nicht für den Eintopf.' },
+    ],
+    reward: { gold: 40, item: true },
+  },
+  {
+    id: 'k3_gabel',
+    title: 'Lava oder Asche',
+    bg: 'glut',
+    cast: ['navigatorin', 'kanonier'],
+    lines: [
+      { who: 'erzaehler', text: 'Links fließt ein Lavastrom ins Meer und lässt das Wasser zischen. Rechts liegt eine graue, stille Ascheküste.' },
+      { who: 'navigatorin', text: 'Beide Wege führen weiter. Der Lavastrom ist heiß, aber schnell.' },
+      { who: 'kanonier', text: 'An der Ascheküste haben wir als Kinder nach Schätzen gegraben. Meistens Muscheln. Manchmal nicht.' },
+    ],
+    choice: {
+      prompt: 'Welchen Weg nimmst du?',
+      options: [
+        { label: 'Am Lavastrom entlang', text: 'In der Hitze schmelzen alte Goldmünzen aus dem Gestein. Mara sammelt sie mit dem Kescher ein.', reward: { gold: 70 } },
+        { label: 'Über die Ascheküste', text: 'Bolle gräbt an seiner alten Stelle und findet eine Kiste, die nicht nach Muscheln klingt.', reward: { item: true } },
+      ],
+    },
+  },
+  {
+    id: 'k3_wrack',
+    title: 'Das Laternenboot',
+    bg: 'glut',
+    cast: ['jonte', 'ausguck'],
+    lines: [
+      { who: 'erzaehler', text: 'Auf einer Sandbank liegt ein ausgebranntes Boot. Am Bug hängt ein Wappen mit einer Laterne.' },
+      { who: 'jonte', text: 'Eine Laterne. Wie beim Leuchtturm im Nebelriff. Komischer Zufall.' },
+      { who: 'ausguck', text: 'Das ist kein ... ich meine ... können wir einfach weiterfahren? Bitte?' },
+      { who: 'smutje', text: 'Der Junge ist ja ganz blass. Hier, nimm ein Stück Brot.' },
+      { who: 'erzaehler', text: 'Unter einer Planke liegt eine Kiste. Pip schaut sie nicht an.' },
+    ],
+    reward: { gold: 50, item: true },
+  },
+  {
+    id: 'k3_pip',
+    title: 'Pip will etwas sagen',
+    bg: 'glut',
+    cast: ['ausguck', 'navigatorin'],
+    lines: [
+      { who: 'erzaehler', text: 'Am Abend sitzt Pip ganz oben im Mast und starrt Richtung Westen, wo der Nebel liegt.' },
+      { who: 'ausguck', text: 'Mara? Ich hab manchmal Bilder im Kopf. Von Sachen, die noch nicht passiert sind. Und jetzt sehe ich ...' },
+      { who: 'navigatorin', text: 'Was siehst du, Pip?' },
+      { who: 'kanonier', text: 'Essen ist fertig! Grummel hat das Feuerpulver-Rezept ausprobiert. Es ist ... scharf.' },
+      { who: 'ausguck', text: 'Ach, nichts. Ist bestimmt nichts.' },
+    ],
+  },
+  {
+    id: 'k3_boss',
+    title: 'Der Wächter der Glut',
+    bg: 'glut',
+    cast: ['jonte', 'zunder'],
+    lines: [
+      { who: 'erzaehler', text: 'Tief in der Höhle glüht das dritte Kartenstück auf einem Stein. Davor steht ein Feuersalamander mit Speer.' },
+      { who: 'zunder', text: 'Halt. Ich bin Zunder. Ich bewache dieses Stück, seit der Berg es ausgespuckt hat.' },
+      { who: 'jonte', text: 'Wir brauchen es, um die Windquelle zu finden. Wir wollen niemandem schaden.' },
+      { who: 'zunder', text: 'Das hat die mit der Laterne auch gesagt. Sie war hier. Ihr gebt ihr nichts. Zeigt mir, dass euer Wind echt ist.' },
+      { who: 'navigatorin', text: 'Wenn er seine Feuerwalze holt, unterbrich ihn! Ab der Hälfte schützt ihn ein Glutpanzer.' },
+    ],
+  },
+  {
+    id: 'k3_ende',
+    title: 'Die Karte',
+    bg: 'glut',
+    cast: ['navigatorin', 'ausguck'],
+    lines: [
+      { who: 'zunder', text: 'Euer Wind ist echt. Nehmt das Stück. Aber passt auf die Laterne auf.' },
+      { who: 'erzaehler', text: 'An Deck legt Mara drei Kartenstücke aneinander. Die Ränder schmelzen zusammen, und die Karte beginnt zu leuchten.' },
+      { who: 'navigatorin', text: 'Seht ihr? Eine Linie quer übers Meer. Das ist der Weg zur Windquelle!' },
+      { who: 'erzaehler', text: 'Da erstirbt der Wind. Die Segel hängen schlaff. Auf dem Achterdeck steht eine alte Frau mit Laterne.' },
+      { who: 'waerterin', text: 'Danke, Kinder. Ihr habt mehr gefunden als alle vor euch. Ab hier übernehme ich.' },
+      { who: 'erzaehler', text: 'Ein kalter Nebel zieht über das Deck. Als er sich hebt, sind Oda und die Karte verschwunden.' },
+      { who: 'ausguck', text: 'Ich hab’s gesehen. Ich hab’s die ganze Zeit gesehen. Und ich hab’s nicht gesagt.' },
+      { who: 'jonte', text: 'Dann holen wir sie uns zurück, Pip. Zusammen. Ohne Karte, wenn’s sein muss.' },
+    ],
+    reward: { gold: 120 },
   },
 ]
 

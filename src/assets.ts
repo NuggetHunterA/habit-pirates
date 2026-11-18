@@ -1,5 +1,6 @@
 import seekarte from './assets/seekarte.webp'
 import seekarteKap2 from './assets/seekarte_kap2.webp'
+import seekarteKap3 from './assets/seekarte_kap3.webp'
 import schiff from './assets/ship/schiff.webp'
 import krabbe from './assets/krabbe.webp'
 import portrait from './assets/jonte/portrait.webp'
@@ -10,7 +11,7 @@ const parts = import.meta.glob('./assets/jonte/*.webp', { eager: true, import: '
 export const ART = { seekarte, schiff, krabbe, portrait }
 
 /** Seekarten je Kapitel */
-export const MAPS = { kap1: seekarte, kap2: seekarteKap2 }
+export const MAPS = { kap1: seekarte, kap2: seekarteKap2, kap3: seekarteKap3 }
 
 export interface RigPart {
   img: string

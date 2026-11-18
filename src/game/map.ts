@@ -52,11 +52,30 @@ export const CHAPTER_2: Field[] = [
   { kind: 'boss', name: 'Glockenhöhle', x: 1040, y: 170, enc: 'grauhand', story: 'k2_boss' },
 ]
 
+/** Kapitel 3: Glutinseln. Start im Hafen unten links, Boss in der Feuerhoehle oben rechts. */
+export const CHAPTER_3: Field[] = [
+  { kind: 'start', name: 'Glutbucht', x: 270, y: 735, story: 'k3_intro' },
+  { kind: 'insel', name: 'Bolles Dorf', x: 150, y: 615, story: 'k3_dorf' },
+  { kind: 'truhe', name: 'Aschestrand', x: 330, y: 540, chest: 'holz' },
+  { kind: 'gegner', name: 'Schwarzer Strand', x: 225, y: 395, enc: 'glutkrabben' },
+  { kind: 'hafen', name: 'Feuerhafen', x: 300, y: 225 },
+  { kind: 'gabel', name: 'Glutgabelung', x: 480, y: 410, story: 'k3_gabel' },
+  { kind: 'truhe', name: 'Glühender Fels', x: 650, y: 470, chest: 'silber' },
+  { kind: 'gegner', name: 'Lavabucht', x: 560, y: 640, enc: 'aschetrupp' },
+  { kind: 'sturm', name: 'Feuerfontäne', x: 760, y: 720, story: 'k3_sturm' },
+  { kind: 'wrack', name: 'Laternenboot', x: 950, y: 620, story: 'k3_wrack' },
+  { kind: 'gegner', name: 'Obsidianhöhle', x: 960, y: 470, enc: 'obsidianwache' },
+  { kind: 'insel', name: 'Aschehang', x: 790, y: 360, story: 'k3_pip' },
+  { kind: 'truhe', name: 'Vulkanschatz', x: 620, y: 250, chest: 'gold' },
+  { kind: 'truhe', name: 'Rauchklippe', x: 840, y: 190, chest: 'silber' },
+  { kind: 'boss', name: 'Feuerhöhle', x: 1030, y: 260, enc: 'zunder', story: 'k3_boss' },
+]
+
 export interface Chapter {
   n: number
   name: string
   /** Seekarte (Bild-Schluessel in assets) */
-  art: 'kap1' | 'kap2'
+  art: 'kap1' | 'kap2' | 'kap3'
   fields: Field[]
   /** Hoechste Stufe in diesem Kapitel */
   cap: number
@@ -69,6 +88,7 @@ export interface Chapter {
 export const CHAPTERS: Chapter[] = [
   { n: 1, name: 'Die Krabbenküste', art: 'kap1', fields: CHAPTER_1, cap: 5, farm: ['moewen', 'riffbande', 'krabbenbande'], outro: 'k1_ende' },
   { n: 2, name: 'Das Nebelriff', art: 'kap2', fields: CHAPTER_2, cap: 10, farm: ['quallen', 'tiefseetrupp', 'geistertrupp', 'geisterschiff'], outro: 'k2_ende' },
+  { n: 3, name: 'Die Glutinseln', art: 'kap3', fields: CHAPTER_3, cap: 15, farm: ['glutkrabben', 'funkenschwarm', 'schneckenfeld', 'aschetrupp', 'obsidianwache'], outro: 'k3_ende' },
 ]
 
 export const chapterOf = (n: number | undefined): Chapter => CHAPTERS[Math.min(CHAPTERS.length, Math.max(1, n ?? 1)) - 1]

@@ -264,6 +264,78 @@ export const FIGURES: Record<Look, Figure> = {
       ],
     },
   },
+  // Kapitel 3
+  glutkrabbe: {
+    refH: 240,
+    spec: {
+      feet: p(150, 236),
+      knee: 200,
+      waist: p(150, 130),
+      neck: p(150, 95),
+      brow: 60,
+      waves: [{ x0: 0, y0: 0, x1: 120, y1: 120, amp: 3, freq: 4, k: 1 }],
+    },
+  },
+  aschegeist: {
+    refH: 300,
+    spec: {
+      float: true,
+      feet: p(170, 296),
+      knee: 400,
+      waist: p(170, 170),
+      neck: p(175, 90),
+      brow: 50,
+      waves: [{ x0: 80, y0: 150, x1: 312, y1: 300, amp: 10, freq: 2.2, k: 0.6 }],
+    },
+  },
+  lavaschnecke: {
+    refH: 240,
+    spec: {
+      feet: p(140, 236),
+      knee: 210,
+      waist: p(150, 150),
+      neck: p(70, 110),
+      brow: 60,
+    },
+  },
+  funkenvogel: {
+    refH: 260,
+    spec: {
+      float: true,
+      flap: true,
+      feet: p(160, 255),
+      knee: 300,
+      waist: p(160, 170),
+      neck: p(150, 110),
+      brow: 70,
+      armA: { path: [p(130, 120), p(80, 70), p(20, 20)], r: 40 },
+      armB: { path: [p(200, 120), p(250, 60), p(300, 10)], r: 40 },
+      waves: [{ x0: 100, y0: 200, x1: 300, y1: 260, amp: 4, freq: 5, k: 1 }],
+    },
+  },
+  obsidiangolem: {
+    refH: 340,
+    spec: {
+      armScale: 0.5,
+      feet: p(200, 336),
+      knee: 290,
+      waist: p(195, 200),
+      neck: p(195, 95),
+      brow: 60,
+    },
+  },
+  zunder: {
+    refH: 460,
+    spec: {
+      armScale: 0.6,
+      feet: p(250, 455),
+      knee: 400,
+      waist: p(250, 280),
+      neck: p(200, 150),
+      brow: 90,
+      waves: [{ x0: 300, y0: 0, x1: 483, y1: 200, amp: 6, freq: 2.5, k: 0.7 }],
+    },
+  },
 }
 
 /** Punkte fuer ein kleineres oder groesseres Bild umrechnen */

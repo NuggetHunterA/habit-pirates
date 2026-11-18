@@ -1,5 +1,6 @@
 import strand from '../assets/kampf/strand.webp'
 import nebel from '../assets/kampf/nebel.webp'
+import glut from '../assets/kampf/glut.webp'
 import silhouette from '../assets/crew/silhouette.webp'
 import silNavigatorin from '../assets/crew/silhouette_navigatorin.webp'
 import silSmutje from '../assets/crew/silhouette_smutje.webp'
@@ -43,6 +44,6 @@ export function portraitFor(look: Look): string {
 export const figure = (name: string) => FIG[name]
 
 export const FIGHT_ART = {
-  backgrounds: { strand, nebel },
+  backgrounds: { strand, nebel, glut },
   allFigures: [...Object.values(SILHOUETTES), jonteGanz, ...Object.entries(FIG).filter(([k]) => !k.endsWith('_portrait')).map(([, v]) => v)] as string[],
 }

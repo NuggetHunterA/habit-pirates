@@ -137,7 +137,7 @@ export interface Encounter {
   name: string
   intro: string
   /** Kampfhintergrund */
-  bg: 'strand' | 'nebel'
+  bg: 'strand' | 'nebel' | 'glut'
   boss?: boolean
   foes: FighterDef[]
   reward: { xp: number; gold: [number, number]; itemChance: number; min?: Rarity }
@@ -214,6 +214,40 @@ const T: Record<string, FoeTemplate> = {
     stats: { leben: 62, angriff: 9, ruestung: 2, tempo: 11, krit: 5, ausweichen: 10 },
     traits: ['blendend'],
     mods: { weakChance: 0.25 },
+  },
+  // Kapitel 3: Glutinseln
+  glutkrabbe: {
+    name: 'Glutkrabbe',
+    look: 'glutkrabbe',
+    stats: { leben: 70, angriff: 10, ruestung: 4, tempo: 10, krit: 5, ausweichen: 5 },
+    traits: ['glutschere'],
+    mods: { burnChance: 0.35 },
+  },
+  aschegeist: {
+    name: 'Aschegeist',
+    look: 'aschegeist',
+    stats: { leben: 80, angriff: 12, ruestung: 3, tempo: 11, krit: 8, ausweichen: 12 },
+    traits: ['brandfest'],
+  },
+  lavaschnecke: {
+    name: 'Lavaschnecke',
+    look: 'lavaschnecke',
+    stats: { leben: 90, angriff: 9, ruestung: 5, tempo: 7, krit: 3, ausweichen: 0 },
+    traits: ['panzer'],
+    mods: { startShield: 0.5 },
+  },
+  funkenvogel: {
+    name: 'Funkenvogel',
+    look: 'funkenvogel',
+    stats: { leben: 45, angriff: 9, ruestung: 1, tempo: 15, krit: 10, ausweichen: 22 },
+    traits: ['flink', 'sturzflieger'],
+    mods: { burnChance: 0.2 },
+  },
+  golem: {
+    name: 'Obsidian-Golem',
+    look: 'obsidiangolem',
+    stats: { leben: 150, angriff: 14, ruestung: 14, tempo: 6, krit: 3, ausweichen: 0 },
+    traits: ['obsidian', 'brandfest'],
   },
   irrlicht: {
     name: 'Irrlicht',
@@ -351,29 +385,109 @@ export const GRAUHAND: Encounter = {
   outro: 'Grauhands Laterne erlischt. Der Nebel hebt sich, und am Horizont glüht es rot.',
 }
 
+// ---------------- Kapitel 3: Die Glutinseln ----------------
+/** Staerke in Kapitel 3, je Kampf mit eigenem Faktor */
+const k3 = (f: number): [number, number] => [Math.round(7 * f * 100) / 100, Math.round(6.5 * f * 100) / 100]
+
+export const GLUTKRABBEN: Encounter = {
+  id: 'glutkrabben',
+  name: 'Glutkrabben',
+  intro: 'Der schwarze Strand bewegt sich. Das sind keine Steine, das sind Krabben!',
+  bg: 'glut',
+  foes: [foe('glutkrabbe', 'glut1', 'vorne', k3(1.35)), foe('glutkrabbe', 'glut2', 'vorne', k3(1.35)), foe('funkenvogel', 'funke1', 'hinten', k3(1.35))],
+  reward: { xp: 100, gold: [40, 58], itemChance: 0.4 },
+  outro: 'Die Glutkrabben graben sich zischend in den Sand.',
+}
+
+export const FUNKENSCHWARM: Encounter = {
+  id: 'funkenschwarm',
+  name: 'Funkenschwarm',
+  intro: 'Ein Schwarm aus Funken stürzt vom Vulkan herab.',
+  bg: 'glut',
+  foes: [foe('funkenvogel', 'funke1', 'vorne', k3(1.2)), foe('funkenvogel', 'funke2', 'vorne', k3(1.2)), foe('glutkrabbe', 'glut1', 'vorne', k3(1.2)), foe('funkenvogel', 'funke3', 'hinten', k3(1.2))],
+  reward: { xp: 105, gold: [42, 60], itemChance: 0.4 },
+  outro: 'Die Funken verglühen über dem Meer.',
+}
+
+export const SCHNECKENFELD: Encounter = {
+  id: 'schneckenfeld',
+  name: 'Lavaschnecken',
+  intro: 'Langsam, aber unaufhaltsam kriechen glühende Schnecken heran.',
+  bg: 'glut',
+  foes: [foe('lavaschnecke', 'schnecke1', 'vorne', k3(1.6)), foe('lavaschnecke', 'schnecke2', 'vorne', k3(1.6)), foe('aschegeist', 'asche1', 'hinten', k3(1.6))],
+  reward: { xp: 110, gold: [44, 62], itemChance: 0.4 },
+  outro: 'Die Schnecken ziehen sich in ihre Häuser zurück. Das dauert.',
+}
+
+export const ASCHETRUPP: Encounter = {
+  id: 'aschetrupp',
+  name: 'Aschetrupp',
+  intro: 'Aus dem Rauch formen sich Gestalten mit Säbeln aus Ruß.',
+  bg: 'glut',
+  foes: [foe('aschegeist', 'asche1', 'vorne', k3(1.5)), foe('aschegeist', 'asche2', 'vorne', k3(1.5)), foe('lavaschnecke', 'schnecke1', 'hinten', k3(1.5))],
+  reward: { xp: 115, gold: [46, 64], itemChance: 0.45 },
+  outro: 'Der Wind verweht die Asche.',
+}
+
+export const OBSIDIANWACHE: Encounter = {
+  id: 'obsidianwache',
+  name: 'Obsidianwache',
+  intro: 'Vor der Höhle steht ein Wächter aus schwarzem Glas. Er ist nicht allein.',
+  bg: 'glut',
+  foes: [foe('golem', 'golem1', 'vorne', k3(1.25)), foe('glutkrabbe', 'glut1', 'vorne', k3(1.25)), foe('aschegeist', 'asche1', 'hinten', k3(1.25)), foe('funkenvogel', 'funke1', 'hinten', k3(1.25))],
+  reward: { xp: 130, gold: [50, 70], itemChance: 0.45 },
+  outro: 'Der Golem sinkt in sich zusammen und wird wieder zu Fels.',
+}
+
+export const ZUNDER: Encounter = {
+  id: 'zunder',
+  name: 'Zunder',
+  intro: 'In der glühenden Höhle hebt ein Feuersalamander seinen Speer.',
+  bg: 'glut',
+  boss: true,
+  foes: [
+    {
+      id: 'zunder',
+      name: 'Zunder',
+      look: 'zunder',
+      side: 'feind',
+      row: 'vorne',
+      stats: { leben: 4760, angriff: 82, ruestung: 9, tempo: 10, krit: 8, ausweichen: 5 },
+      traits: ['zunder', 'brandfest'],
+      big: { name: 'Feuerwalze', every: 3, mult: 1.6 },
+    },
+    foe('lavaschnecke', 'schnecke1', 'vorne', k3(1.3)),
+    foe('funkenvogel', 'funke1', 'hinten', k3(1.3)),
+  ],
+  reward: { xp: 300, gold: [200, 280], itemChance: 1 },
+  outro: 'Zunder senkt den Speer. Das Feuer in der Höhle wird ruhig.',
+}
+
 /** Zufallskaempfe beim Farmen vor dem Boss */
 export const FARM: Record<number, Encounter[]> = {
   1: [MOEWEN, RIFFBANDE, KRABBENBANDE],
   2: [QUALLEN, TIEFSEETRUPP, GEISTERTRUPP, GEISTERSCHIFF],
+  3: [GLUTKRABBEN, FUNKENSCHWARM, SCHNECKENFELD, ASCHETRUPP, OBSIDIANWACHE],
 }
 
 export const ENCOUNTERS: Record<string, Encounter> = Object.fromEntries(
-  [MOEWEN, RIFFBANDE, KRABBENBANDE, SCHALBART, QUALLEN, TIEFSEETRUPP, GEISTERTRUPP, GEISTERSCHIFF, GRAUHAND].map((e) => [e.id, e]),
+  [MOEWEN, RIFFBANDE, KRABBENBANDE, SCHALBART, QUALLEN, TIEFSEETRUPP, GEISTERTRUPP, GEISTERSCHIFF, GRAUHAND, GLUTKRABBEN, FUNKENSCHWARM, SCHNECKENFELD, ASCHETRUPP, OBSIDIANWACHE, ZUNDER].map((e) => [e.id, e]),
 )
 
 /** Seeungeheuer aus den Zufallsereignissen: staerker als ein schwerer Beutezug, je Kapitel */
 const UNGEHEUER: Record<number, { leben: number; angriff: number; ruestung: number; xp: number; gold: [number, number] }> = {
   1: { leben: 2280, angriff: 32, ruestung: 6, xp: 90, gold: [60, 90] },
   2: { leben: 9450, angriff: 105, ruestung: 7, xp: 170, gold: [120, 170] },
+  3: { leben: 13500, angriff: 160, ruestung: 9, xp: 260, gold: [200, 280] },
 }
 
 export function seaMonster(chapter: number): Encounter {
-  const u = UNGEHEUER[chapter] ?? UNGEHEUER[2]
+  const u = UNGEHEUER[chapter] ?? UNGEHEUER[3]
   return {
     id: 'seeungeheuer',
     name: 'Seeungeheuer',
     intro: 'Riesige Tentakel greifen nach dem Schiff!',
-    bg: chapter === 1 ? 'strand' : 'nebel',
+    bg: chapter === 1 ? 'strand' : chapter === 2 ? 'nebel' : 'glut',
     foes: [
       {
         id: 'ungeheuer',
