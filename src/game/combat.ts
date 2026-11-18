@@ -169,6 +169,11 @@ export type Look =
   | 'irrlicht'
   | 'schalbart'
   | 'grauhand'
+  | 'seeigel'
+  | 'einsiedlerkrebs'
+  | 'nebelaal'
+  | 'laternenfisch'
+  | 'seeungeheuer'
 
 export interface Ability {
   id: AbilityId
@@ -215,6 +220,11 @@ export type Trait =
   | 'irrlicht'
   | 'festung'
   | 'nebelkapitaen'
+  | 'stacheln'
+  | 'panzer'
+  | 'laehmend'
+  | 'blendend'
+  | 'ungeheuer'
 
 export const TRAIT_TEXT: Record<Trait, string> = {
   ankerschild: 'Ankerschild: nimmt 35 % weniger Schaden von Einzelangriffen. Flächenschaden trifft voll.',
@@ -226,6 +236,11 @@ export const TRAIT_TEXT: Record<Trait, string> = {
   irrlicht: 'Irrlicht: heilt seine Verbündeten. Am besten zuerst ausschalten.',
   festung: 'Boss mit drei Phasen. Großangriffe lassen sich mit der Sturmklinge unterbrechen.',
   nebelkapitaen: 'Boss mit drei Phasen. Großangriffe lassen sich mit der Sturmklinge unterbrechen.',
+  stacheln: 'Stacheln: Wer ihn trifft, sticht sich und verliert selbst etwas Leben.',
+  panzer: 'Schneckenhaus: startet mit einem dicken Schild. Erst den Schild brechen.',
+  laehmend: 'Lähmend: Treffer verlangsamen oft.',
+  blendend: 'Blendend: Treffer schwächen oft den Angriff.',
+  ungeheuer: 'Riesig und zäh. Holt mit den Tentakeln gegen die ganze Crew aus. Sturmklinge unterbricht.',
 }
 
 /** Angekuendigter Grossangriff gegen die ganze Crew */

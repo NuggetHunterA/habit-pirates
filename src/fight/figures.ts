@@ -203,6 +203,67 @@ export const FIGURES: Record<Look, Figure> = {
       ],
     },
   },
+  // Phase 4: neue Gegner. Ohne bewegliche Arme, der Koerper wippt und wellt.
+  seeigel: {
+    refH: 260,
+    spec: {
+      feet: p(160, 256),
+      knee: 225,
+      waist: p(165, 150),
+      neck: p(165, 110),
+      brow: 70,
+      waves: [{ x0: 40, y0: 20, x1: 300, y1: 200, amp: 3, freq: 4, k: 1.2 }],
+    },
+  },
+  einsiedlerkrebs: {
+    refH: 260,
+    spec: {
+      feet: p(150, 256),
+      knee: 228,
+      waist: p(160, 160),
+      neck: p(150, 120),
+      brow: 60,
+    },
+  },
+  nebelaal: {
+    refH: 300,
+    spec: {
+      float: true,
+      feet: p(110, 296),
+      knee: 400,
+      waist: p(105, 190),
+      neck: p(95, 80),
+      brow: 40,
+      waves: [{ x0: 0, y0: 90, x1: 225, y1: 300, amp: 9, freq: 2.4, k: 0.6 }],
+    },
+  },
+  laternenfisch: {
+    refH: 220,
+    spec: {
+      float: true,
+      shoot: true,
+      feet: p(160, 216),
+      knee: 400,
+      waist: p(170, 130),
+      neck: p(150, 100),
+      brow: 50,
+      waves: [{ x0: 200, y0: 40, x1: 294, y1: 200, amp: 6, freq: 3, k: 0.8 }],
+    },
+  },
+  seeungeheuer: {
+    refH: 420,
+    spec: {
+      feet: p(220, 415),
+      knee: 380,
+      waist: p(225, 260),
+      neck: p(235, 170),
+      brow: 90,
+      waves: [
+        { x0: 0, y0: 60, x1: 120, y1: 400, amp: 10, freq: 1.8, k: 0.5 },
+        { x0: 330, y0: 60, x1: 442, y1: 400, amp: 10, freq: 2.1, k: 0.5 },
+      ],
+    },
+  },
 }
 
 /** Punkte fuer ein kleineres oder groesseres Bild umrechnen */

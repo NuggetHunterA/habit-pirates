@@ -9,7 +9,7 @@ export interface Field {
   via?: [number, number][]
   /** Kampf auf diesem Feld (Encounter-id aus game/foes) */
   enc?: string
-  /** Story-Szene oder Ereignis (id aus game/story) */
+  /** Story-Szene (id aus game/story). Auf Sturm-Feldern: Schluessel des Zufallsereignisses (game/events). */
   story?: string
   /** Truhenart auf Truhenfeldern (Standard: Holz) */
   chest?: 'holz' | 'silber' | 'gold'
@@ -67,8 +67,8 @@ export interface Chapter {
 }
 
 export const CHAPTERS: Chapter[] = [
-  { n: 1, name: 'Die Krabbenküste', art: 'kap1', fields: CHAPTER_1, cap: 5, farm: ['moewen', 'krabbenbande'], outro: 'k1_ende' },
-  { n: 2, name: 'Das Nebelriff', art: 'kap2', fields: CHAPTER_2, cap: 10, farm: ['quallen', 'geistertrupp', 'geisterschiff'], outro: 'k2_ende' },
+  { n: 1, name: 'Die Krabbenküste', art: 'kap1', fields: CHAPTER_1, cap: 5, farm: ['moewen', 'riffbande', 'krabbenbande'], outro: 'k1_ende' },
+  { n: 2, name: 'Das Nebelriff', art: 'kap2', fields: CHAPTER_2, cap: 10, farm: ['quallen', 'tiefseetrupp', 'geistertrupp', 'geisterschiff'], outro: 'k2_ende' },
 ]
 
 export const chapterOf = (n: number | undefined): Chapter => CHAPTERS[Math.min(CHAPTERS.length, Math.max(1, n ?? 1)) - 1]

@@ -1,7 +1,7 @@
 // Balancing-Simulator: npm run sim
 // Spielt jeden Kampf viele Male mit allen Faehigkeits-Kombinationen und zeigt die beste.
 import { simulate, type AbilityId } from '../src/game/combat.ts'
-import { CREW, ENCOUNTERS, crewDefs, type CrewId, type CrewSetup } from '../src/game/foes.ts'
+import { CREW, ENCOUNTERS, crewDefs, seaMonster, strengthen, type CrewId, type CrewSetup } from '../src/game/foes.ts'
 import { crewStats } from '../src/game/progress.ts'
 
 const N = 600
@@ -33,7 +33,10 @@ function setups(crew: CrewId[]): [string, CrewSetup][] {
 }
 
 function run(encId: string, crew: CrewId[], level: number, gear: Gear) {
-  const base = ENCOUNTERS[encId]
+  // Seeungeheuer der Ereignisse: ungeheuer1, ungeheuer2. Schwerer Beutezug: Suffix :schwer
+  const [id, tier] = encId.split(':')
+  const raw = id.startsWith('ungeheuer') ? seaMonster(Number(id.slice(9))) : ENCOUNTERS[id]
+  const base = tier === 'schwer' ? strengthen(raw, 1.6) : raw
   // Zum Tunen: SIM_HP=1.5 SIM_ATK=1.3 skaliert alle Gegner
   const kh = Number(process.env.SIM_HP ?? 1)
   const ka = Number(process.env.SIM_ATK ?? 1)
@@ -91,10 +94,14 @@ const normal: [string, CrewId[], number, string][] = [
   ['moewen', C1, 2, 'k1'],
   ['krabbenbande', C1, 2, 'k1'],
   ['krabbenbande', C1, 3, 'k1'],
+  ['riffbande', C1b, 3, 'k1'],
+  ['riffbande', C1b, 4, 'k1'],
   ['quallen', C1b, 5, 'k2'],
   ['quallen', C1b, 6, 'k2'],
   ['geistertrupp', C1b, 6, 'k2'],
   ['geistertrupp', C1b, 7, 'k2'],
+  ['tiefseetrupp', C2, 7, 'k2'],
+  ['tiefseetrupp', C2, 8, 'k2'],
   ['geisterschiff', C2, 7, 'k2'],
   ['geisterschiff', C2, 8, 'k2'],
 ]
@@ -114,5 +121,15 @@ const farm: [string, CrewId[], number, string][] = [
   ['geistertrupp', C2, 10, 'k2'],
   ['geisterschiff', C2, 10, 'k2'],
 ]
-const list = process.env.SIM_NORMAL ? normal : process.env.SIM_BOSS ? boss : process.env.SIM_FARM ? farm : plan
-for (const [e, c, l, g] of list) if (!only || e === only) run(e, c, l, GEAR[g])
+// Zufallsereignis Seeungeheuer auf Hoechststufe, verglichen mit dem schweren Beutezug (SIM_EVENT=1)
+const event: [string, CrewId[], number, string][] = [
+  ['krabbenbande:schwer', C1b, 5, 'k1'],
+  ['riffbande:schwer', C1b, 5, 'k1'],
+  ['ungeheuer1', C1b, 5, 'k1'],
+  ['ungeheuer1', C1b, 5, 'k2'],
+  ['geistertrupp:schwer', C2, 10, 'k2'],
+  ['tiefseetrupp:schwer', C2, 10, 'k2'],
+  ['ungeheuer2', C2, 10, 'k2'],
+]
+const list = process.env.SIM_EVENT ? event : process.env.SIM_NORMAL ? normal : process.env.SIM_BOSS ? boss : process.env.SIM_FARM ? farm : plan
+for (const [e, c, l, g] of list) if (!only || e.startsWith(only)) run(e, c, l, GEAR[g])

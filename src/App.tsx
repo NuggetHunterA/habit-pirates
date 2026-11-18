@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ART } from './assets'
 import { useGame } from './game/store'
 import { chapterOf } from './game/map'
-import { ENCOUNTERS, crewName, farmEncounter, guardianEncounter, type CrewId, type CrewSetup } from './game/foes'
+import { ENCOUNTERS, crewName, farmEncounter, ghostShipEvent, guardianEncounter, seaMonster, type CrewId, type CrewSetup } from './game/foes'
 import { chestAt } from './game/loot'
 import { fighters } from './game/crewinfo'
 import { STORIES } from './game/story'
@@ -13,6 +13,8 @@ import { crewExtras } from './game/schools'
 import { blocked } from './game/store'
 import FightScene from './fight/FightScene'
 import StoryScene from './components/StoryScene'
+import EventScene, { type EventResult } from './components/EventScene'
+import { EVENT_AFTER_FARM, rollEvent, type RolledEvent } from './game/events'
 import type { FightRequest } from './components/MapPanel'
 import type { Item } from './game/types'
 import ProfilePick from './components/ProfilePick'
@@ -31,7 +33,12 @@ import { RULES, windAvailable } from './game/rules'
 
 type Left = 'woche' | 'tag'
 type Right = 'karte' | 'truhe'
-type Scene = { k: 'fight'; req: FightRequest; n: number } | { k: 'story'; id: string } | { k: 'reward'; r: PendingReward }
+type Scene =
+  | { k: 'fight'; req: FightRequest; n: number }
+  | { k: 'story'; id: string }
+  | { k: 'reward'; r: PendingReward }
+  /** Zufallsereignis. key: Story-id des Sturm-Felds */
+  | { k: 'event'; ev: RolledEvent; key: string | null; n: number }
 
 /** Aufgeklappt (Fold innen) ab dieser Breite: zwei Spalten */
 const WIDE = '(min-width: 680px)'
@@ -97,8 +104,40 @@ export default function App() {
   }
 
   /** Kampf zur Anfrage: Beutezug-Stufe, Truhenwaechter oder fester Kampf */
-  const encounterFor = (req: FightRequest) =>
-    req.guard ? guardianEncounter(chapter.n) : req.tier ? farmEncounter(req.enc, req.tier) : ENCOUNTERS[req.enc]
+  const encounterFor = (req: FightRequest) => {
+    if (req.guard) return guardianEncounter(chapter.n)
+    if (req.enc === 'ereignis_seeungeheuer') return seaMonster(chapter.n)
+    if (req.enc === 'ereignis_geisterschiff') return ghostShipEvent()
+    if (!req.tier) return ENCOUNTERS[req.enc]
+    const enc = farmEncounter(req.enc, req.tier)
+    // Hinweis aus der Flaschenpost: sicher ein Item, mindestens selten
+    if (!req.hint) return enc
+    const min = enc.reward.min === 'gewoehnlich' || !enc.reward.min ? 'selten' : enc.reward.min
+    return { ...enc, reward: { ...enc.reward, itemChance: 1, min } }
+  }
+
+  /** Szene oder, auf Sturm-Feldern, ein Zufallsereignis */
+  const openStory = (id: string) => {
+    const i = chapter.fields.findIndex((f) => f.kind === 'sturm' && f.story === id)
+    if (i < 0 || !save) return setScene({ k: 'story', id })
+    setScene({ k: 'event', ev: rollEvent(save, chapter.n, 'feld', chapter.fields[i].name, `${save.profile}|ereignis|${chapter.n}|${i}`), key: id, n: Date.now() })
+  }
+
+  /** Nach einem Beutezug: mit 25 % Chance ein Zufallsereignis */
+  const maybeEvent = () => {
+    if (!save || Math.random() >= EVENT_AFTER_FARM) return
+    const ev = rollEvent(save, chapter.n, 'beutezug', '')
+    window.setTimeout(() => setScene({ k: 'event', ev, key: null, n: Date.now() }), 350)
+  }
+
+  const endEvent = (sc: Extract<Scene, { k: 'event' }>, r: EventResult) => {
+    if (!game.finishEvent(sc.key, r)) return say('Dafür reicht das Gold nicht.')
+    setScene(null)
+    if (r.item) say(`${r.item.name} liegt jetzt im Laderaum!`)
+    else if (r.gold) say(`+${r.gold} Gold!`)
+    else if (r.wind) say(`+${r.wind} Wind von den Delfinen!`)
+    else if (r.hint) say('Hinweis gespeichert: Der nächste Beutezug bringt bessere Beute.')
+  }
 
   /** Mehr Gold aus Truhen (Goldene-Moewe-Set) */
   const chestGoldBonus = () => {
@@ -119,17 +158,24 @@ export default function App() {
       }
       return
     }
+    // Kampf aus einem Zufallsereignis: Niederlage kostet nichts
+    if (req.event && r && !r.sieg) {
+      say('Rückzug! Die Crew segelt davon. Es hat nichts gekostet.')
+      return
+    }
     // Beutezug verloren: der Wind ist weg, es gibt die halbe Erfahrung
     if (req.tier && r && !r.sieg) {
       const xp = Math.round(encounterFor(req).reward.xp / 2)
       game.gainXp(xp)
       say(`Verloren. Die Crew lernt trotzdem dazu: +${xp} Erfahrung.`)
+      maybeEvent()
       return
     }
     if (!r?.sieg) return
     game.winFight({ field: req.field, boss: req.boss, farm: req.farm, xp: r.xp, gold: r.gold, items: r.items })
     if (req.boss) window.setTimeout(() => setScene({ k: 'story', id: chapter.outro }), 250)
     else if (r.items.length) say(`${r.items[0].name} liegt jetzt im Laderaum!`)
+    if (req.tier) maybeEvent()
   }
 
   const endStory = (id: string, gold: number, items: Item[]) => {
@@ -260,6 +306,18 @@ export default function App() {
                     say(`+${gold} Gold und ${items.length} Items im Laderaum!`)
                   }}
                 />
+              ) : rightTab === 'karte' && scene?.k === 'event' ? (
+                <EventScene
+                  key={scene.n}
+                  ev={scene.ev}
+                  gold={save!.game.gold}
+                  onDone={(r) => endEvent(scene, r)}
+                  onFight={(enc) => {
+                    // Das Sturm-Feld ist erledigt, sobald die Crew sich entschieden hat
+                    game.finishEvent(scene.key, {})
+                    setScene({ k: 'fight', req: { enc, field: null, boss: false, farm: false, event: true }, n: Date.now() })
+                  }}
+                />
               ) : rightTab === 'karte' && scene?.k === 'story' ? (
                 <StoryScene key={scene.id} id={scene.id} chapter={chapter.n} onDone={(gold, items) => endStory(scene.id, gold, items)} />
               ) : rightTab === 'ausruestung' ? (
@@ -297,7 +355,7 @@ export default function App() {
                   onChest={() => setRight('truhe')}
                   onShop={() => setTab('laden')}
                   onFight={(req) => setScene({ k: 'fight', req, n: Date.now() })}
-                  onStory={(id) => setScene({ k: 'story', id })}
+                  onStory={openStory}
                 />
               )}
             </div>

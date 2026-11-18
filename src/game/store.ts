@@ -339,7 +339,33 @@ export function useGame() {
       /** Beutezug starten: kostet sofort Wind. false, wenn zu wenig da ist. */
       startFarm(): boolean {
         if (!save || windAvailable(save) < RULES.windPerField) return false
-        update((s) => ({ ...s, game: { ...s.game, windSpent: s.game.windSpent + RULES.windPerField } }))
+        // Der Hinweis aus der Flaschenpost gilt fuer genau diesen Beutezug
+        update((s) => ({ ...s, game: { ...s.game, windSpent: s.game.windSpent + RULES.windPerField, hint: false } }))
+        return true
+      },
+      /**
+       * Zufallsereignis abgeschlossen. key: Story-id des Sturm-Felds (zaehlt dann als erledigt).
+       * Gold, Wind, Hinweis oder ein gekauftes Item (price wird abgezogen).
+       */
+      finishEvent(key: string | null, r: { gold?: number; wind?: number; hint?: boolean; item?: Item; price?: number }): boolean {
+        if (!save) return false
+        if (r.price && save.game.gold < r.price) return false
+        update((s) => {
+          const g = s.game
+          const items = r.item ? [r.item] : []
+          return {
+            ...s,
+            game: {
+              ...g,
+              seen: key && !g.seen.includes(key) ? [...g.seen, key] : g.seen,
+              gold: g.gold + (r.gold ?? 0) - (r.price ?? 0),
+              windGift: g.windGift + (r.wind ?? 0),
+              hint: r.hint ? true : g.hint,
+              inventory: [...g.inventory, ...items],
+              found: withFound(g, items),
+            },
+          }
+        })
         return true
       },
       /** Niederlage beim Beutezug: der Wind ist weg, es gibt Erfahrung (halbe) */

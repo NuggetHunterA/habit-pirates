@@ -130,6 +130,12 @@ SPRITES = [
     ('crew-geheim/ausguck.png', 'figuren/ausguck', 400),
     ('jonte_c_neutral.png', 'figuren/jonte', 400),
     ('welt/krabbe.png', 'figuren/krabbenbandit', 300, (0.12, 0.62)),
+    # Phase 4: neue Gegner (verdeckt) und das Seeungeheuer aus den Ereignissen
+    ('gegner-geheim/seeigel.png', 'figuren/seeigel', 260, (0.12, 0.62)),
+    ('gegner-geheim/einsiedlerkrebs.png', 'figuren/einsiedlerkrebs', 260, (0.25, 0.55)),
+    ('gegner-geheim/nebelaal.png', 'figuren/nebelaal', 300, (0.0, 0.42)),
+    ('gegner-geheim/laternenfisch.png', 'figuren/laternenfisch', 220, (0.1, 0.7)),
+    ('gegner-geheim/seeungeheuer.png', 'figuren/seeungeheuer', 420, (0.05, 0.5)),
 ]
 for src, out, hgt, *por_opt in SPRITES:
     webp(freistellen(SRC / src, hgt), OUT / f'{out}.webp', 88)
@@ -152,3 +158,10 @@ for k, f in [(2, 'seekarte_kap2_nebelriff.png'), (3, 'seekarte_kap3_glutinseln.p
     m = Image.open(SRC / f'welt/{f}').convert('RGB')
     webp(m, OUT / f'seekarte_kap{k}.webp', 84)
 print('kapitel ok')
+
+# Phase 4: Bilder der Zufallsereignisse
+for name in ['flaschenpost', 'haendler_nebel', 'geisterschiff', 'seeungeheuer', 'delfine', 'treibgut']:
+    ev = Image.open(SRC / f'ereignisse/{name}.png').convert('RGB')
+    ev.thumbnail((960, 960), Image.LANCZOS)
+    webp(ev, OUT / f'ereignisse/{name}.webp', 80)
+print('ereignisse ok')
