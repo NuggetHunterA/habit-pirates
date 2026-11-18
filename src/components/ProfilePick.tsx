@@ -22,12 +22,12 @@ export default function ProfilePick({ onPick }: { onPick: (p: string) => void })
           />
         </svg>
         <motion.img
-          src={ART.schiff}
-          alt="Das Piratenschiff"
-          initial={{ x: -260 }}
-          animate={{ x: 0, y: [0, -8, 0], rotate: [-2, 2, -2] }}
-          transition={{ x: { type: 'spring', stiffness: 40, damping: 12 }, y: { repeat: Infinity, duration: 2.8 }, rotate: { repeat: Infinity, duration: 2.8 } }}
-          style={{ position: 'absolute', left: '50%', bottom: 26, width: 230, marginLeft: -115 }}
+          src={ART.logo}
+          alt="Habit Pirates"
+          initial={{ y: -40, opacity: 0, scale: 0.8 }}
+          animate={{ y: [0, -8, 0], opacity: 1, scale: 1 }}
+          transition={{ opacity: { duration: 0.4 }, scale: { type: 'spring', stiffness: 120, damping: 12 }, y: { repeat: Infinity, duration: 2.8, ease: 'easeInOut' } }}
+          style={{ position: 'absolute', left: '50%', top: 34, width: 190, height: 190, marginLeft: -95, borderRadius: '24%', boxShadow: '0 8px 0 rgba(11,18,54,.45)' }}
         />
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, padding: 24, textAlign: 'center' }}>
