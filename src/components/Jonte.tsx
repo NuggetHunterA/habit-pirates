@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react'
-import { JONTE_PARTS, JONTE_RIG } from '../assets'
+import ganz from '../assets/jonte/jonte_ganz.webp'
 
 /**
- * Kapitaen Jonte Rotrock aus 14 Einzelteilen, im Code animiert
- * (Atmen, Hut und Mantel schwingen nach, Jubeln mit Sprung).
- * Portierung des abgenommenen Bewegungstests.
+ * Kapitaen Jonte Rotrock als nahtlose Mesh-Animation (wie Live2D, nur kleiner):
+ * Ein einziges Bild liegt auf einem Gitter, das von "Knochen" sanft verbogen wird.
+ * Dadurch gibt es keine Naehte an Schultern oder Hueften.
+ * Leerlauf: Atmen, Wiegen, Kopf und Hut federn nach, Mantel weht, Saebelarm pendelt.
+ * Antippen oder trigger: Jubeln mit Sprung, Saebel hoch und Funken.
  */
 
 type Action = 'cheer'
@@ -15,98 +17,92 @@ interface Props {
   label?: string
 }
 
-// Sichtfenster im Rig-Raum (Rig ist auf halbe Groesse skaliert)
-const VIEW = { x: 30, y: -50, w: 470, h: 560 }
-const CX = 260
-const FY = 487
+// Bildmasse (jonte_ganz.webp) und Ankerpunkte darin
+const IMG_W = 782
+const IMG_H = 1087
+const FEET = { x: 400, y: 1080 }
+const WAIST = { x: 430, y: 510 }
+const NECK = { x: 430, y: 240 }
+const HAT = { x: 415, y: 115 }
+const COAT = { x: 330, y: 520 }
+const SHOULDER = { x: 515, y: 290 }
+const SWORD_TIP = { x: 765, y: 895 }
 
-type Pose = { rot: number; dx: number; dy: number; sx: number; sy: number }
-const ease = {
-  out: (t: number) => 1 - Math.pow(1 - t, 3),
-  inout: (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
-  back: (t: number) => {
-    const c = 1.9
-    return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2)
-  },
-  in: (t: number) => t * t * t,
+const COLS = 26
+const ROWS = 36
+
+type V2 = { x: number; y: number }
+const smooth = (e0: number, e1: number, v: number) => {
+  const t = Math.min(1, Math.max(0, (v - e0) / (e1 - e0)))
+  return t * t * (3 - 2 * t)
 }
-type EaseName = keyof typeof ease
-type Key = [number, number, EaseName?]
-function kf(t: number, keys: Key[]) {
-  if (t <= keys[0][0]) return keys[0][1]
-  for (let i = 1; i < keys.length; i++) {
-    const [t1, v1, e] = keys[i]
-    const [t0, v0] = keys[i - 1]
-    if (t <= t1) {
-      const u = (t - t0) / (t1 - t0)
-      return v0 + (v1 - v0) * ease[e ?? 'inout'](u)
+function segDist(p: V2, a: V2, b: V2) {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const t = Math.min(1, Math.max(0, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)))
+  return Math.hypot(p.x - (a.x + dx * t), p.y - (a.y + dy * t))
+}
+
+/** 2D-Affin-Matrix [a b c d e f]: x' = a x + c y + e, y' = b x + d y + f */
+type M = [number, number, number, number, number, number]
+const I: M = [1, 0, 0, 1, 0, 0]
+const mul = (m: M, n: M): M => [
+  m[0] * n[0] + m[2] * n[1],
+  m[1] * n[0] + m[3] * n[1],
+  m[0] * n[2] + m[2] * n[3],
+  m[1] * n[2] + m[3] * n[3],
+  m[0] * n[4] + m[2] * n[5] + m[4],
+  m[1] * n[4] + m[3] * n[5] + m[5],
+]
+/** Drehen/Skalieren um einen Punkt, dann verschieben */
+function around(p: V2, rot: number, sx = 1, sy = 1, dx = 0, dy = 0): M {
+  const c = Math.cos(rot)
+  const s = Math.sin(rot)
+  const a = c * sx
+  const b = s * sx
+  const cc = -s * sy
+  const d = c * sy
+  return [a, b, cc, d, p.x - a * p.x - cc * p.y + dx, p.y - b * p.x - d * p.y + dy]
+}
+
+const BONES = ['root', 'body', 'chest', 'head', 'hat', 'coat', 'arm'] as const
+type Bone = (typeof BONES)[number]
+
+/** Gewichte je Gitterpunkt: wie stark welcher Knochen ihn bewegt */
+function weightsFor(p: V2): number[] {
+  const w: Record<Bone, number> = { root: 1, body: 0, chest: 0, head: 0, hat: 0, coat: 0, arm: 0 }
+  const move = (from: Bone[], to: Bone, f: number) => {
+    for (const b of from) {
+      const m = w[b] * f
+      w[b] -= m
+      w[to] += m
     }
   }
-  return keys[keys.length - 1][1]
+  // Beine bleiben stehen, darueber bewegt sich der Koerper
+  move(['root'], 'body', smooth(880, 600, p.y))
+  // Oberkoerper ab der Taille
+  move(['body'], 'chest', smooth(560, 440, p.y))
+  // Kopf
+  move(['chest'], 'head', smooth(275, 215, p.y))
+  // Hut: oberhalb der Stirn
+  move(['head'], 'hat', smooth(140, 100, p.y))
+  // Mantelschoss links: weht im Wind
+  const coat = smooth(320, 200, p.x) * smooth(470, 560, p.y)
+  move(['root', 'body', 'chest'], 'coat', coat)
+  // Saebelarm mit Klinge
+  const dArm = Math.min(segDist(p, SHOULDER, { x: 572, y: 610 }) - 44, segDist(p, { x: 560, y: 590 }, SWORD_TIP) - 62)
+  move(['root', 'body', 'chest', 'coat'], 'arm', smooth(40, 0, dArm) * smooth(250, 330, p.y))
+  return BONES.map((b) => w[b])
 }
 
-/**
- * Gelenke weich machen: Glieder blenden am Drehpunkt sanft aus, damit sie in das Teil darunter
- * uebergehen statt mit harter Kante darauf zu liegen. Werte in Rig-Einheiten (r0: unsichtbar bis, r1: voll ab).
- */
-const FEATHER: Record<string, { r0: number; r1: number }> = {
-  oberarm_b: { r0: 4, r1: 22 },
-  oberarm_f: { r0: 4, r1: 22 },
-  unterarm_b: { r0: 2, r1: 14 },
-  unterarm_f: { r0: 2, r1: 12 },
-  unter_l: { r0: 3, r1: 16 },
-  unter_r: { r0: 3, r1: 16 },
-}
-/**
- * Unverblendete Kopie eines Glieds unter dem Teil, an dem es haengt. So scheint an der weichen
- * Kante nie der Hintergrund durch, sondern das Glied selbst.
- */
-const BACK_Z: Record<string, number> = {
-  oberarm_b: 4.9,
-  oberarm_f: 4.95,
-  unterarm_b: 5.45,
-  unterarm_f: 5.9,
-  unter_l: 2.9,
-  unter_r: 2.9,
-}
-
-/** Torso: Hosenbund unten weich auslaufen lassen (Anteil der Bildhoehe) */
-const TORSO_FADE = { from: 0.95, to: 1.0 }
-
-function soften(name: string, img: HTMLImageElement, feather: boolean): HTMLImageElement {
-  const c = document.createElement('canvas')
-  c.width = img.naturalWidth
-  c.height = img.naturalHeight
-  const x = c.getContext('2d', { willReadFrequently: true })!
-  x.drawImage(img, 0, 0)
-  const d = x.getImageData(0, 0, c.width, c.height)
-  const a = d.data
-  const r = JONTE_RIG[name]
-  const f = feather ? FEATHER[name] : undefined
-  const W = c.width
-  for (let p = 0, i = 3; i < a.length; i += 4, p++) {
-    // Kanten haerten gegen helle Naehte
-    let al = Math.min(255, Math.max(0, (a[i] - 40) * 1.6))
-    if (f && al) {
-      const px = (p % W) / 2
-      const py = Math.floor(p / W) / 2
-      const dist = Math.hypot(px - r.px, py - r.py)
-      const t = Math.min(1, Math.max(0, (dist - f.r0) / (f.r1 - f.r0)))
-      al *= t * t * (3 - 2 * t)
-    }
-    if (name === 'torso' && al) {
-      const v = Math.floor(p / W) / c.height
-      const t = 1 - Math.min(1, Math.max(0, (v - TORSO_FADE.from) / (TORSO_FADE.to - TORSO_FADE.from)))
-      al *= t
-    }
-    a[i] = al
-  }
-  x.putImageData(d, 0, 0)
-  return c as unknown as HTMLImageElement
-}
+const VS = `attribute vec2 a_pos; attribute vec2 a_uv; uniform vec2 u_view; varying vec2 v_uv;
+void main(){ vec2 c = a_pos / u_view * 2.0 - 1.0; gl_Position = vec4(c.x, -c.y, 0.0, 1.0); v_uv = a_uv; }`
+const FS = `precision mediump float; uniform sampler2D u_tex; varying vec2 v_uv;
+void main(){ gl_FragColor = texture2D(u_tex, v_uv); }`
 
 export default function Jonte({ trigger, className, label = 'Kapitän Jonte Rotrock' }: Props) {
-  const ref = useRef<HTMLCanvasElement>(null)
+  const glRef = useRef<HTMLCanvasElement>(null)
+  const fxRef = useRef<HTMLCanvasElement>(null)
   const actRef = useRef<{ kind: Action; t: number } | null>(null)
 
   useEffect(() => {
@@ -114,158 +110,217 @@ export default function Jonte({ trigger, className, label = 'Kapitän Jonte Rotr
   }, [trigger])
 
   useEffect(() => {
-    const cv = ref.current!
-    const ctx = cv.getContext('2d')!
-    const imgs: Record<string, HTMLImageElement> = {}
-    const raw: Record<string, HTMLImageElement> = {}
-    let alive = true
-    let loaded = 0
-    const names = Object.keys(JONTE_RIG)
+    const cv = glRef.current!
+    const fx = fxRef.current!
+    const ctx = fx.getContext('2d')!
+    const gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true, antialias: true })
+    if (!gl) return
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
-    for (const n of names) {
-      const i = new Image()
-      i.onload = () => {
-        loaded++
-      }
-      i.src = JONTE_PARTS[JONTE_RIG[n].img]
-      imgs[n] = i
-      i.decode?.()
-        .then(() => {
-          raw[n] = soften(n, i, false)
-          imgs[n] = soften(n, i, true)
-        })
-        .catch(() => {})
-    }
-    const P: Record<string, Pose> = {}
-    for (const k of names) P[k] = { rot: 0, dx: 0, dy: 0, sx: 1, sy: 1 }
-    const root: Pose = { rot: 0, dx: 0, dy: 0, sx: 1, sy: 1 }
-    const spr = { hat: { v: 0, x: 0 }, coat: { v: 0, x: 0 }, head: { v: 0, x: 0 } }
-    const spring = (s: { v: number; x: number }, target: number, k: number, d: number, dt: number) => {
-      s.v += (k * (target - s.x) - d * s.v) * dt
-      s.x += s.v * dt
-      return s.x
-    }
-    type Particle = { x: number; y: number; vx: number; vy: number; life: number; r: number; c: string; g: number }
-    let particles: Particle[] = []
-    let spawned: Record<string, boolean> = {}
-    const burst = (x: number, y: number, n: number, cols: string[], sp: number, g = 300) => {
-      for (let i = 0; i < n; i++) {
-        const a = Math.random() * Math.PI * 2
-        const s = sp * (0.4 + Math.random() * 0.8)
-        particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.4 + Math.random() * 0.4, r: 2 + Math.random() * 3, c: cols[i % cols.length], g })
-      }
-    }
 
-    let time = 0
-    let last = 0
-    let raf = 0
+    // ---------- Gitter ----------
+    const rest: V2[] = []
+    const uv: number[] = []
+    const W: number[][] = []
+    for (let r = 0; r <= ROWS; r++)
+      for (let c = 0; c <= COLS; c++) {
+        const p = { x: (c / COLS) * IMG_W, y: (r / ROWS) * IMG_H }
+        rest.push(p)
+        uv.push(c / COLS, r / ROWS)
+        W.push(weightsFor(p))
+      }
+    const idx: number[] = []
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++) {
+        const i = r * (COLS + 1) + c
+        idx.push(i, i + 1, i + COLS + 1, i + 1, i + COLS + 2, i + COLS + 1)
+      }
+    const pos = new Float32Array(rest.length * 2)
 
+    // ---------- WebGL ----------
+    const sh = (type: number, src: string) => {
+      const s = gl.createShader(type)!
+      gl.shaderSource(s, src)
+      gl.compileShader(s)
+      return s
+    }
+    const prog = gl.createProgram()!
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS))
+    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS))
+    gl.linkProgram(prog)
+    gl.useProgram(prog)
+    const posBuf = gl.createBuffer()
+    const uvBuf = gl.createBuffer()
+    gl.bindBuffer(gl.ARRAY_BUFFER, uvBuf)
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uv), gl.STATIC_DRAW)
+    const aUv = gl.getAttribLocation(prog, 'a_uv')
+    gl.enableVertexAttribArray(aUv)
+    gl.vertexAttribPointer(aUv, 2, gl.FLOAT, false, 0, 0)
+    const aPos = gl.getAttribLocation(prog, 'a_pos')
+    gl.enableVertexAttribArray(aPos)
+    const ib = gl.createBuffer()
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW)
+    const uView = gl.getUniformLocation(prog, 'u_view')
+    gl.enable(gl.BLEND)
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+
+    let ready = false
+    const tex = gl.createTexture()
+    const img = new Image()
+    img.onload = () => {
+      gl.bindTexture(gl.TEXTURE_2D, tex)
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+      ready = true
+    }
+    img.src = ganz
+
+    // ---------- Groesse ----------
+    let view = { s: 1, ox: 0, oy: 0 }
     const resize = () => {
       const r = cv.getBoundingClientRect()
       const dpr = Math.min(2.5, window.devicePixelRatio || 1)
-      cv.width = Math.max(1, Math.round(r.width * dpr))
-      cv.height = Math.max(1, Math.round(r.height * dpr))
+      const w = Math.max(1, Math.round(r.width * dpr))
+      const h = Math.max(1, Math.round(r.height * dpr))
+      cv.width = fx.width = w
+      cv.height = fx.height = h
+      // Platz nach oben fuer Sprung und Saebel lassen
+      const s = Math.min(w / (IMG_W * 1.02), h / (IMG_H * 1.1))
+      view = { s, ox: (w - IMG_W * s) / 2, oy: h - IMG_H * s - h * 0.01 }
+      gl.viewport(0, 0, w, h)
     }
     resize()
     const ro = new ResizeObserver(resize)
     ro.observe(cv)
 
-    const mat = (k: string): DOMMatrix => {
-      const r = JONTE_RIG[k]
-      const p = P[k]
-      const px = r.x + r.px
-      const py = r.y + r.py
-      const M = r.parent ? mat(r.parent) : rootM()
-      return M.translate(px + p.dx, py + p.dy).rotate(p.rot * 57.2958).scale(p.sx, p.sy).translate(-px, -py)
+    // ---------- Federn und Partikel ----------
+    const spr = { hat: { v: 0, x: 0 }, head: { v: 0, x: 0 }, coat: { v: 0, x: 0 }, arm: { v: 0, x: 0 } }
+    const spring = (s: { v: number; x: number }, target: number, k: number, d: number, dt: number) => {
+      s.v += (k * (target - s.x) - d * s.v) * dt
+      s.x += s.v * dt
+      return s.x
     }
-    const rootM = () =>
-      new DOMMatrix().translate(CX + root.dx, FY + root.dy).rotate(root.rot * 57.2958).scale(root.sx, root.sy).translate(-CX, -FY)
+    type Particle = { x: number; y: number; vx: number; vy: number; life: number; r: number; c: string }
+    let particles: Particle[] = []
+    let sparked = false
+    const burst = (x: number, y: number) => {
+      for (let i = 0; i < 22; i++) {
+        const a = Math.random() * Math.PI * 2
+        const sp = 220 * (0.4 + Math.random() * 0.8)
+        particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 80, life: 0.5 + Math.random() * 0.4, r: 4 + Math.random() * 6, c: ['#fff3b0', '#ffe27a', '#ffffff', '#7ee0ff'][i % 4] })
+      }
+    }
+
+    let time = 0
+    let last = 0
+    let lastJump = 0
+    let raf = 0
+    let alive = true
+    const tf: Record<Bone, M> = { root: I, body: I, chest: I, head: I, hat: I, coat: I, arm: I }
 
     const update = (dt: number) => {
-      for (const k of names) Object.assign(P[k], { rot: 0, dx: 0, dy: 0, sx: 1, sy: 1 })
-      Object.assign(root, { rot: 0, dx: 0, dy: 0, sx: 1, sy: 1 })
       const m = reduce ? 0.3 : 1
-      const b = Math.sin(time * 2.2)
-      P.torso.sy = 1 + 0.018 * b * m
-      P.torso.sx = 1 - 0.008 * b * m
-      P.kopf.dy = -1.5 * b * m
-      P.kopf.rot = 0.025 * Math.sin(time * 1.1) * m
-      P.oberarm_b.rot = 0.05 * Math.sin(time * 2.2 + 0.6) * m
-      P.oberarm_f.rot = -0.04 * Math.sin(time * 2.2 + 0.4) * m
-      P.unterarm_b.rot = 0.06 * Math.sin(time * 2.2 + 1.0) * m
-      P.unterarm_f.rot = -0.05 * Math.sin(time * 2.2 + 0.9) * m
-      P.oberarm_b.dy = -1 * b * m
-      P.oberarm_f.dy = -1 * b * m
-      let bodyAcc = 0
+      const b = Math.sin(time * 2.1)
+      let jump = 0
+      let squash = 1
+      let armUp = 0
+      let lean = 0
       const act = actRef.current
       if (act && !reduce) {
         act.t += dt
         const t = act.t
-        const jump = kf(t, [[0, 0], [0.18, 0], [0.55, -38, 'out'], [0.9, 0, 'in'], [1.4, 0]])
-        root.dy = jump
-        const sq = kf(t, [[0, 1], [0.18, 0.86, 'out'], [0.3, 1.12, 'out'], [0.7, 1.02], [0.9, 1.0], [0.98, 0.88, 'out'], [1.2, 1.03, 'out'], [1.4, 1]])
-        root.sy = sq
-        root.sx = 1 / Math.sqrt(sq)
-        P.oberarm_f.rot = kf(t, [[0, 0], [0.2, 0.25], [0.5, -2.3, 'back'], [1.0, -2.2], [1.4, 0, 'inout']])
-        P.unterarm_f.rot = kf(t, [[0, 0], [0.5, -0.3, 'back'], [1.0, -0.2], [1.4, 0, 'inout']])
-        // Klinge zeigt beim Hochreissen nach oben statt hinter den Kopf
-        P.saebel.rot = kf(t, [[0, 0], [0.2, 0.1], [0.5, 2.45, 'back'], [1.0, 2.35], [1.4, 0, 'inout']])
-        P.unter_l.rot = kf(t, [[0, 0], [0.18, 0.35, 'out'], [0.3, 0], [0.45, 0.5], [0.9, 0.1], [0.98, 0.4, 'out'], [1.3, 0]])
-        P.unter_r.rot = kf(t, [[0, 0], [0.18, -0.3, 'out'], [0.3, 0], [0.45, -0.2], [0.9, 0], [0.98, -0.3, 'out'], [1.3, 0]])
-        P.oberarm_b.rot += kf(t, [[0, 0], [0.2, -0.1], [0.5, 0.7, 'back'], [1.0, 0.6], [1.4, 0, 'inout']])
-        P.unterarm_b.rot += kf(t, [[0, 0], [0.5, 0.6, 'back'], [1.0, 0.5], [1.4, 0, 'inout']])
-        P.hut.dy = kf(t, [[0, 0], [0.3, 0], [0.62, -21, 'out'], [0.95, 0, 'in'], [1.4, 0]])
-        P.hut.rot = kf(t, [[0, 0], [0.3, 0], [0.62, -0.35, 'out'], [0.95, 0.05, 'in'], [1.2, 0]])
-        P.ober_l.rot = kf(t, [[0, 0], [0.45, -0.35], [0.85, 0], [1.4, 0]])
-        P.ober_r.rot = kf(t, [[0, 0], [0.45, 0.25], [0.85, 0], [1.4, 0]])
-        if (t >= 0.5 && !spawned.st) {
-          spawned.st = true
-          burst(CX + 150, 40, 18, ['#fff3b0', '#ffe27a', '#ffffff'], 160)
+        const k = (keys: [number, number][]) => {
+          if (t <= keys[0][0]) return keys[0][1]
+          for (let i = 1; i < keys.length; i++) {
+            if (t <= keys[i][0]) {
+              const u = (t - keys[i - 1][0]) / (keys[i][0] - keys[i - 1][0])
+              const e = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2
+              return keys[i - 1][1] + (keys[i][1] - keys[i - 1][1]) * e
+            }
+          }
+          return keys[keys.length - 1][1]
         }
-        bodyAcc = -jump * 0.5
+        squash = k([[0, 1], [0.16, 0.9], [0.32, 1.06], [0.7, 1.0], [0.86, 0.93], [1.05, 1.02], [1.25, 1]])
+        jump = k([[0, 0], [0.16, 0], [0.5, -70], [0.86, 0], [1.3, 0]])
+        armUp = k([[0, 0], [0.14, 0.05], [0.45, -0.2], [0.95, -0.17], [1.35, 0]])
+        lean = k([[0, 0], [0.16, 0.04], [0.5, -0.03], [0.9, 0], [1.3, 0]])
+        if (t > 0.48 && !sparked) {
+          sparked = true
+          const tip = apply(tf.arm, SWORD_TIP)
+          burst(tip.x, tip.y)
+        }
         if (t >= 1.4) {
           actRef.current = null
-          spawned = {}
+          sparked = false
         }
       }
-      const drive = Math.max(-0.25, Math.min(0.25, bodyAcc * 0.004)) + 0.02 * Math.sin(time * 2.2 - 0.8) * m
-      P.hut.rot += spring(spr.hat, -drive * 1.4 + P.kopf.rot * -0.6, 120, 9, dt)
-      P.mantel_r.rot = spring(spr.coat, -drive * 0.9 + 0.05 * Math.sin(time * 1.7) * m, 60, 5, dt)
-      P.mantel_l.rot = -P.mantel_r.rot * 0.8 + 0.04 * Math.sin(time * 1.9 + 1) * m
-      P.kopf.rot += spring(spr.head, drive * 0.6, 90, 8, dt)
+      const vel = (jump - lastJump) / Math.max(dt, 0.001) / 60
+      lastJump = jump
+      const swayRot = 0.012 * Math.sin(time * 0.9) * m + lean
+      // Wurzel: Sprung und Stauchen an den Fuessen
+      tf.root = around(FEET, 0, 1 / Math.sqrt(squash), squash, 0, jump)
+      // Koerper wiegt um die Fuesse
+      tf.body = mul(tf.root, around(FEET, swayRot))
+      // Brust atmet (Hoehe) um die Taille
+      tf.chest = mul(tf.body, around(WAIST, 0.008 * Math.sin(time * 1.3) * m, 1 - 0.006 * b * m, 1 + 0.014 * b * m))
+      // Kopf: leichtes Nicken und Nachfedern
+      const headRot = 0.03 * Math.sin(time * 1.1 + 0.5) * m + spring(spr.head, -swayRot * 1.5 + vel * 0.004, 70, 7, dt)
+      tf.head = mul(tf.chest, around(NECK, headRot, 1, 1, 0, -2.5 * b * m))
+      // Hut federt nach, hebt beim Sprung kurz ab
+      const hatRot = spring(spr.hat, -headRot * 0.8 + vel * 0.012, 90, 6, dt)
+      tf.hat = mul(tf.head, around(HAT, hatRot, 1, 1, 0, Math.min(0, vel * 0.9)))
+      // Mantelschoss weht im Wind
+      const wind = 0.05 * Math.sin(time * 1.7) + 0.025 * Math.sin(time * 3.1 + 1)
+      const coatRot = spring(spr.coat, wind * m + vel * 0.006, 40, 4, dt)
+      tf.coat = mul(tf.body, around(COAT, coatRot, 1 + 0.02 * Math.sin(time * 1.7 + 0.4) * m, 1))
+      // Saebelarm pendelt, beim Jubeln hoch
+      const armRot = spring(spr.arm, armUp + 0.03 * Math.sin(time * 2.1 + 0.8) * m, 120, 13, dt)
+      tf.arm = mul(tf.chest, around(SHOULDER, armRot))
+
       particles = particles.filter((p) => (p.life -= dt) > 0)
       for (const p of particles) {
-        p.vy += p.g * dt
+        p.vy += 420 * dt
         p.x += p.vx * dt
         p.y += p.vy * dt
       }
     }
 
-    const order = [...names.map((k) => ({ k, z: JONTE_RIG[k].z, back: false })), ...Object.entries(BACK_Z).map(([k, z]) => ({ k, z, back: true }))].sort(
-      (a, b) => a.z - b.z,
-    )
+    const apply = (m: M, p: V2): V2 => ({ x: m[0] * p.x + m[2] * p.y + m[4], y: m[1] * p.x + m[3] * p.y + m[5] })
+
     const draw = () => {
-      ctx.setTransform(1, 0, 0, 1, 0, 0)
-      ctx.clearRect(0, 0, cv.width, cv.height)
-      if (loaded < names.length) return
-      const s = Math.min(cv.width / VIEW.w, cv.height / VIEW.h)
-      const ox = (cv.width - VIEW.w * s) / 2 - VIEW.x * s
-      const oy = cv.height - (VIEW.y + VIEW.h) * s
-      const V = new DOMMatrix().translate(ox, oy).scale(s)
-      ctx.setTransform(V)
-      const sh = 1 - Math.min(0.5, -root.dy / 120)
-      ctx.fillStyle = 'rgba(0,0,0,0.28)'
-      ctx.beginPath()
-      ctx.ellipse(CX + root.dx, FY + 2, 75 * sh, 10 * sh, 0, 0, Math.PI * 2)
-      ctx.fill()
-      for (const { k, back } of order) {
-        ctx.setTransform(V.multiply(mat(k)))
-        const r = JONTE_RIG[k]
-        const im = back ? raw[k] ?? imgs[k] : imgs[k]
-        // Bilder liegen in doppelter Aufloesung vor, das Rig in halber
-        ctx.drawImage(im, r.x, r.y, im.width / 2, im.height / 2)
+      if (!ready) return
+      const mats = BONES.map((b) => tf[b])
+      for (let i = 0; i < rest.length; i++) {
+        const p = rest[i]
+        const w = W[i]
+        let x = 0
+        let y = 0
+        for (let j = 0; j < mats.length; j++) {
+          const wj = w[j]
+          if (!wj) continue
+          const m = mats[j]
+          x += wj * (m[0] * p.x + m[2] * p.y + m[4])
+          y += wj * (m[1] * p.x + m[3] * p.y + m[5])
+        }
+        pos[i * 2] = view.ox + x * view.s
+        pos[i * 2 + 1] = view.oy + y * view.s
       }
-      ctx.setTransform(V)
+      gl.clearColor(0, 0, 0, 0)
+      gl.clear(gl.COLOR_BUFFER_BIT)
+      gl.uniform2f(uView, cv.width, cv.height)
+      gl.bindBuffer(gl.ARRAY_BUFFER, posBuf)
+      gl.bufferData(gl.ARRAY_BUFFER, pos, gl.DYNAMIC_DRAW)
+      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0)
+      gl.drawElements(gl.TRIANGLES, idx.length, gl.UNSIGNED_SHORT, 0)
+
+      // Schatten und Funken
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.clearRect(0, 0, fx.width, fx.height)
+      ctx.setTransform(view.s, 0, 0, view.s, view.ox, view.oy)
       for (const p of particles) {
         ctx.globalAlpha = Math.min(1, p.life / 0.3)
         ctx.fillStyle = p.c
@@ -290,17 +345,20 @@ export default function Jonte({ trigger, className, label = 'Kapitän Jonte Rotr
       alive = false
       cancelAnimationFrame(raf)
       ro.disconnect()
+      gl.getExtension('WEBGL_lose_context')?.loseContext()
     }
   }, [])
 
   return (
-    <canvas
-      ref={ref}
-      className={className}
-      role="img"
-      aria-label={label}
-      onClick={() => (actRef.current = { kind: 'cheer', t: 0 })}
-      style={{ display: 'block', width: '100%', height: '100%', touchAction: 'manipulation' }}
-    />
+    <div className={className} style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <canvas
+        ref={glRef}
+        role="img"
+        aria-label={label}
+        onClick={() => (actRef.current = { kind: 'cheer', t: 0 })}
+        style={{ position: 'absolute', inset: 0, display: 'block', width: '100%', height: '100%', touchAction: 'manipulation' }}
+      />
+      <canvas ref={fxRef} aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />
+    </div>
   )
 }
