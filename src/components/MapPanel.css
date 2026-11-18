@@ -42,3 +42,104 @@
 .btn-gold--off {
   filter: grayscale(0.8) brightness(0.85);
 }
+
+/* Feld-Panel unten auf der Karte: eingeklappt nur eine Zeile */
+.map-card {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 4px 12px 12px;
+  border-radius: 18px;
+  border-width: 3px;
+  box-shadow: 0 6px 0 var(--wood-2), 0 10px 24px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.map-card--collapsed {
+  padding: 4px 10px 10px;
+  gap: 4px;
+}
+
+.map-card__handle {
+  align-self: stretch;
+  height: 18px;
+  border: none;
+  background: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+
+.map-card__handle span {
+  width: 44px;
+  height: 5px;
+  border-radius: 99px;
+  background: var(--wood-3);
+}
+
+.map-card__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.map-card__portrait {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 2px solid var(--wood-3);
+  flex: none;
+  background: linear-gradient(#3b5bdb, #16206b);
+}
+
+.map-card--collapsed .map-card__portrait {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+}
+
+.map-card__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-card__kicker {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.map-card__title {
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.map-card--collapsed .map-card__kicker {
+  font-size: 10px;
+}
+
+.map-card--collapsed .map-card__title {
+  font-size: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.map-card__btn {
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 16px;
+}

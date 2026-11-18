@@ -25,6 +25,8 @@ export interface DayLog {
 
 export type Rarity = 'gewoehnlich' | 'selten' | 'episch' | 'legendaer'
 export type Slot = 'waffe' | 'hut' | 'kleidung' | 'talisman' | 'schiff'
+/** Plaetze, die jeder Pirat selbst hat */
+export type PirateSlot = Exclude<Slot, 'schiff'>
 
 /** Kampfwerte. krit und ausweichen in Prozent. */
 export interface Stats {
@@ -56,8 +58,14 @@ export interface GameState {
   field: number
   looted: number[]
   inventory: Item[]
-  /** Angelegte Ausruestung: Slot -> Item-uid */
-  equipped: Partial<Record<Slot, string>>
+  /** Alt (bis Phase 1): Ausruestung nur fuer Jonte, Slot -> Item-uid. Wird beim Laden nach gear/ship uebernommen. */
+  equipped?: Partial<Record<Slot, string>>
+  /** Angelegte Ausruestung je Pirat (Crew-id -> Slot -> Item-uid). Das Schiffsteil liegt in ship. */
+  gear: Record<string, Partial<Record<PirateSlot, string>>>
+  /** Angelegtes Schiffsteil (gilt fuer die ganze Crew) */
+  ship?: string
+  /** Schluessel aller Items, die schon einmal gefunden wurden (Sammelbuch) */
+  found: string[]
   /** Heute im Laden gekaufte Angebote */
   shop: { day: string; bought: string[] }
   /** Aktuelles Kapitel (1, 2, ...) */

@@ -180,16 +180,18 @@
 }
 
 .seamap__recenter {
+  /* Runder Kompass-Knopf unten rechts, immer ueber dem Feld-Panel (--map-panel-h setzt MapPanel) */
   position: absolute;
-  right: 12px;
-  top: 12px;
+  right: 14px;
+  bottom: calc(var(--map-panel-h, 80px) + 26px + env(safe-area-inset-bottom, 0px));
   z-index: 5;
-  min-height: 44px;
-  padding: 0 14px 0 10px;
+  width: 54px;
+  height: 54px;
+  padding: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
-  border-radius: 22px;
+  justify-content: center;
+  border-radius: 50%;
   border: 2px solid var(--brass);
   background: linear-gradient(var(--wood-2), var(--wood-0));
   color: var(--gold-text);

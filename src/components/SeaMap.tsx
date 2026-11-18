@@ -423,13 +423,12 @@ export default function SeaMap({ chapter, field, done: doneFields, mini = false,
         </div>
       </div>
       {!mini && free && (
-        <button type="button" className="seamap__recenter" onClick={recenter}>
-          <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+        <button type="button" className="seamap__recenter" onClick={recenter} aria-label="Zum Schiff" title="Zum Schiff">
+          <svg width="28" height="28" viewBox="0 0 20 20" aria-hidden="true">
             <circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" strokeWidth="2.4" />
             <circle cx="10" cy="10" r="2" fill="currentColor" />
             <path d="M10 1v3M10 16v3M1 10h3M16 10h3" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
           </svg>
-          Zum Schiff
         </button>
       )}
     </div>

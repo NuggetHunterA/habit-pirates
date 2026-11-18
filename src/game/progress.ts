@@ -33,14 +33,14 @@ const add = (a: FighterStats, b: Bonus): FighterStats => {
 }
 
 /**
- * Kampfwerte der ganzen Crew: Stufe fuer alle, Ausruestung fuer Jonte,
+ * Kampfwerte der ganzen Crew: Stufe fuer alle, eigene Ausruestung je Pirat,
  * das Schiffsteil fuer alle.
  */
-export function crewStats(level: number, jonteGear: Bonus, shipGear: Bonus): Record<CrewId, FighterStats> {
+export function crewStats(level: number, gear: Partial<Record<string, Bonus>>, shipGear: Bonus): Record<CrewId, FighterStats> {
   const out = {} as Record<CrewId, FighterStats>
   for (const id of Object.keys(CREW) as CrewId[]) {
     const base = lvl(CREW[id].stats, level)
-    out[id] = add(add(base, shipGear), id === 'jonte' ? jonteGear : {})
+    out[id] = add(add(base, shipGear), gear[id] ?? {})
   }
   return out
 }

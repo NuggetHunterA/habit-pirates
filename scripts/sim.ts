@@ -35,7 +35,7 @@ function run(encId: string, crew: CrewId[], level: number, gear: Gear) {
   const kh = Number(process.env.SIM_HP ?? 1)
   const ka = Number(process.env.SIM_ATK ?? 1)
   const enc = { ...base, foes: base.foes.map((f) => ({ ...f, stats: { ...f.stats, leben: Math.round(f.stats.leben * kh), angriff: f.stats.angriff * ka } })) }
-  const stats = crewStats(level, gear.jonte, gear.ship)
+  const stats = crewStats(level, { jonte: gear.jonte }, gear.ship)
   const res: { name: string; auto: number; smart: number; hp: number }[] = []
   for (const [name, s] of setups(crew)) {
     let a = 0
