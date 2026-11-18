@@ -32,6 +32,8 @@ export const FIGURES: Record<Look, Figure> = {
   kanonier: {
     refH: 400,
     spec: {
+      // Donnerbuechse zeigt im Bild nach rechts
+      facesRight: true,
       shoot: true,
       feet: p(130, 395),
       knee: 320,
