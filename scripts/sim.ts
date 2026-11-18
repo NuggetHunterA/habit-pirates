@@ -14,6 +14,9 @@ const GEAR: Record<string, Gear> = {
   episch: { name: 'episch', jonte: { angriff: 14, ruestung: 10, tempo: 4, leben: 8, krit: 12 }, ship: { leben: 20, ruestung: 4 } },
   // Passende Ausruestung fuer alle Piraten (Phase 3): Kapitel 1 gewoehnlich, Kapitel 2 seltene Teile aus Kapitel 1
   k1: { name: 'k1 alle', jonte: { angriff: 4, ruestung: 3, leben: 8, krit: 3 }, ship: { tempo: 1 }, all: true },
+  k3: { name: 'k3 alle', jonte: { angriff: 12, krit: 8, ruestung: 16, tempo: 6, leben: 55, ausweichen: 6 }, ship: { angriff: 7, krit: 5 }, all: true },
+  // Ende Kapitel 3: epische Teile aus Kapitel 3 fuer alle
+  k3e: { name: 'k3 episch', jonte: { angriff: 20, krit: 12, ruestung: 22, tempo: 8, leben: 85, ausweichen: 8 }, ship: { angriff: 10, krit: 6, leben: 30 }, all: true },
   k2: { name: 'k2 alle', jonte: { angriff: 7, krit: 5, ruestung: 10, tempo: 4, leben: 28, ausweichen: 4 }, ship: { angriff: 4, krit: 3 }, all: true },
 }
 
@@ -66,6 +69,7 @@ function run(encId: string, crew: CrewId[], level: number, gear: Gear) {
 const C1: CrewId[] = ['jonte', 'kanonier']
 const C1b: CrewId[] = ['jonte', 'kanonier', 'navigatorin']
 const C2: CrewId[] = ['jonte', 'kanonier', 'navigatorin', 'smutje']
+const C3: CrewId[] = ['jonte', 'kanonier', 'navigatorin', 'ausguck']
 
 const only = process.argv[2]
 const plan: [string, CrewId[], number, string][] = [
@@ -131,5 +135,22 @@ const event: [string, CrewId[], number, string][] = [
   ['tiefseetrupp:schwer', C2, 10, 'k2'],
   ['ungeheuer2', C2, 10, 'k2'],
 ]
-const list = process.env.SIM_EVENT ? event : process.env.SIM_NORMAL ? normal : process.env.SIM_BOSS ? boss : process.env.SIM_FARM ? farm : plan
+// Kapitel 3 (SIM_K3=1): normale Kaempfe beim Einstieg, Boss auf Stufe 13 bis 15, Beutezug schwer
+const k3: [string, CrewId[], number, string][] = [
+  ['glutkrabben', C2, 10, 'k2'],
+  ['glutkrabben', C2, 11, 'k2'],
+  ['glutkrabben', C3, 11, 'k3'],
+  ['funkenschwarm', C3, 11, 'k3'],
+  ['schneckenfeld', C3, 11, 'k3'],
+  ['aschetrupp', C3, 12, 'k3'],
+  ['obsidianwache', C3, 12, 'k3'],
+  ['obsidianwache', C3, 13, 'k3'],
+  ['zunder', C3, 13, 'k3'],
+  ['zunder', C3, 15, 'k3'],
+  ['zunder', C3, 15, 'k3e'],
+  ['glutkrabben:schwer', C3, 15, 'k3e'],
+  ['aschetrupp:schwer', C3, 15, 'k3e'],
+  ['ungeheuer3', C3, 15, 'k3e'],
+]
+const list = process.env.SIM_K3 ? k3 : process.env.SIM_EVENT ? event : process.env.SIM_NORMAL ? normal : process.env.SIM_BOSS ? boss : process.env.SIM_FARM ? farm : plan
 for (const [e, c, l, g] of list) if (!only || e.startsWith(only)) run(e, c, l, GEAR[g])

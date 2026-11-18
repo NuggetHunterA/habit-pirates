@@ -16,7 +16,7 @@ interface Props {
 }
 
 /** Figuren, deren Bild nach links schaut (werden links gespiegelt, damit sich alle ansehen) */
-const FACES_LEFT: string[] = ['kanonier', 'navigatorin', 'smutje', 'ausguck', 'schalbart', 'grauhand']
+const FACES_LEFT: string[] = ['kanonier', 'navigatorin', 'smutje', 'ausguck', 'schalbart', 'grauhand', 'zunder']
 
 type Step = { k: 'line'; i: number } | { k: 'choice' } | { k: 'outcome'; o: number } | { k: 'join' } | { k: 'reward' }
 
@@ -74,7 +74,7 @@ export default function StoryScene({ id, chapter = 1, onDone }: Props) {
               key={look}
               src={figure(look)}
               alt={SPEAKERS[look] ?? look}
-              className={`story__fig story__fig--${i ? 'r' : 'l'} ${look === 'schalbart' || look === 'grauhand' ? 'story__fig--big' : ''} ${speaker === look ? 'is-talking' : speaker && speaker !== 'erzaehler' ? 'is-quiet' : ''}`}
+              className={`story__fig story__fig--${i ? 'r' : 'l'} ${look === 'schalbart' || look === 'grauhand' || look === 'zunder' ? 'story__fig--big' : ''} ${speaker === look ? 'is-talking' : speaker && speaker !== 'erzaehler' ? 'is-quiet' : ''}`}
               style={{ scaleX: FACES_LEFT.includes(look) === (i === 0) ? -1 : 1 }}
               initial={{ x: i ? 80 : -80, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}

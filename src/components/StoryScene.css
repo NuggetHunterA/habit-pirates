@@ -276,3 +276,7 @@
   padding: 1px 6px;
   border-radius: 6px;
 }
+
+.story__shade--glut {
+  background: linear-gradient(rgba(40, 12, 6, 0.4), rgba(40, 12, 6, 0.05) 30%, rgba(40, 12, 6, 0.05) 55%, rgba(30, 8, 4, 0.8));
+}
