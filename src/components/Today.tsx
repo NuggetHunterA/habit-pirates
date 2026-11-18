@@ -29,7 +29,7 @@ export default function Today({ game, wide, onMap, onWeek, onAddHabit }: Props) 
       {!wide && (
         <div style={{ position: 'relative', height: 190, borderRadius: 18, border: '3px solid var(--brass)', overflow: 'hidden', boxShadow: '0 6px 0 #062631', flex: 'none' }}>
           <SeaMap field={ship} looted={save.game.looted} mini />
-          <div style={{ position: 'absolute', left: 10, top: 10, padding: '4px 10px', borderRadius: 10, background: 'rgba(42,25,13,0.88)', color: 'var(--gold-text)', fontSize: 12, fontWeight: 800 }}>
+          <div className="minimap-label">
             Feld {ship + 1} von {CHAPTER_1.length} · nächstes: {next.name}
           </div>
           <button type="button" className="btn-gold" onClick={onMap} style={{ position: 'absolute', right: 10, bottom: 10, minHeight: 42, fontSize: 14, padding: '0 14px', boxShadow: '0 4px 0 var(--gold-lo)' }}>

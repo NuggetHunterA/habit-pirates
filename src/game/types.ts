@@ -26,12 +26,24 @@ export interface DayLog {
 export type Rarity = 'gewoehnlich' | 'selten' | 'episch' | 'legendaer'
 export type Slot = 'waffe' | 'hut' | 'kleidung' | 'talisman' | 'schiff'
 
+/** Kampfwerte. krit und ausweichen in Prozent. */
+export interface Stats {
+  leben: number
+  angriff: number
+  ruestung: number
+  tempo: number
+  krit: number
+  ausweichen: number
+}
+
 export interface Item {
   uid: string
+  /** Schluessel im Item-Katalog (game/items.ts); Werte und Bild kommen von dort */
   key: string
   name: string
   slot: Slot
   rarity: Rarity
+  /** Anzeige-Text der Werte (aeltere Spielstaende) */
   stats: string
 }
 
@@ -44,6 +56,10 @@ export interface GameState {
   field: number
   looted: number[]
   inventory: Item[]
+  /** Angelegte Ausruestung: Slot -> Item-uid */
+  equipped: Partial<Record<Slot, string>>
+  /** Heute im Laden gekaufte Angebote */
+  shop: { day: string; bought: string[] }
 }
 
 export interface Save {

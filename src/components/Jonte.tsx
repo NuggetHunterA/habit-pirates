@@ -68,6 +68,18 @@ export default function Jonte({ trigger, className, label = 'Kapitän Jonte Rotr
       }
       i.src = JONTE_PARTS[JONTE_RIG[n].img]
       imgs[n] = i
+      i.decode?.().then(() => {
+        const c = document.createElement('canvas')
+        c.width = i.naturalWidth
+        c.height = i.naturalHeight
+        const x = c.getContext('2d')!
+        x.drawImage(i, 0, 0)
+        const d = x.getImageData(0, 0, c.width, c.height)
+        const a = d.data
+        for (let p = 3; p < a.length; p += 4) a[p] = Math.min(255, Math.max(0, (a[p] - 40) * 1.6))
+        x.putImageData(d, 0, 0)
+        imgs[n] = c as unknown as HTMLImageElement
+      }).catch(() => {})
     }
     const P: Record<string, Pose> = {}
     for (const k of names) P[k] = { rot: 0, dx: 0, dy: 0, sx: 1, sy: 1 }
@@ -141,6 +153,8 @@ export default function Jonte({ trigger, className, label = 'Kapitän Jonte Rotr
         root.sx = 1 / Math.sqrt(sq)
         P.oberarm_f.rot = kf(t, [[0, 0], [0.2, 0.25], [0.5, -2.3, 'back'], [1.0, -2.2], [1.4, 0, 'inout']])
         P.unterarm_f.rot = kf(t, [[0, 0], [0.5, -0.3, 'back'], [1.0, -0.2], [1.4, 0, 'inout']])
+        // Klinge zeigt beim Hochreissen nach oben statt hinter den Kopf
+        P.saebel.rot = kf(t, [[0, 0], [0.2, 0.1], [0.5, 2.45, 'back'], [1.0, 2.35], [1.4, 0, 'inout']])
         P.unter_l.rot = kf(t, [[0, 0], [0.18, 0.35, 'out'], [0.3, 0], [0.45, 0.5], [0.9, 0.1], [0.98, 0.4, 'out'], [1.3, 0]])
         P.unter_r.rot = kf(t, [[0, 0], [0.18, -0.3, 'out'], [0.3, 0], [0.45, -0.2], [0.9, 0], [0.98, -0.3, 'out'], [1.3, 0]])
         P.oberarm_b.rot += kf(t, [[0, 0], [0.2, -0.1], [0.5, 0.7, 'back'], [1.0, 0.6], [1.4, 0, 'inout']])

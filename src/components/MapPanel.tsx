@@ -6,14 +6,17 @@ import { CHAPTER_1, FIELD_TEXT } from '../game/map'
 import { RULES, windAvailable } from '../game/rules'
 import SeaMap from './SeaMap'
 
+/** Text fuer den Hafen kommt von hier, weil der Laden jetzt existiert */
+const fieldText = (k: keyof typeof FIELD_TEXT) => (k === 'hafen' ? 'Ein Handelsschiff mit Hafenladen. Hier kannst du einkaufen.' : FIELD_TEXT[k])
+
 interface Props {
   game: Game
-  onBack?: () => void
+  onShop: () => void
   onChest: () => void
   say: (m: string) => void
 }
 
-export default function MapPanel({ game, onBack, onChest, say }: Props) {
+export default function MapPanel({ game, onChest, onShop, say }: Props) {
   const save = game.save!
   const ship = save.game.field
   const [sailing, setSailing] = useState(false)
@@ -33,12 +36,13 @@ export default function MapPanel({ game, onBack, onChest, say }: Props) {
   const arrive = (i: number) => {
     const f = CHAPTER_1[i]
     if (f.kind === 'truhe') say('Truhe in Sicht!')
-    else if (f.kind !== 'start') say(`${f.name} erreicht. ${FIELD_TEXT[f.kind]}`)
+    else if (f.kind === 'hafen') say(`${f.name} erreicht. Der Hafenladen hat geöffnet!`)
+    else if (f.kind !== 'start') say(`${f.name} erreicht. ${fieldText(f.kind)}`)
   }
 
   const kicker = sailing ? 'Unterwegs' : atChest ? 'Du bist hier' : atEnd ? 'Ende des Kapitels' : 'Nächstes Feld'
   const title = sailing ? `Kurs auf ${next.name}` : atChest ? here.name : atEnd ? here.name : next.name
-  const text = sailing ? 'Volle Fahrt voraus!' : atChest ? 'Öffne sie und sieh, was drin ist.' : atEnd ? FIELD_TEXT.boss : FIELD_TEXT[next.kind]
+  const text = sailing ? 'Volle Fahrt voraus!' : atChest ? 'Öffne sie und sieh, was drin ist.' : atEnd ? fieldText('boss') : fieldText(next.kind)
   const showEnemy = !sailing && !atChest && !atEnd && next.kind === 'gegner'
 
   return (
@@ -54,11 +58,6 @@ export default function MapPanel({ game, onBack, onChest, say }: Props) {
             Feld {ship + 1} von {CHAPTER_1.length}
           </div>
         </div>
-        {onBack && (
-          <button type="button" className="btn-wood" onClick={onBack} style={{ pointerEvents: 'auto' }}>
-            Zurück
-          </button>
-        )}
       </div>
 
       <motion.div
@@ -92,7 +91,12 @@ export default function MapPanel({ game, onBack, onChest, say }: Props) {
             Truhe öffnen!
           </motion.button>
         ) : (
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            {here.kind === 'hafen' && !sailing && (
+              <button type="button" className="btn-gold" style={{ minHeight: 48, fontSize: 16 }} onClick={onShop}>
+                Hafenladen
+              </button>
+            )}
             <button type="button" className={`btn-sea ${canSail ? '' : 'btn-sea--off'}`} onClick={sail} disabled={sailing}>
               Segeln · {RULES.windPerField} Wind
             </button>

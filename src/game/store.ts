@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { Glass, Habit, HabitKind, Item, Save, WeekPlan } from './types'
+import type { Glass, Habit, HabitKind, Item, Save, Slot, WeekPlan } from './types'
 import { dateKey, weekStartOf } from './dates'
 import { RULES, emptyLog, windAvailable, previousWeek } from './rules'
 import { CHAPTER_1 } from './map'
+import { PRICE, itemDef, makeItem, sellPrice } from './items'
 
 /**
  * Spielstand pro Profil. Im Prototyp liegt er im Browser (localStorage).
@@ -29,6 +30,14 @@ function write(k: string, v: unknown) {
 
 const uid = () => Math.random().toString(36).slice(2, 9)
 
+/** Aeltere Spielstaende auf das aktuelle Format bringen */
+function migrate(s: Save | null): Save | null {
+  if (!s) return s
+  const g = s.game
+  if (g.equipped && g.shop) return s
+  return { ...s, game: { ...g, equipped: g.equipped ?? {}, shop: g.shop ?? { day: '', bought: [] } } }
+}
+
 function newSave(profile: string): Save {
   const habits: Habit[] = [
     { id: 'trinken', name: 'Genug trinken', kind: 'drink', always: true },
@@ -46,7 +55,7 @@ function newSave(profile: string): Save {
     habits,
     weeks: {},
     logs: {},
-    game: { gold: 0, windGift: RULES.startWind, windSpent: 0, field: 0, looted: [], inventory: [] },
+    game: { gold: 0, windGift: RULES.startWind, windSpent: 0, field: 0, looted: [], inventory: [], equipped: {}, shop: { day: '', bought: [] } },
   }
 }
 
@@ -68,7 +77,7 @@ export function useGame() {
   const [profile, setProfileState] = useState<string | null>(() => read<string>(PROFILE_KEY))
   const [save, setSave] = useState<Save | null>(() => {
     const p = read<string>(PROFILE_KEY)
-    return p ? read<Save>(saveKey(p)) ?? newSave(p) : null
+    return p ? migrate(read<Save>(saveKey(p))) ?? newSave(p) : null
   })
   const today = useToday()
   const week = weekStartOf(today)
@@ -82,7 +91,7 @@ export function useGame() {
   const chooseProfile = useCallback((p: string) => {
     write(PROFILE_KEY, p)
     setProfileState(p)
-    setSave(read<Save>(saveKey(p)) ?? newSave(p))
+    setSave(migrate(read<Save>(saveKey(p))) ?? newSave(p))
   }, [])
 
   const logoutProfile = useCallback(() => {
@@ -180,14 +189,62 @@ export function useGame() {
               },
         )
       },
+      equip(uid: string) {
+        update((s) => {
+          const it = s.game.inventory.find((x) => x.uid === uid)
+          if (!it) return s
+          return { ...s, game: { ...s.game, equipped: { ...s.game.equipped, [it.slot]: uid } } }
+        })
+      },
+      unequip(slot: Slot) {
+        update((s) => {
+          const equipped = { ...s.game.equipped }
+          delete equipped[slot]
+          return { ...s, game: { ...s.game, equipped } }
+        })
+      },
+      sellItem(uid: string) {
+        update((s) => {
+          const it = s.game.inventory.find((x) => x.uid === uid)
+          if (!it) return s
+          const equipped = { ...s.game.equipped }
+          if (equipped[it.slot] === uid) delete equipped[it.slot]
+          return {
+            ...s,
+            game: { ...s.game, gold: s.game.gold + sellPrice(it.rarity), inventory: s.game.inventory.filter((x) => x.uid !== uid), equipped },
+          }
+        })
+      },
+      /** Kauft ein Tagesangebot. Gibt das neue Item zurueck oder null (zu wenig Gold, schon gekauft). */
+      buyItem(key: string): Item | null {
+        const def = itemDef(key)
+        const s = save
+        if (!def || !s) return null
+        const bought = s.game.shop.day === today ? s.game.shop.bought : []
+        if (s.game.gold < PRICE[def.rarity] || bought.includes(key)) return null
+        const it = makeItem(def)
+        update((x) => ({
+          ...x,
+          game: {
+            ...x.game,
+            gold: x.game.gold - PRICE[def.rarity],
+            inventory: [...x.game.inventory, it],
+            shop: { day: today, bought: [...(x.game.shop.day === today ? x.game.shop.bought : []), key] },
+          },
+        }))
+        return it
+      },
       testWind() {
         update((s) => ({ ...s, game: { ...s.game, windGift: s.game.windGift + RULES.windPerField } }))
+      },
+      testGold() {
+        update((s) => ({ ...s, game: { ...s.game, gold: s.game.gold + 100 } }))
       },
       resetGame() {
         update((s) => newSave(s.profile))
       },
     }),
-    [update, week, today],
+    [update, week, today, save],
   )
 
   return { profile, save, today, week, plan, suggestion, previousWeek: previousWeek(week), chooseProfile, logoutProfile, ...actions }
