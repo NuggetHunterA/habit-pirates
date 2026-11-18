@@ -121,6 +121,8 @@ export interface Save {
   /** Zeitpunkt der letzten Aenderung (leer = unberuehrter neuer Stand). Beim Abgleich gewinnt der neuere. */
   updatedAt?: string
   habits: Habit[]
+  /** false: Einstieg (Erklaerung und erste Habits) steht noch aus. Fehlt bei aelteren Staenden = erledigt. */
+  introDone?: boolean
   weeks: Record<string, WeekPlan>
   logs: Record<string, DayLog>
   game: GameState

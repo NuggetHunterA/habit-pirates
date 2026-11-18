@@ -62,21 +62,14 @@ function migrate(s: Save | null): Save | null {
 
 /** Neuer Stand. touched=false: unberuehrt, ein Stand aus Supabase gewinnt immer. */
 function newSave(profile: string, touched = false): Save {
-  const habits: Habit[] = [
-    { id: 'trinken', name: 'Genug trinken', kind: 'drink', always: true },
-    { id: uid(), name: 'Vitamin D', kind: 'tap' },
-    { id: uid(), name: 'Creatin', kind: 'tap' },
-    { id: uid(), name: 'Zähne putzen am Abend', kind: 'tap' },
-    { id: uid(), name: 'Gesichtspflege', kind: 'tap' },
-    { id: uid(), name: '10 Seiten lesen', kind: 'tap' },
-    { id: uid(), name: 'Kein Doom-Scrolling', kind: 'lassen' },
-  ]
   return {
     version: 1,
     profile,
     createdAt: new Date().toISOString(),
     updatedAt: touched ? new Date().toISOString() : '',
-    habits,
+    // Die ersten Habits waehlt man im Einstieg
+    habits: [],
+    introDone: false,
     weeks: {},
     logs: {},
     game: { gold: 0, windGift: RULES.startWind, windSpent: 0, field: 0, looted: [], inventory: [], gear: {}, found: [], shop: { day: '', bought: [] }, ...PROGRESS() },
@@ -583,6 +576,14 @@ export function useGame() {
       },
       testGold() {
         update((s) => ({ ...s, game: { ...s.game, gold: s.game.gold + 100 } }))
+      },
+      /** Einstieg abgeschlossen: gewaehlte Start-Habits anlegen */
+      finishIntro(start: { name: string; kind: HabitKind; always?: boolean }[]) {
+        update((s) => ({
+          ...s,
+          introDone: true,
+          habits: [...s.habits, ...start.map((h) => ({ id: h.kind === 'drink' ? 'trinken' : uid(), name: h.name, kind: h.kind, ...(h.always ? { always: true } : {}) }))],
+        }))
       },
       resetGame() {
         update((s) => newSave(s.profile, true))

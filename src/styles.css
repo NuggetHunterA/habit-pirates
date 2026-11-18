@@ -738,3 +738,113 @@ input:focus-visible {
   padding: 0 14px;
   flex: none;
 }
+
+/* Einstieg fuer neue Spieler */
+.main--intro {
+  display: flex;
+  justify-content: center;
+}
+.intro {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  min-height: 100%;
+}
+.intro__skip {
+  border: none;
+  background: transparent;
+  color: var(--sea-muted);
+  font-weight: 800;
+  font-size: 14px;
+  min-height: 40px;
+}
+.intro__slide {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  touch-action: pan-y;
+}
+.intro__art {
+  height: 230px;
+  border-radius: 20px;
+  background: linear-gradient(#2a3aa6, #16206b);
+  border: 3px solid var(--sea-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.intro__map {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.intro__chests {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+.intro__chests img {
+  width: 92px;
+}
+.intro__chests img:nth-child(2) {
+  width: 104px;
+}
+.intro__chests img:nth-child(3) {
+  width: 118px;
+}
+.intro__bubble {
+  background: #fff;
+  color: var(--ink);
+  border-radius: 18px;
+  padding: 14px 16px;
+  font-size: 15px;
+  line-height: 1.45;
+  font-weight: 700;
+}
+.intro__bubble b {
+  display: block;
+  font-size: 22px;
+  font-weight: 400;
+  margin-bottom: 4px;
+}
+.intro__dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+.intro__dots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 5px;
+  background: var(--sea-line);
+  transition: width 0.2s;
+}
+.intro__dots i.on {
+  width: 24px;
+  background: var(--gold);
+}
+.intro__pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.intro__pick button {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 900;
+  font-size: 14px;
+}
+.intro__pick button[aria-pressed='true'] {
+  background: var(--gold);
+  border-color: var(--gold-lo);
+}
+.intro__pick .intro__own {
+  background: transparent;
+  color: var(--sea-text);
+  border: 2px dashed var(--sea-line);
+}
