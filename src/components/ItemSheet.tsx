@@ -2,7 +2,9 @@ import { useState } from 'react'
 import type { Item, Stats } from '../game/types'
 import type { Game } from '../game/store'
 import { STAT_LABEL, STAT_ORDER, isPercent, itemBonus, itemDef, sellPrice } from '../game/items'
-import { diffIfEquipped } from '../game/equipment'
+import { copiesOf, diffIfEquipped, equippedItems, sellableCopy, wearer, wornUids } from '../game/equipment'
+import { CREW, type CrewId } from '../game/foes'
+import { portraitFor } from '../fight/art'
 import { RARITY_LABEL, SLOT_LABEL } from '../game/loot'
 import ItemIcon, { RARITY_COLOR } from './ItemIcon'
 import StatIcon from './StatIcon'
@@ -25,14 +27,26 @@ export function StatLines({ bonus, diff }: { bonus: Partial<Stats>; diff?: Parti
   )
 }
 
-/** Detailansicht eines Items im Laderaum: Anlegen, Ablegen, Verkaufen */
-export default function ItemSheet({ game, item, onClose, say }: { game: Game; item: Item; onClose: () => void; say: (m: string) => void }) {
+/**
+ * Detailansicht eines Items im Laderaum (gestapelt nach Item-Art): Anlegen beim gewaehlten Piraten,
+ * Ablegen, Doppelte verkaufen. Das letzte Exemplar laesst sich nicht verkaufen.
+ */
+export default function ItemSheet({ game, item, who, onClose, say }: { game: Game; item: Item; who: CrewId; onClose: () => void; say: (m: string) => void }) {
   const save = game.save!
+  const g = save.game
   const [confirmSell, setConfirmSell] = useState(false)
-  const equipped = save.game.equipped[item.slot] === item.uid
+  const ship = item.slot === 'schiff'
+  const mine = equippedItems(save, who)[item.slot]
+  const wornByMe = mine?.key === item.key
+  const copies = copiesOf(g, item.key)
+  const worn = wornUids(g)
+  const free = copies.filter((c) => !worn.has(c.uid))
+  const others = Array.from(new Set(copies.map((c) => wearer(g, c.uid)).filter((w): w is CrewId => !!w && w !== 'schiff' && w !== who)))
+  const sellable = sellableCopy(g, item.key)
   const def = itemDef(item.key)
   const c = RARITY_COLOR[item.rarity]
-  const diff = equipped ? undefined : diffIfEquipped(save, item)
+  const diff = wornByMe ? undefined : diffIfEquipped(save, item, who)
+  const name = CREW[who].name
   return (
     <Sheet onClose={onClose} label={item.name}>
       <div className="itemsheet__head">
@@ -41,56 +55,81 @@ export default function ItemSheet({ game, item, onClose, say }: { game: Game; it
           <span className="rarity-tag" style={{ background: c.tagBg, color: c.tagFg }}>
             {RARITY_LABEL[item.rarity]}
           </span>
+          {copies.length > 1 && (
+            <span className="rarity-tag" style={{ background: '#e7ebfa', color: 'var(--ink)', marginLeft: 6 }}>
+              ×{copies.length} im Laderaum
+            </span>
+          )}
           <h2 style={{ fontSize: 28, lineHeight: 1.05, marginTop: 4 }}>{item.name}</h2>
           <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--ink-soft)' }}>
             {SLOT_LABEL[item.slot]}
-            {item.slot === 'schiff' ? ' · gilt für die ganze Crew' : ''}
+            {ship ? ' · gilt für die ganze Crew' : ''}
           </div>
         </div>
       </div>
       {def && <div style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--ink-soft)' }}>„{def.text}“</div>}
       <StatLines bonus={itemBonus(item)} diff={diff} />
-      {diff && <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>Pfeile: Unterschied zu deiner jetzigen Ausrüstung.</div>}
-      <div style={{ display: 'flex', gap: 10 }}>
-        {equipped ? (
+      {diff && !ship && <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>Pfeile: Unterschied zu {name}s jetziger Ausrüstung.</div>}
+      {!wornByMe && !ship && others.length > 0 && free.length === 0 && (
+        <div className="itemsheet__note">
+          <img src={portraitFor(others[0])} alt="" />
+          <span>
+            <b>Trägt gerade {CREW[others[0]].name}.</b> Beim Anlegen wechselt es zu {name}.
+          </span>
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {wornByMe ? (
           <button
             type="button"
             className="btn-wood"
-            style={{ flex: 1, minHeight: 52 }}
+            style={{ minHeight: 52 }}
             onClick={() => {
-              game.unequip(item.slot)
+              game.unequip(item.slot, who)
               onClose()
             }}
           >
-            Ablegen
+            {ship ? 'Vom Schiff nehmen' : `Bei ${name} ablegen`}
           </button>
         ) : (
           <button
             type="button"
             className="btn-gold"
-            style={{ flex: 1 }}
             onClick={() => {
-              game.equip(item.uid)
-              say(`${item.name} angelegt!`)
+              game.equip((free[0] ?? item).uid, who)
+              say(ship ? `${item.name} ist am Schiff!` : `${name} trägt jetzt ${item.name}!`)
               onClose()
             }}
           >
-            Anlegen
+            {ship ? 'Ans Schiff bauen' : `Bei ${name} anlegen`}
           </button>
         )}
         <button
           type="button"
           className={`small-btn ${confirmSell ? 'small-btn--danger' : ''}`}
-          style={{ height: 52, minWidth: 120 }}
+          style={{ height: 48 }}
+          disabled={!sellable}
           onClick={() => {
             if (!confirmSell) return setConfirmSell(true)
-            game.sellItem(item.uid)
-            say(`Verkauft: +${sellPrice(item.rarity)} Gold`)
+            const sold = game.sellDuplicate(item.key)
+            if (sold) say(`Doppeltes verkauft: +${sellPrice(sold.rarity)} Gold`)
             onClose()
           }}
         >
-          {confirmSell ? 'Wirklich verkaufen?' : `Verkaufen · ${sellPrice(item.rarity)}`}
-          {!confirmSell && <span className="coin coin--sm" />}
+          {!sellable ? (
+            copies.length < 2 ? (
+              'Letztes Exemplar, bleibt im Laderaum'
+            ) : (
+              'Alle Exemplare sind angelegt'
+            )
+          ) : confirmSell ? (
+            'Wirklich verkaufen?'
+          ) : (
+            <>
+              1 Doppeltes verkaufen · {sellPrice(item.rarity)}
+              <span className="coin coin--sm" />
+            </>
+          )}
         </button>
       </div>
     </Sheet>

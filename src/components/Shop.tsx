@@ -33,7 +33,7 @@ export default function Shop({ game, say, onGear }: { game: Game; say: (m: strin
           const price = PRICE[def.rarity]
           const afford = save.game.gold >= price
           const c = RARITY_COLOR[def.rarity]
-          const diff = diffIfEquipped(save, { key: def.key, slot: def.slot, uid: '', name: def.name, rarity: def.rarity, stats: '' })
+          const diff = diffIfEquipped(save, { key: def.key, slot: def.slot })
           return (
             <motion.div
               key={def.key}

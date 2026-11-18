@@ -88,7 +88,7 @@ export default function App() {
 
   const fightBonus = () => {
     const g = gearBonus(save!)
-    return crewStats(level, g.jonte, g.ship)
+    return crewStats(level, g.crew, g.ship)
   }
 
   const endFight = (req: FightRequest, r: { sieg: boolean; xp: number; gold: number; items: Item[] } | null) => {

@@ -401,6 +401,355 @@
   font-size: 14px;
 }
 
+/* ---------- Ansichten im Ausruestungs-Tab ---------- */
+.gear__views {
+  margin: 12px 14px 0;
+}
+
+.gear__picker {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 0 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.gear__pick {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--sea-muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.gear__pick img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: linear-gradient(#3b5bdb, #16206b);
+  border: 3px solid var(--sea-line);
+  transition: width 0.18s, height 0.18s;
+}
+
+.gear__pick[aria-selected='true'] {
+  color: var(--gold-text);
+}
+
+.gear__pick[aria-selected='true'] img {
+  width: 60px;
+  height: 60px;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(255, 194, 26, 0.35);
+}
+
+.gear__pick-hint {
+  margin-left: auto;
+  flex: none;
+  max-width: 130px;
+  font-size: 11px;
+  line-height: 1.25;
+  text-align: right;
+  color: var(--sea-muted);
+  padding-bottom: 4px;
+}
+
+.gear__stage {
+  touch-action: pan-y;
+}
+
+.gear__hero-fig {
+  position: absolute;
+  inset: 0;
+}
+
+.gear__hero-fig > canvas,
+.crew-figure {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.gear__ship {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gear__ship-note {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--sea-muted);
+}
+
+.gear__count {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 3;
+  padding: 1px 7px;
+  border-radius: 99px;
+  background: #ff4d6d;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.gear__worn--other {
+  background: #c9d3f5;
+  color: var(--ink);
+  border-color: #fff;
+}
+
+.itemsheet__note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #e7f5ff;
+  font-size: 13px;
+}
+
+.itemsheet__note img {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #3b5bdb;
+  flex: none;
+}
+
+.small-btn:disabled {
+  opacity: 0.6;
+}
+
+/* ---------- Sammelbuch ---------- */
+.book {
+  margin: 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.book__bar {
+  height: 9px;
+}
+
+.book__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.book__group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.book__group-head h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #fff;
+}
+
+.book__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 10px 8px;
+}
+
+.book__tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+.book__unknown {
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  border: 2.5px dashed;
+  background: rgba(11, 18, 54, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display);
+  font-size: 24px;
+}
+
+.book__name {
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  color: var(--sea-muted);
+  max-width: 76px;
+}
+
+/* ---------- Crewuebersicht ---------- */
+.crewlist {
+  margin: 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.crewlist__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.crewlist__hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--sea-muted);
+}
+
+.crewcard {
+  background: var(--parch);
+  color: var(--ink);
+  border-radius: 18px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: inset 0 -4px 0 #d5dcf7, 0 4px 10px rgba(4, 8, 40, 0.3);
+}
+
+.crewcard__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.crewcard__head img {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  object-fit: cover;
+  background: linear-gradient(#3b5bdb, #16206b);
+  flex: none;
+}
+
+.crewcard__role {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #3b5bdb;
+}
+
+.crewcard__name {
+  font-size: 23px;
+  line-height: 1.05;
+}
+
+.crewcard__level {
+  margin-left: auto;
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: #ffe066;
+  font-family: var(--display);
+  font-size: 16px;
+}
+
+.crewcard__vals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.crewcard__vals b {
+  display: block;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.crewcard__abilities {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.crewcard__ability {
+  border: 2px solid #e3e7f7;
+  border-radius: 12px;
+  padding: 7px 10px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--ink-soft);
+}
+
+.crewcard__ability b {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.crewcard__ability.is-on {
+  border-color: #ffc21a;
+  background: #fff9db;
+}
+
+.crewcard__mark {
+  float: right;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #ffc21a;
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.crewcard__gear {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.crewcard__btn {
+  margin-left: auto;
+  min-height: 42px;
+  font-size: 15px;
+  padding: 0 14px;
+}
+
+.crewcard--secret {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  background: rgba(11, 18, 54, 0.6);
+  color: var(--sea-text);
+  border: 2px dashed var(--sea-line);
+  box-shadow: none;
+}
+
+.crewcard--secret img {
+  width: 56px;
+  height: 64px;
+  object-fit: contain;
+}
+
 /* ---------- Laden ---------- */
 .shop {
   padding: 0 0 28px;

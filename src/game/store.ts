@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Glass, Habit, HabitKind, Item, Save, Slot, WeekPlan } from './types'
+import { copiesOf, migrateGear, sellableCopy, wearer, withFound, wornUids } from './equipment'
 import { dateKey, weekStartOf } from './dates'
 import { RULES, emptyLog, windAvailable, previousWeek } from './rules'
 import { CHAPTERS, chapterOf } from './map'
@@ -55,8 +56,8 @@ const PROGRESS = () => ({ chapter: 1, crew: [...START_CREW], xp: 0, cleared: [],
 function migrate(s: Save | null): Save | null {
   if (!s) return s
   const g = s.game
-  if (g.equipped && g.shop && g.chapter) return s
-  return { ...s, game: { ...PROGRESS(), ...g, equipped: g.equipped ?? {}, shop: g.shop ?? { day: '', bought: [] } } }
+  if (g.gear && g.found && g.shop && g.chapter) return s
+  return { ...s, game: migrateGear({ ...PROGRESS(), ...g, shop: g.shop ?? { day: '', bought: [] } }) }
 }
 
 /** Neuer Stand. touched=false: unberuehrt, ein Stand aus Supabase gewinnt immer. */
@@ -78,7 +79,7 @@ function newSave(profile: string, touched = false): Save {
     habits,
     weeks: {},
     logs: {},
-    game: { gold: 0, windGift: RULES.startWind, windSpent: 0, field: 0, looted: [], inventory: [], equipped: {}, shop: { day: '', bought: [] }, ...PROGRESS() },
+    game: { gold: 0, windGift: RULES.startWind, windSpent: 0, field: 0, looted: [], inventory: [], gear: {}, found: [], shop: { day: '', bought: [] }, ...PROGRESS() },
   }
 }
 
@@ -331,6 +332,7 @@ export function useGame() {
               xp: Math.min(xpTotal(cap), g.xp + opts.xp),
               gold: g.gold + opts.gold,
               inventory: [...g.inventory, ...opts.items],
+              found: withFound(g, opts.items),
               cleared: opts.field != null && !g.cleared.includes(opts.field) ? [...g.cleared, opts.field] : g.cleared,
               bossBeaten: opts.boss && !g.bossBeaten.includes(g.chapter) ? [...g.bossBeaten, g.chapter] : g.bossBeaten,
               windSpent: g.windSpent + (opts.farm ? RULES.windPerField : 0),
@@ -363,6 +365,7 @@ export function useGame() {
               seen: [...g.seen, id],
               gold: g.gold + gold,
               inventory: [...g.inventory, ...items],
+              found: withFound(g, items),
               crew: st?.join && !g.crew.includes(st.join) ? [...g.crew, st.join] : g.crew,
             },
           }
@@ -389,35 +392,53 @@ export function useGame() {
                   gold: s.game.gold + gold,
                   looted: [...s.game.looted, field],
                   inventory: [...s.game.inventory, ...items],
+                  found: withFound(s.game, items),
                 },
               },
         )
       },
-      equip(uid: string) {
+      /**
+       * Item bei einem Piraten anlegen (Schiffsteile gelten fuer alle).
+       * Traegt es schon ein anderer, wird ein freies Exemplar genommen oder es wechselt den Besitzer.
+       */
+      equip(uid: string, who: string) {
         update((s) => {
-          const it = s.game.inventory.find((x) => x.uid === uid)
+          const g = s.game
+          let it = g.inventory.find((x) => x.uid === uid)
           if (!it) return s
-          return { ...s, game: { ...s.game, equipped: { ...s.game.equipped, [it.slot]: uid } } }
-        })
-      },
-      unequip(slot: Slot) {
-        update((s) => {
-          const equipped = { ...s.game.equipped }
-          delete equipped[slot]
-          return { ...s, game: { ...s.game, equipped } }
-        })
-      },
-      sellItem(uid: string) {
-        update((s) => {
-          const it = s.game.inventory.find((x) => x.uid === uid)
-          if (!it) return s
-          const equipped = { ...s.game.equipped }
-          if (equipped[it.slot] === uid) delete equipped[it.slot]
-          return {
-            ...s,
-            game: { ...s.game, gold: s.game.gold + sellPrice(it.rarity), inventory: s.game.inventory.filter((x) => x.uid !== uid), equipped },
+          const w = wearer(g, it.uid)
+          if (w && w !== who && it.slot !== 'schiff') {
+            const worn = wornUids(g)
+            it = copiesOf(g, it.key).find((c) => !worn.has(c.uid)) ?? it
           }
+          const gear: Save['game']['gear'] = {}
+          for (const [p, slots] of Object.entries(g.gear)) {
+            gear[p] = Object.fromEntries(Object.entries(slots).filter(([, u]) => u !== it!.uid))
+          }
+          if (it.slot === 'schiff') return { ...s, game: { ...g, gear, ship: it.uid } }
+          gear[who] = { ...gear[who], [it.slot]: it.uid }
+          return { ...s, game: { ...g, gear, ship: g.ship === it.uid ? undefined : g.ship } }
         })
+      },
+      unequip(slot: Slot, who: string) {
+        update((s) => {
+          if (slot === 'schiff') return { ...s, game: { ...s.game, ship: undefined } }
+          const mine = { ...s.game.gear[who] }
+          delete mine[slot]
+          return { ...s, game: { ...s.game, gear: { ...s.game.gear, [who]: mine } } }
+        })
+      },
+      /** Verkauft ein doppeltes Exemplar. Das letzte Exemplar und getragene Items bleiben. */
+      sellDuplicate(key: string): Item | null {
+        if (!save) return null
+        const it = sellableCopy(save.game, key)
+        if (!it) return null
+        update((s) => {
+          const c = sellableCopy(s.game, key)
+          if (!c) return s
+          return { ...s, game: { ...s.game, gold: s.game.gold + sellPrice(c.rarity), inventory: s.game.inventory.filter((x) => x.uid !== c.uid) } }
+        })
+        return it
       },
       /** Kauft ein Tagesangebot. Gibt das neue Item zurueck oder null (zu wenig Gold, schon gekauft). */
       buyItem(key: string): Item | null {
@@ -433,6 +454,7 @@ export function useGame() {
             ...x.game,
             gold: x.game.gold - PRICE[def.rarity],
             inventory: [...x.game.inventory, it],
+            found: withFound(x.game, [it]),
             shop: { day: today, bought: [...(x.game.shop.day === today ? x.game.shop.bought : []), key] },
           },
         }))

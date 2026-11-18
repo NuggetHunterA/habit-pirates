@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { useState, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import type { Game } from '../game/store'
 import { blocked, bossTriesLeft, doneFields, BOSS_TRIES } from '../game/store'
 import { CHAPTERS, FIELD_TEXT, chapterOf } from '../game/map'
@@ -27,6 +27,8 @@ interface Props {
   say: (m: string) => void
 }
 
+const PANEL_KEY = 'hp.mapPanel'
+
 const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)]
 
 export default function MapPanel({ game, onChest, onShop, onFight, onStory, say }: Props) {
@@ -50,6 +52,36 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
   const canSail = wind >= RULES.windPerField && !atEnd && !sailing && !fightHere
   const lp = levelProgress(g.xp, chapter.cap)
   const nextChapter = CHAPTERS.find((c) => c.n === chapter.n + 1)
+  /** Feld-Panel eingeklappt (Standard), damit die Karte frei bleibt. Die Wahl bleibt gespeichert. */
+  const [collapsed, setCollapsedState] = useState(() => {
+    try {
+      return localStorage.getItem(PANEL_KEY) !== 'open'
+    } catch {
+      return true
+    }
+  })
+  const setCollapsed = (v: boolean) => {
+    setCollapsedState(v)
+    try {
+      localStorage.setItem(PANEL_KEY, v ? 'closed' : 'open')
+    } catch {
+      /* egal */
+    }
+  }
+  const drag = useRef<number | null>(null)
+  /** Hoehe des Panels als CSS-Variable, damit der Kompass-Knopf der Karte immer darueber sitzt */
+  const wrap = useRef<HTMLDivElement>(null)
+  const card = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const c = card.current
+    const w = wrap.current
+    if (!c || !w) return
+    const set = () => w.style.setProperty('--map-panel-h', `${c.offsetHeight}px`)
+    set()
+    const ro = new ResizeObserver(set)
+    ro.observe(c)
+    return () => ro.disconnect()
+  }, [])
 
   const sail = () => {
     if (wind < RULES.windPerField) return say(`Noch ${RULES.windPerField - Math.max(0, wind)} Wind nötig. Hake Habits ab!`)
@@ -110,8 +142,44 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
     portrait = portraitFor(boss.foes[0].look)
   }
 
+  const startNext = () => {
+    if (!nextChapter) return
+    game.nextChapter()
+    const st = nextChapter.fields[0].story
+    if (st) window.setTimeout(() => onStory(st), 300)
+  }
+
+  /** Wichtigste Aktion fuer die eingeklappte Leiste */
+  const primary: ReactNode = sailing ? null : storyHere ? (
+    <Pulse small onClick={() => onStory(storyHere)}>{here.kind === 'sturm' || here.kind === 'wrack' ? 'Nachsehen' : 'Szene'}</Pulse>
+  ) : atChest ? (
+    <Pulse small onClick={onChest}>Öffnen!</Pulse>
+  ) : fightHere ? (
+    <Pulse small onClick={() => onFight({ enc: here.enc!, field: ship, boss: false, farm: false })}>Kämpfen!</Pulse>
+  ) : boss ? (
+    !bossBeaten ? (
+      <button type="button" className={`btn-gold map-card__btn ${triesLeft > 0 ? '' : 'btn-gold--off'}`} onClick={attackBoss}>
+        Boss
+      </button>
+    ) : outroPending ? (
+      <Pulse small onClick={() => onStory(chapter.outro)}>Szene</Pulse>
+    ) : nextChapter ? (
+      <button type="button" className="btn-gold map-card__btn" onClick={startNext}>
+        Weiter
+      </button>
+    ) : (
+      <button type="button" className={`btn-sea map-card__btn ${wind >= RULES.windPerField ? '' : 'btn-sea--off'}`} onClick={farm}>
+        Beutezug · {RULES.windPerField}
+      </button>
+    )
+  ) : (
+    <button type="button" className={`btn-sea map-card__btn ${canSail ? '' : 'btn-sea--off'}`} onClick={sail}>
+      Segeln · {RULES.windPerField}
+    </button>
+  )
+
   return (
-    <div style={{ position: 'absolute', inset: 0 }}>
+    <div ref={wrap} style={{ position: 'absolute', inset: 0 }}>
       <SeaMap key={chapter.n} chapter={chapter} field={ship} done={doneFields(save)} onArrive={arrive} onSailingChange={setSailing} />
 
       <div style={{ position: 'absolute', left: 12, right: 12, top: 12, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, pointerEvents: 'none' }}>
@@ -140,33 +208,49 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
       </div>
 
       <motion.div
-        className="card"
+        ref={card}
+        className={`card map-card ${collapsed ? 'map-card--collapsed' : ''}`}
         layout
-        style={{ position: 'absolute', left: 12, right: 12, bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))', padding: 12, borderRadius: 18, borderWidth: 3, boxShadow: '0 6px 0 var(--wood-2), 0 10px 24px rgba(0,0,0,0.35)', display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 520, margin: '0 auto' }}
+        transition={{ type: 'spring', stiffness: 420, damping: 36 }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button
+          type="button"
+          className="map-card__handle"
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? 'Feld-Details aufklappen' : 'Feld-Details einklappen'}
+          onClick={() => setCollapsed(!collapsed)}
+          onPointerDown={(e) => (drag.current = e.clientY)}
+          onPointerUp={(e) => {
+            const d = e.clientY - (drag.current ?? e.clientY)
+            drag.current = null
+            if (d < -20) setCollapsed(false)
+            else if (d > 20) setCollapsed(true)
+          }}
+        >
+          <span />
+        </button>
+        <div className="map-card__row">
           <AnimatePresence>
             {portrait && (
               <motion.img
                 key={portrait}
                 src={portrait}
                 alt=""
+                className="map-card__portrait"
                 initial={{ scale: 0, rotate: -20 }}
                 animate={{ scale: 1, rotate: 0 }}
                 exit={{ scale: 0 }}
-                style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 12, border: '2px solid var(--wood-3)', flex: 'none', background: 'linear-gradient(#3b5bdb, #16206b)' }}
               />
             )}
           </AnimatePresence>
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--ink-soft)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{kicker}</span>
-            <span className="display" style={{ fontSize: 26, lineHeight: 1.1 }}>
-              {title}
-            </span>
-            <span style={{ fontSize: 13, fontWeight: 700 }}>{text}</span>
+          <div className="map-card__text" onClick={() => collapsed && setCollapsed(false)}>
+            <span className="map-card__kicker">{kicker}</span>
+            <span className="display map-card__title">{title}</span>
+            {!collapsed && <span style={{ fontSize: 13, fontWeight: 700 }}>{text}</span>}
           </div>
+          {collapsed && primary}
         </div>
-        {sailing ? null : storyHere ? (
+        {!collapsed && (sailing ? null : storyHere ? (
           <Pulse onClick={() => onStory(storyHere)}>{here.kind === 'sturm' || here.kind === 'wrack' ? 'Nachsehen' : 'Szene ansehen'}</Pulse>
         ) : atChest ? (
           <Pulse onClick={onChest}>Truhe öffnen!</Pulse>
@@ -185,15 +269,7 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
               </button>
             )}
             {bossBeaten && !outroPending && nextChapter && (
-              <button
-                type="button"
-                className="btn-gold"
-                onClick={() => {
-                  game.nextChapter()
-                  const st = nextChapter.fields[0].story
-                  if (st) window.setTimeout(() => onStory(st), 300)
-                }}
-              >
+              <button type="button" className="btn-gold" onClick={startNext}>
                 Weiter: Kapitel {nextChapter.n}
               </button>
             )}
@@ -213,15 +289,15 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
             </button>
             <div style={{ fontSize: 13, fontWeight: 800 }}>{Math.max(0, wind)} Wind an Bord</div>
           </div>
-        )}
+        ))}
       </motion.div>
     </div>
   )
 }
 
-function Pulse({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+function Pulse({ onClick, children, small }: { onClick: () => void; children: ReactNode; small?: boolean }) {
   return (
-    <motion.button type="button" className="btn-gold" onClick={onClick} animate={{ scale: [1, 1.04, 1] }} transition={{ repeat: Infinity, duration: 1.4 }}>
+    <motion.button type="button" className={`btn-gold ${small ? 'map-card__btn' : ''}`} onClick={onClick} animate={{ scale: [1, 1.04, 1] }} transition={{ repeat: Infinity, duration: 1.4 }}>
       {children}
     </motion.button>
   )

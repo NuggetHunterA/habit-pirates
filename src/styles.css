@@ -216,8 +216,14 @@ input:focus-visible {
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.35);
 }
 
+/* Aufgeklappt: drei Knoepfe mittig ueber die ganze Breite */
 .tabbar--wide {
-  padding-left: calc(min(46%, 420px) + 8px);
+  justify-content: center;
+  gap: 24px;
+}
+
+.tabbar--wide .tabbar__btn {
+  flex: 0 0 120px;
 }
 
 .tabbar__btn {
