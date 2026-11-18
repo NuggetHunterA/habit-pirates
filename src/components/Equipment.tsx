@@ -14,6 +14,7 @@ import CrewFigure from './CrewFigure'
 import StatIcon from './StatIcon'
 import Collection from './Collection'
 import CrewOverview from './CrewOverview'
+import CrewBoni from './CrewBoni'
 import './Gear.css'
 
 const ORDER: Rarity[] = ['legendaer', 'episch', 'selten', 'gewoehnlich']
@@ -183,13 +184,13 @@ function Outfit({ game, say, onShop, who, setWho }: { game: Game; say: (m: strin
 
       <div className="gear__stats">
         {STAT_ORDER.map((k) => {
-          const extra = Math.round((stats[k] - base[k]) * 10) / 10
+          const extra = Math.round(((stats[k] ?? 0) - (base[k] ?? 0)) * 10) / 10
           return (
             <div key={k} className="gear__stat">
               <StatIcon stat={k} />
               <span className="gear__stat-label">{STAT_LABEL[k]}</span>
               <b>
-                {Math.round(stats[k] * 10) / 10}
+                {Math.round((stats[k] ?? 0) * 10) / 10}
                 {isPercent(k) ? ' %' : ''}
               </b>
               {extra > 0 && <em>+{extra}</em>}
@@ -197,6 +198,8 @@ function Outfit({ game, say, onShop, who, setWho }: { game: Game; say: (m: strin
           )
         })}
       </div>
+
+      <CrewBoni save={save} who={who} />
 
       <div className="gear__hold">
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>

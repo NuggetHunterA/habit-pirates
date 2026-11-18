@@ -5,6 +5,7 @@ import { PRICE, itemBonus, shopOffer } from '../game/items'
 import { diffIfEquipped } from '../game/equipment'
 import { RARITY_LABEL, SLOT_LABEL } from '../game/loot'
 import ItemIcon, { RARITY_COLOR } from './ItemIcon'
+import ItemExtras from './ItemExtras'
 import { StatLines } from './ItemSheet'
 import './Gear.css'
 
@@ -53,6 +54,7 @@ export default function Shop({ game, say, onGear }: { game: Game; say: (m: strin
                 </div>
                 <div className="shop__name">{def.name}</div>
                 <StatLines bonus={itemBonus(def)} diff={diff} />
+                <ItemExtras itemKey={def.key} />
               </div>
               <button
                 type="button"

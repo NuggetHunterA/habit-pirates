@@ -28,7 +28,7 @@ export function levelProgress(xp: number, cap: number): { level: number; into: n
 type Bonus = Partial<FighterStats>
 const add = (a: FighterStats, b: Bonus): FighterStats => {
   const o = { ...a }
-  for (const k of Object.keys(b) as (keyof FighterStats)[]) o[k] += b[k] ?? 0
+  for (const k of Object.keys(b) as (keyof FighterStats)[]) if (b[k]) o[k] = (o[k] ?? 0) + b[k]!
   return o
 }
 

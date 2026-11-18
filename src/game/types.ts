@@ -23,6 +23,11 @@ export interface DayLog {
   glasses: Glass[]
 }
 
+/** Schulen: jedes epische und legendaere Item gehoert zu einer (game/schools.ts) */
+export type School = 'pulver' | 'klinge' | 'gezeiten' | 'fluch' | 'glueck'
+/** Sets ab Kapitel 2 (game/schools.ts) */
+export type SetId = 'sturmjaeger' | 'korallenwacht' | 'goldene_moewe' | 'pulverteufel' | 'nebelgaenger' | 'tiefseeschwur'
+
 export type Rarity = 'gewoehnlich' | 'selten' | 'episch' | 'legendaer'
 export type Slot = 'waffe' | 'hut' | 'kleidung' | 'talisman' | 'schiff'
 /** Plaetze, die jeder Pirat selbst hat */
@@ -36,6 +41,8 @@ export interface Stats {
   tempo: number
   krit: number
   ausweichen: number
+  /** Krit-Schaden in Prozent (Grundwert 160) */
+  kritSchaden?: number
 }
 
 export interface Item {

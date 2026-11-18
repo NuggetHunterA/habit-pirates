@@ -19,6 +19,7 @@ import {
 import { CREW, MAX_PER_ROW, START_CREW, abilityLabel, crewDefs, crewName, crewTitle, defaultSetup, fighterSlots, type CrewId, type CrewSetup, type Encounter } from '../game/foes'
 import { isSpoilerFree, portraitFor } from './art'
 import { rollItem } from '../game/loot'
+import type { Extra } from '../game/schools'
 import { levelFor } from '../game/progress'
 import type { Item } from '../game/types'
 import LootList from '../components/LootList'
@@ -39,6 +40,8 @@ interface Props {
   level?: number
   /** Fertige Kampfwerte je Pirat (Stufe plus Ausruestung). Ohne: nur Stufe. */
   bonus?: Partial<Record<CrewId, FighterStats>>
+  /** Item-Effekte, Schul- und Set-Boni fuer die gewaehlte Aufstellung */
+  extras?: (fighters: CrewId[]) => Partial<Record<CrewId, Extra>>
   /** Zuletzt gewaehlte Aufstellung */
   initialSetup?: CrewSetup
   onSetup?: (s: CrewSetup) => void
@@ -88,7 +91,7 @@ function place(defs: FighterDef[]) {
   })
 }
 
-export default function FightScene({ encounter, crew = START_CREW, level = 1, bonus, initialSetup, onSetup, canStart, xp, cap, onExit }: Props) {
+export default function FightScene({ encounter, crew = START_CREW, level = 1, bonus, extras, initialSetup, onSetup, canStart, xp, cap, onExit }: Props) {
   const [phase, setPhase] = useState<Phase>('vorbereitung')
   const [setup, setSetup] = useState<CrewSetup>(() => validSetup(initialSetup, crew) ?? defaultSetup(crew))
   const [result, setResult] = useState<FightResult | null>(null)
@@ -124,6 +127,7 @@ export default function FightScene({ encounter, crew = START_CREW, level = 1, bo
               setup={setup}
               level={level}
               bonus={bonus}
+              extras={extras}
               onEnd={(r) => {
                 setResult(r)
                 setPhase('ende')
@@ -332,7 +336,7 @@ interface Banner {
   tone: 'crew' | 'feind' | 'info'
 }
 
-function BattleView({ encounter, setup, level, bonus, onEnd }: { encounter: Encounter; setup: CrewSetup; level: number; bonus?: Partial<Record<CrewId, FighterStats>>; onEnd: (r: FightResult) => void }) {
+function BattleView({ encounter, setup, level, bonus, extras, onEnd }: { encounter: Encounter; setup: CrewSetup; level: number; bonus?: Partial<Record<CrewId, FighterStats>>; extras?: (fighters: CrewId[]) => Partial<Record<CrewId, Extra>>; onEnd: (r: FightResult) => void }) {
   const cvRef = useRef<HTMLCanvasElement>(null)
   const stageRef = useRef<Stage | null>(null)
   const battleRef = useRef<Battle | null>(null)
@@ -362,7 +366,8 @@ function BattleView({ encounter, setup, level, bonus, onEnd }: { encounter: Enco
     const stage = new Stage(cvRef.current!)
     stage.speed = speed
     stageRef.current = stage
-    const defs = [...crewDefs(setup, level, bonus, isSpoilerFree()), ...encounter.foes]
+    const ex = extras?.(setup.map((p) => p.id))
+    const defs = [...crewDefs(setup, level, bonus, isSpoilerFree(), ex), ...encounter.foes]
     stage.bg = encounter.bg
     const b = createBattle(defs)
     battleRef.current = b
@@ -400,8 +405,14 @@ function BattleView({ encounter, setup, level, bonus, onEnd }: { encounter: Enco
       if (win) for (const f of alive(b, 'crew')) stage.play(f.id, 'cheer')
       await stage.wait(1.2)
       const [g0, g1] = encounter.reward.gold
+      // Glueck-Schule und Goldene-Moewe-Set: mehr Beute
+      const crewMods = defs.filter((d) => d.side === 'crew').map((d) => d.mods ?? {})
+      const goldBonus = Math.max(0, ...crewMods.map((m) => m.goldBonus ?? 0))
+      const extraItem = Math.max(0, ...crewMods.map((m) => m.extraItem ?? 0))
       const items = win && Math.random() < encounter.reward.itemChance ? [rollItem(encounter.boss ? 'selten' : 'gewoehnlich')] : []
-      onEnd({ sieg: win, xp: win ? encounter.reward.xp : 0, gold: win ? g0 + Math.floor(Math.random() * (g1 - g0 + 1)) : 0, items })
+      if (win && extraItem && Math.random() < extraItem) items.push(rollItem())
+      const gold = win ? Math.round((g0 + Math.floor(Math.random() * (g1 - g0 + 1))) * (1 + goldBonus)) : 0
+      onEnd({ sieg: win, xp: win ? encounter.reward.xp : 0, gold, items })
     }
     void run()
     return () => {
@@ -513,7 +524,8 @@ function describe(b: Battle, ev: FightEvent[]): string[] {
     else if (e.t === 'phase') out.push(e.text)
     else if (e.t === 'durch') out.push(`${n(e.who)} schlägt durch ${n(e.target)} hindurch`)
     else if (e.t === 'unterbrochen') out.push(`${n(e.who)} wurde unterbrochen`)
-    else if (e.t === 'brand') out.push(`${n(e.target)} brennt: ${e.dmg}`)
+    else if (e.t === 'brand') out.push(`${n(e.target)} ${e.blut ? 'blutet' : e.gift ? 'leidet unter Gift' : 'brennt'}: ${e.dmg}`)
+    else if (e.t === 'effekt') out.push(`${n(e.target)}: ${e.text}`)
     else if (e.t === 'heilung') out.push(`${n(e.target)} heilt ${e.amount}`)
     else if (e.t === 'besiegt') out.push(`${n(e.who)} ist besiegt`)
   }
@@ -527,7 +539,7 @@ async function playEvents(stage: Stage, b: Battle, ev: FightEvent[], banner: (t:
   /** Treffer-Ereignisse, die direkt zu einer Aktion gehoeren */
   const takeHits = () => {
     const out: FightEvent[] = []
-    while (i < ev.length && ['treffer', 'verfehlt', 'besiegt', 'zurueck', 'unterbrochen', 'heilung', 'durch', 'phase', 'verstaerkung'].includes(ev[i].t)) out.push(ev[i++])
+    while (i < ev.length && ['treffer', 'verfehlt', 'besiegt', 'zurueck', 'unterbrochen', 'heilung', 'durch', 'phase', 'verstaerkung', 'effekt'].includes(ev[i].t)) out.push(ev[i++])
     return out
   }
   const showHits = async (hits: FightEvent[]) => {
@@ -575,6 +587,9 @@ async function playEvents(stage: Stage, b: Battle, ev: FightEvent[], banner: (t:
           stage.burst(x, y - 60, 18, ['#dee2e6', '#adb5bd', '#96f2d7'], 160, -120, true)
         })
         await stage.wait(0.8)
+      } else if (h.t === 'effekt') {
+        stage.float(h.target, h.text, h.tone === 'gut' ? '#ffe066' : '#ffa8a8', 17)
+        await stage.wait(0.15)
       } else if (h.t === 'heilung') {
         const a = stage.actors.get(h.target)!
         a.hp = Math.min(a.hpMax, a.hp + h.amount)
@@ -593,9 +608,9 @@ async function playEvents(stage: Stage, b: Battle, ev: FightEvent[], banner: (t:
       case 'brand': {
         const a = stage.actors.get(e.target)!
         a.hp = Math.max(0, a.hp - e.dmg)
-        stage.float(e.target, String(e.dmg), e.gift ? '#8ce99a' : '#ff922b', 24)
+        stage.float(e.target, String(e.dmg), e.gift ? '#8ce99a' : e.blut ? '#ff6b6b' : '#ff922b', 24)
         const c = stage.center(e.target)
-        stage.burst(c.x, c.y, 10, e.gift ? ['#b2f2bb', '#69db7c', '#2b8a3e'] : ['#ffd43b', '#ff922b', '#f03e3e'], 140, -200, true)
+        stage.burst(c.x, c.y, 10, e.gift ? ['#b2f2bb', '#69db7c', '#2b8a3e'] : e.blut ? ['#ffa8a8', '#e03131', '#a61e4d'] : ['#ffd43b', '#ff922b', '#f03e3e'], 140, -200, true)
         await stage.wait(0.35)
         break
       }
@@ -729,6 +744,7 @@ async function playEvents(stage: Stage, b: Battle, ev: FightEvent[], banner: (t:
       case 'durch':
       case 'phase':
       case 'verstaerkung':
+      case 'effekt':
         i--
         await showHits(takeHits())
         await stage.wait(0.4)

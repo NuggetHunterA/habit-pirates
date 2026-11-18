@@ -11,6 +11,7 @@
     "build:single": "VITE_SINGLEFILE=1 vite build --mode single",
     "build:kampf": "vite build --mode kampf",
     "sim": "node --experimental-strip-types scripts/sim.ts",
+    "fxcheck": "node --experimental-strip-types scripts/fx-check.ts",
     "assets": "python3 scripts/prepare_assets.py"
   },
   "dependencies": {

@@ -15,6 +15,89 @@ export interface FighterStats {
   tempo: number
   krit: number
   ausweichen: number
+  /** Krit-Schaden in Prozent (ohne Angabe: 160) */
+  kritSchaden?: number
+}
+
+/** Grundwert Krit-Schaden in Prozent */
+export const KRIT_SCHADEN = 160
+
+/**
+ * Besondere Wirkungen aus Item-Effekten, Schulen und Sets.
+ * Zahlen sind Anteile (0.1 = 10 %), Krit-Boni in Prozentpunkten.
+ */
+export interface Mods {
+  /** Kritische Treffer verursachen Blutung */
+  critBleed?: boolean
+  /** Wie oft Blutung stapelt (Standard 3) */
+  bleedMax?: number
+  /** Mehr Krit-Chance gegen brennende oder blutende Ziele */
+  critVsBrand?: number
+  critVsBlutung?: number
+  /** Jeder n-te eigene Angriff trifft zweimal */
+  doubleEvery?: number
+  /** Schild zum Kampfstart (Anteil vom Leben) */
+  startShield?: number
+  /** Schild kommt einmal zurueck, wenn das Leben unter 50 % faellt */
+  shieldRefresh?: number
+  /** Konter nach dem Ausweichen (Schaden-Multiplikator) */
+  counter?: number
+  /** Heilt um diesen Anteil des eigenen Schadens */
+  lifesteal?: number
+  /** Einmal pro Kampf: unter `below` Leben heilt `heal` */
+  lastStand?: { below: number; heal: number }
+  /** Eigene Heilungen staerker */
+  healBonus?: number
+  /** Brand macht mehr Schaden */
+  brandBonus?: number
+  /** Brennende Gegner explodieren beim Tod (Anteil vom Angriff an allen Gegnern) */
+  explode?: number
+  /** Vergiftete Gegner sind geschwaecht */
+  poisonWeakens?: boolean
+  /** Erster Angriff im Kampf ist kritisch und verursacht Blutung */
+  firstCrit?: boolean
+  /** Die Spezialfaehigkeit setzt Brand auf alle getroffenen Ziele */
+  abilityBurn?: boolean
+  /** Wer den Traeger verfehlt, wird vergiftet */
+  poisonOnMiss?: boolean
+  /** Unter `below` Leben: mehr Angriff und doppelter Lebensraub */
+  rage?: { below: number; atk: number }
+  /** Die ersten n eigenen Treffer verlangsamen das Ziel */
+  slowHits?: number
+  /** Heilt bei jedem n-ten eigenen Zug einen Anteil vom Leben */
+  regen?: { every: number; pct: number }
+  /** Alle Gegner starten verlangsamt */
+  slowFoesAtStart?: boolean
+  /** Mehr Gold aus Kaempfen */
+  goldBonus?: number
+  /** Zusaetzliche Chance auf ein Item nach dem Kampf */
+  extraItem?: number
+}
+
+const MAX_KEYS: (keyof Mods)[] = ['bleedMax', 'counter']
+
+/** Mods zusammenfuehren: Zahlen addieren (Konter und Blutungs-Stapel: hoechster Wert), Schalter verodern */
+export function mergeMods(...list: (Mods | undefined)[]): Mods {
+  const out: Record<string, unknown> = {}
+  for (const m of list) {
+    if (!m) continue
+    for (const [k, v] of Object.entries(m) as [keyof Mods, unknown][]) {
+      const cur = out[k]
+      if (typeof v === 'number') {
+        if (k === 'doubleEvery') out[k] = typeof cur === 'number' ? Math.min(cur, v) : v
+        else if (MAX_KEYS.includes(k)) out[k] = Math.max((cur as number) ?? 0, v)
+        else out[k] = ((cur as number) ?? 0) + v
+      } else if (typeof v === 'boolean') out[k] = !!cur || v
+      else if (v && typeof v === 'object') {
+        // Objekte (lastStand, rage, regen): staerkere Wirkung gewinnt
+        const a = cur as Record<string, number> | undefined
+        const b = v as Record<string, number>
+        const score = (o: Record<string, number>) => Object.values(o).reduce((x, y) => x + y, 0)
+        out[k] = !a || score(b) > score(a) ? b : a
+      }
+    }
+  }
+  return out as Mods
 }
 
 export type Side = 'crew' | 'feind'
@@ -127,6 +210,8 @@ export interface FighterDef {
   big?: BigAttack
   /** Verstaerkung, die ein Boss ruft */
   adds?: FighterDef[]
+  /** Item-, Schul- und Set-Wirkungen */
+  mods?: Mods
 }
 
 export interface Fighter extends FighterDef {
@@ -150,6 +235,25 @@ export interface Fighter extends FighterDef {
   schleier: boolean
   /** Boss-Phase 1..3 */
   phase: number
+  /** Wer den Brand gelegt hat (fuer Explosionen) */
+  brandSrc: string
+  /** Schild, faengt Schaden ab */
+  shield: number
+  shieldRefreshed: boolean
+  /** Blutung: Stapel, verbleibende Zuege, Schaden pro Stapel */
+  bleed: number
+  bleedTurns: number
+  bleedDmg: number
+  /** Zuege verlangsamt (-30 % Tempo) und geschwaecht (-20 % Angriff) */
+  slow: number
+  weak: number
+  lastStandUsed: boolean
+  /** Erster eigener Angriff schon erfolgt */
+  firstDone: boolean
+  /** Eigene normale Angriffe (fuer Doppelschlag) */
+  attacks: number
+  /** Restliche verlangsamende Treffer */
+  slowHitsLeft: number
 }
 
 export type FightEvent =
@@ -159,7 +263,9 @@ export type FightEvent =
   | { t: 'verfehlt'; who: string; target: string }
   | { t: 'faehigkeit'; who: string; ability: AbilityId; targets: string[] }
   | { t: 'heilung'; target: string; amount: number }
-  | { t: 'brand'; target: string; dmg: number; gift?: boolean }
+  | { t: 'brand'; target: string; dmg: number; gift?: boolean; blut?: boolean }
+  /** Kurzer Hinweis ueber einer Figur (Schild, Blutung, Konter, ...) */
+  | { t: 'effekt'; target: string; text: string; tone: 'gut' | 'schlecht' }
   | { t: 'durch'; who: string; target: string }
   | { t: 'phase'; who: string; text: string }
   | { t: 'verstaerkung'; who: string; adds: string[] }
@@ -180,7 +286,6 @@ export interface Battle {
 
 const ENERGY_PER_ACTION = 25
 const ENERGY_PER_HIT = 12
-const KRIT_MULT = 1.6
 const MAX_ACTIONS = 400
 
 // Mulberry32: kleiner, schneller Zufall mit Seed
@@ -197,8 +302,14 @@ export function createBattle(defs: FighterDef[], seed = (Math.random() * 2 ** 31
     over: false,
     sieg: false,
     round: 0,
-    fighters: defs.map((d, i) => spawn(d, i)),
+    fighters: startEffects(defs.map((d, i) => spawn(d, i))),
   }
+}
+
+/** Wirkungen zum Kampfstart: Gegner verlangsamt (Gezeiten-Schule) */
+function startEffects(fs: Fighter[]): Fighter[] {
+  if (fs.some((f) => f.side === 'crew' && f.mods?.slowFoesAtStart)) for (const f of fs) if (f.side === 'feind') f.slow = 2
+  return fs
 }
 
 function spawn(d: FighterDef, i: number): Fighter {
@@ -220,6 +331,18 @@ function spawn(d: FighterDef, i: number): Fighter {
       gift: 0,
       schleier: !!d.traits?.includes('geisterhaft'),
       phase: 1,
+      brandSrc: '',
+      shield: Math.round((d.mods?.startShield ?? 0) * d.stats.leben),
+      shieldRefreshed: false,
+      bleed: 0,
+      bleedTurns: 0,
+      bleedDmg: 0,
+      slow: 0,
+      weak: 0,
+      lastStandUsed: false,
+      firstDone: false,
+      attacks: 0,
+      slowHitsLeft: d.mods?.slowHits ?? 0,
   }
 }
 
@@ -227,14 +350,17 @@ export const alive = (b: Battle, side?: Side) => b.fighters.filter((f) => f.hp >
 export const byId = (b: Battle, id: string) => b.fighters.find((f) => f.id === id)!
 export const abilityReady = (f: Fighter) => !!f.ability && f.hp > 0 && f.energy >= 100
 
+/** Tempo mit Verlangsamung */
+const speed = (f: Fighter) => Math.max(1, f.stats.tempo * (f.slow > 0 ? 0.7 : 1))
+
 /** Wer ist als Naechstes dran? Fuellt die Zugleisten bis einer 100 erreicht. */
 function nextActor(b: Battle): Fighter {
   const living = alive(b)
   for (;;) {
     const ready = living.filter((f) => f.gauge >= 100).sort((a, c) => c.gauge - a.gauge)
     if (ready.length) return ready[0]
-    const step = Math.min(...living.map((f) => (100 - f.gauge) / Math.max(1, f.stats.tempo)))
-    for (const f of living) f.gauge += f.stats.tempo * step + 1e-9
+    const step = Math.min(...living.map((f) => (100 - f.gauge) / speed(f)))
+    for (const f of living) f.gauge += speed(f) * step + 1e-9
   }
 }
 
@@ -253,9 +379,14 @@ function pickTarget(b: Battle, me: Fighter): Fighter {
   return back[Math.floor(rnd(b) * back.length)] ?? foes[0]
 }
 
-function attackPower(me: Fighter): number {
+const raging = (f: Fighter) => !!f.mods?.rage && f.hp / f.stats.leben < f.mods.rage.below
+
+function attackPower(b: Battle, me: Fighter): number {
   let a = me.stats.angriff
   if (me.ruf > 0) a *= 1.3
+  if (me.weak > 0) a *= 0.8
+  if (me.gift > 0 && alive(b, me.side === 'crew' ? 'feind' : 'crew').some((f) => f.mods?.poisonWeakens)) a *= 0.8
+  if (raging(me)) a *= 1 + me.mods!.rage!.atk
   // Nahkaempfer aus der hinteren Reihe treffen schwaecher
   if (!me.ranged && me.row === 'hinten') a *= 0.7
   return a
@@ -273,8 +404,44 @@ function dodge(t: Fighter) {
   return d
 }
 
-/** Schaden mit Ruestung, Krit und Ausweichen */
-function strike(b: Battle, me: Fighter, t: Fighter, mult: number, ev: FightEvent[], opts: { area?: boolean; noDodge?: boolean } = {}) {
+/** Heilen mit Obergrenze, gibt den geheilten Betrag zurueck */
+function heal(t: Fighter, amount: number, ev: FightEvent[]): number {
+  const h = Math.min(t.stats.leben - t.hp, Math.round(amount))
+  if (h < 1 || t.hp <= 0) return 0
+  t.hp += h
+  ev.push({ t: 'heilung', target: t.id, amount: h })
+  return h
+}
+
+/** Brand legen: 3 Zuege, Schaden haengt vom Angriff des Verursachers ab */
+export function applyBrand(me: Fighter, t: Fighter) {
+  t.brand = 3
+  t.brandSrc = me.id
+  t.brandDmg = Math.max(1, Math.round(Math.min(t.stats.leben * 0.05, me.stats.angriff * 0.6) * (1 + (me.mods?.brandBonus ?? 0))))
+}
+
+/** Blutung: stapelt (Standard bis 3), 25 % des Angriffs pro Stapel und Zug. Geisterhafte sind immun. */
+function applyBleed(me: Fighter, t: Fighter, ev: FightEvent[]) {
+  if (t.hp <= 0) return
+  if (t.traits?.includes('geisterhaft')) {
+    ev.push({ t: 'effekt', target: t.id, text: 'Immun gegen Blutung', tone: 'schlecht' })
+    return
+  }
+  t.bleed = Math.min(me.mods?.bleedMax ?? 3, t.bleed + 1)
+  t.bleedTurns = 3
+  t.bleedDmg = Math.max(t.bleedDmg, Math.max(1, Math.round(me.stats.angriff * 0.25)))
+  ev.push({ t: 'effekt', target: t.id, text: t.bleed > 1 ? `Blutung ×${t.bleed}` : 'Blutung', tone: me.side === 'crew' ? 'gut' : 'schlecht' })
+}
+
+interface StrikeOpts {
+  area?: boolean
+  noDodge?: boolean
+  /** Konter und Explosionen loesen keine weiteren aus */
+  chain?: boolean
+}
+
+/** Schaden mit Ruestung, Krit und Ausweichen, plus alle Item-Wirkungen */
+function strike(b: Battle, me: Fighter, t: Fighter, mult: number, ev: FightEvent[], opts: StrikeOpts = {}) {
   if (t.schleier) {
     t.schleier = false
     ev.push({ t: 'durch', who: me.id, target: t.id })
@@ -282,23 +449,79 @@ function strike(b: Battle, me: Fighter, t: Fighter, mult: number, ev: FightEvent
   }
   if (!opts.noDodge && rnd(b) * 100 < dodge(t)) {
     ev.push({ t: 'verfehlt', who: me.id, target: t.id })
+    if (t.mods?.poisonOnMiss && me.hp > 0) {
+      me.gift = 3
+      ev.push({ t: 'effekt', target: me.id, text: 'Vergiftet', tone: me.side === 'crew' ? 'schlecht' : 'gut' })
+    }
+    if (t.mods?.counter && !opts.chain && t.hp > 0 && me.hp > 0) {
+      ev.push({ t: 'effekt', target: t.id, text: 'Konter!', tone: t.side === 'crew' ? 'gut' : 'schlecht' })
+      strike(b, t, me, t.mods.counter, ev, { noDodge: true, chain: true })
+    }
     return
   }
-  const krit = rnd(b) * 100 < me.stats.krit
-  let dmg = attackPower(me) * mult * (20 / (20 + armor(t))) * (0.9 + rnd(b) * 0.2)
-  if (krit) dmg *= KRIT_MULT
+  const first = !me.firstDone && !!me.mods?.firstCrit
+  me.firstDone = true
+  let chance = me.stats.krit
+  if (t.brand > 0) chance += me.mods?.critVsBrand ?? 0
+  if (t.bleed > 0) chance += me.mods?.critVsBlutung ?? 0
+  const krit = first || rnd(b) * 100 < chance
+  let dmg = attackPower(b, me) * mult * (20 / (20 + armor(t))) * (0.9 + rnd(b) * 0.2)
+  if (krit) dmg *= (me.stats.kritSchaden ?? KRIT_SCHADEN) / 100
   const geblockt = !opts.area && !!t.traits?.includes('ankerschild')
   if (geblockt) dmg *= 0.65
   if (t.markiert) dmg *= 1.3
-  const d = Math.max(1, Math.round(dmg))
+  let d = Math.max(1, Math.round(dmg))
+  if (t.shield > 0) {
+    const abs = Math.min(t.shield, d)
+    t.shield -= abs
+    d -= abs
+    ev.push({ t: 'effekt', target: t.id, text: t.shield > 0 ? `Schild −${abs}` : 'Schild zerbrochen', tone: t.side === 'crew' ? 'gut' : 'schlecht' })
+    if (d === 0) return
+  }
   t.hp = Math.max(0, t.hp - d)
   if (t.ability) t.energy = Math.min(100, t.energy + ENERGY_PER_HIT)
   ev.push({ t: 'treffer', who: me.id, target: t.id, dmg: d, krit, geblockt })
-  if (t.hp === 0) ev.push({ t: 'besiegt', who: t.id })
-  else {
-    if (me.traits?.includes('gift') && !opts.area) t.gift = 3
-    bossPhase(b, t, ev)
+  const steal = (me.mods?.lifesteal ?? 0) * (raging(me) ? 2 : 1)
+  if (steal > 0) heal(me, d * steal, ev)
+  if (t.hp === 0) {
+    ev.push({ t: 'besiegt', who: t.id })
+    explodeIfBurning(b, t, ev, opts)
+    return
   }
+  if (me.traits?.includes('gift') && !opts.area) t.gift = 3
+  if ((krit && me.mods?.critBleed) || first) applyBleed(me, t, ev)
+  if (me.slowHitsLeft > 0) {
+    me.slowHitsLeft--
+    t.slow = 2
+    ev.push({ t: 'effekt', target: t.id, text: 'Verlangsamt', tone: me.side === 'crew' ? 'gut' : 'schlecht' })
+  }
+  afterDamage(t, ev)
+  bossPhase(b, t, ev)
+}
+
+/** Schild-Erneuerung und letzte Rettung, wenn das Leben faellt */
+function afterDamage(t: Fighter, ev: FightEvent[]) {
+  const f = t.hp / t.stats.leben
+  if (t.mods?.shieldRefresh && !t.shieldRefreshed && f < 0.5) {
+    t.shieldRefreshed = true
+    t.shield += Math.round(t.mods.shieldRefresh * t.stats.leben)
+    ev.push({ t: 'effekt', target: t.id, text: 'Schild erneuert', tone: 'gut' })
+  }
+  if (t.mods?.lastStand && !t.lastStandUsed && f < t.mods.lastStand.below) {
+    t.lastStandUsed = true
+    ev.push({ t: 'effekt', target: t.id, text: 'Letzte Rettung', tone: 'gut' })
+    heal(t, t.mods.lastStand.heal * t.stats.leben, ev)
+  }
+}
+
+/** Pulver-Schule: brennende Gegner explodieren beim Tod */
+function explodeIfBurning(b: Battle, t: Fighter, ev: FightEvent[], opts: StrikeOpts) {
+  if (opts.chain || t.brand <= 0 || !t.brandSrc) return
+  const src = b.fighters.find((f) => f.id === t.brandSrc)
+  const k = src?.mods?.explode
+  if (!src || !k) return
+  ev.push({ t: 'effekt', target: t.id, text: 'Explosion!', tone: src.side === 'crew' ? 'gut' : 'schlecht' })
+  for (const o of alive(b, t.side)) strike(b, src, o, k, ev, { area: true, noDodge: true, chain: true })
 }
 
 /** Phasenwechsel der Bosse, ausgeloest durch Schaden */
@@ -355,9 +578,7 @@ function castAbility(b: Battle, me: Fighter, ev: FightEvent[]) {
       ev.push({ t: 'faehigkeit', who: me.id, ability: 'kapitaensruf', targets: crew.map((f) => f.id) })
       for (const f of crew) {
         f.ruf = 3
-        const heal = Math.round(f.stats.leben * 0.08)
-        f.hp = Math.min(f.stats.leben, f.hp + heal)
-        ev.push({ t: 'heilung', target: f.id, amount: heal })
+        heal(f, f.stats.leben * 0.08 * (1 + (me.mods?.healBonus ?? 0)), ev)
       }
       break
     }
@@ -365,10 +586,7 @@ function castAbility(b: Battle, me: Fighter, ev: FightEvent[]) {
       ev.push({ t: 'faehigkeit', who: me.id, ability: 'donnerbuechse', targets: foes.map((f) => f.id) })
       for (const t of foes) {
         strike(b, me, t, 1.2, ev, { area: true, noDodge: true })
-        if (t.hp > 0) {
-          t.brand = 3
-          t.brandDmg = Math.max(1, Math.round(Math.min(t.stats.leben * 0.05, me.stats.angriff * 0.6)))
-        }
+        if (t.hp > 0) applyBrand(me, t)
       }
       break
     }
@@ -403,9 +621,7 @@ function castAbility(b: Battle, me: Fighter, ev: FightEvent[]) {
           f.ruf = 3
           if (f.ability && f.id !== me.id) f.energy = Math.min(100, f.energy + 20)
         } else {
-          const heal = Math.round(f.stats.leben * 0.22)
-          f.hp = Math.min(f.stats.leben, f.hp + heal)
-          ev.push({ t: 'heilung', target: f.id, amount: heal })
+          heal(f, f.stats.leben * 0.22 * (1 + (me.mods?.healBonus ?? 0)), ev)
         }
       }
       break
@@ -422,6 +638,18 @@ function castAbility(b: Battle, me: Fighter, ev: FightEvent[]) {
       ev.push({ t: 'faehigkeit', who: me.id, ability: 'sturzflug', targets: ts.map((f) => f.id) })
       for (const t of ts) strike(b, me, t, 1.5, ev, { noDodge: true })
       break
+    }
+  }
+  // Pulverteufel-Set: Faehigkeit setzt Brand auf alle getroffenen Gegner
+  if (me.mods?.abilityBurn) {
+    const cast = ev.find((e) => e.t === 'faehigkeit')
+    const ids = cast && cast.t === 'faehigkeit' ? cast.targets : []
+    for (const id of ids) {
+      const t = b.fighters.find((f) => f.id === id)
+      if (t && t.side !== me.side && t.hp > 0) {
+        applyBrand(me, t)
+        ev.push({ t: 'effekt', target: t.id, text: 'Brand', tone: me.side === 'crew' ? 'gut' : 'schlecht' })
+      }
     }
   }
 }
@@ -468,6 +696,8 @@ export function step(b: Battle, wants: Set<string>): FightEvent[] {
     ev.push({ t: 'brand', target: me.id, dmg: d })
     if (me.hp === 0) {
       ev.push({ t: 'besiegt', who: me.id })
+      me.brand = Math.max(1, me.brand)
+      explodeIfBurning(b, me, ev, {})
       checkEnd(b, ev)
       return ev
     }
@@ -483,8 +713,22 @@ export function step(b: Battle, wants: Set<string>): FightEvent[] {
       return ev
     }
   }
+  if (me.bleed > 0) {
+    const d = me.bleedDmg * me.bleed
+    me.hp = Math.max(0, me.hp - d)
+    ev.push({ t: 'brand', target: me.id, dmg: d, blut: true })
+    if (--me.bleedTurns <= 0) me.bleed = 0
+    if (me.hp === 0) {
+      ev.push({ t: 'besiegt', who: me.id })
+      checkEnd(b, ev)
+      return ev
+    }
+  }
+  if (me.mods?.regen && me.actions % me.mods.regen.every === 0) heal(me, me.stats.leben * me.mods.regen.pct, ev)
   if (me.ruf > 0) me.ruf--
   if (me.flink > 0) me.flink--
+  if (me.slow > 0) me.slow--
+  if (me.weak > 0) me.weak--
 
   // Angekuendigter Grossangriff
   const big = me.big
@@ -543,6 +787,12 @@ export function step(b: Battle, wants: Set<string>): FightEvent[] {
   const t = pickTarget(b, me)
   ev.push({ t: 'angriff', who: me.id, target: t.id, ranged: !!me.ranged })
   strike(b, me, t, 1, ev)
+  me.attacks++
+  const every = me.mods?.doubleEvery
+  if (every && me.attacks % every === 0 && t.hp > 0 && me.hp > 0) {
+    ev.push({ t: 'effekt', target: me.id, text: 'Doppelschlag', tone: me.side === 'crew' ? 'gut' : 'schlecht' })
+    strike(b, me, t, 1, ev)
+  }
   if (me.ability) me.energy = Math.min(100, me.energy + ENERGY_PER_ACTION)
   if (b.round > MAX_ACTIONS) {
     // Notbremse: Unentschieden zaehlt als Niederlage
@@ -573,7 +823,7 @@ export function simulate(defs: FighterDef[], seed: number, smart = false): { sie
 
 /** Die naechsten n Zuege vorhersagen (fuer die Zugleiste), ohne den Kampf zu veraendern */
 export function turnOrder(b: Battle, n: number): string[] {
-  const living = alive(b).map((f) => ({ id: f.id, g: f.gauge, t: Math.max(1, f.stats.tempo) }))
+  const living = alive(b).map((f) => ({ id: f.id, g: f.gauge, t: speed(f) }))
   const out: string[] = []
   while (out.length < n && living.length) {
     const ready = living.filter((f) => f.g >= 100).sort((a, c) => c.g - a.g)
