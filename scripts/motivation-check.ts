@@ -1,5 +1,5 @@
 // Prueft Wind-Formel, Rueckenwind, Serien, Rettungsring und Fokus-Truhe: npm run motcheck
-import { dayResult, windEarned } from '../src/game/rules.ts'
+import { activeHabits, dayResult, freeHabits, nextDueText, windEarned } from '../src/game/rules.ts'
 import { pendingRewards, streakInfo, focusWeek } from '../src/game/motivation.ts'
 import { addDays } from '../src/game/dates.ts'
 import type { Save } from '../src/game/types.ts'
@@ -80,6 +80,44 @@ for (const [n, want] of [[2, 5], [3, 6], [4, 7], [5, 9], [6, 10], [10, 10]] as c
   tick(s, addDays(MON, 5), 1)
   tick(s, addDays(MON, 6), 1)
   eq('7 von 7: Gold', focusWeek(s, MON, addDays(MON, 6))?.chest, { kind: 'gold' })
+}
+
+// Rhythmus: alle 2 Tage ab letztem Erledigen, feste Wochentage, Ruhetag, Loeschen
+{
+  const s = save(2)
+  s.habits[1].rhythms = [{ from: MON, r: { kind: 'every', n: 2 } }]
+  eq('alle 2 Tage: am Start fällig', activeHabits(s, MON).length, 2)
+  tick(s, MON, 2)
+  eq('alle 2 Tage: am Tag danach frei', freeHabits(s, addDays(MON, 1)).map((h) => h.id), ['h1'])
+  eq('frei: Text', nextDueText(s, s.habits[1], addDays(MON, 1)), 'wieder fällig morgen')
+  eq('frei zählt nicht für vollen Wind', dayResult(s, addDays(MON, 1)).total, 1)
+  eq('alle 2 Tage: übermorgen wieder fällig', activeHabits(s, addDays(MON, 2)).length, 2)
+  eq('verpasst: bleibt fällig', activeHabits(s, addDays(MON, 3)).length, 2)
+  s.logs[addDays(MON, 1)] = { done: { h0: true, h1: true }, glasses: [] }
+  eq('freier Habit abgehakt zählt mit', dayResult(s, addDays(MON, 1)).total, 2)
+
+  const t = save(1)
+  t.habits[0].rhythms = [{ from: MON, r: { kind: 'days', days: [0, 2, 4] } }]
+  eq('Wochentage: Di frei', activeHabits(t, addDays(MON, 1)).length, 0)
+  eq('Wochentage: Text', nextDueText(t, t.habits[0], addDays(MON, 1)), 'wieder fällig morgen')
+  eq('Wochentage: Text Fr', nextDueText(t, t.habits[0], addDays(MON, 2)), 'fällig Fr')
+  for (const i of [0, 2, 4, 7, 9]) t.logs[addDays(MON, i)] = { done: { h0: true }, glasses: [] }
+  eq('Ruhetage brechen die Serie nicht', streakInfo(t, addDays(MON, 9)).days, 5)
+  eq('Ruhetage verbrauchen keinen Rettungsring', streakInfo(t, addDays(MON, 9)).rescued, [])
+
+  const f = save(1, 1)
+  f.habits[0].rhythms = [{ from: MON, r: { kind: 'days', days: [0, 2, 4] } }]
+  for (const i of [0, 2, 4]) f.logs[addDays(MON, i)] = { done: { h0: true }, glasses: [] }
+  eq('Fokus mit Rhythmus 3 von 3: Gold', focusWeek(f, MON, addDays(MON, 6))?.chest, { kind: 'gold' })
+  delete f.logs[addDays(MON, 4)]
+  eq('Fokus mit Rhythmus 2 von 3: nichts', focusWeek(f, MON, addDays(MON, 6))?.chest, null)
+
+  const d = save(2)
+  for (let i = 0; i < 3; i++) tick(d, addDays(MON, i), 2)
+  const before = windEarned(d)
+  d.habits[1].removedAt = addDays(MON, 3)
+  eq('Löschen ändert vergangenen Wind nicht', windEarned(d), before)
+  eq('gelöschter Habit ab dem Tag weg', activeHabits(d, addDays(MON, 3)).length, 1)
 }
 
 // Wind gesamt bleibt endlich und berechenbar

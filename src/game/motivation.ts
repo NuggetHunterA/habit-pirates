@@ -1,6 +1,6 @@
 import type { Rarity, Save } from './types'
-import { addDays, daysOfWeek, weekStartOf } from './dates.ts'
-import { firstActiveDay, isDone, streakDay } from './rules.ts'
+import { addDays, weekStartOf } from './dates.ts'
+import { firstActiveDay, focusOkFor, focusTally, isDone, isScheduled, restDay, streakDay } from './rules.ts'
 import type { ChestKind } from './loot'
 
 /**
@@ -55,6 +55,8 @@ export function streakInfo(save: Save, today: string): StreakInfo {
   let todayOk = false
   if (first) {
     for (let d = first; d <= today; d = addDays(d, 1)) {
+      // Ruhetag (nichts faellig): zaehlt weder fuer noch gegen die Serie
+      if (d !== today && restDay(save, d)) continue
       const ok = streakDay(save, d)
       if (ok) {
         if (days === 0) runStart = d
@@ -77,24 +79,29 @@ export function streakInfo(save: Save, today: string): StreakInfo {
 
 export interface FocusResult {
   week: string
-  /** Tage, an denen alle Fokus-Habits erledigt waren */
+  /** Erledigte Tage des knappsten Fokus-Habits */
   days: number
+  /** Faellige Tage dieses Habits (taeglich: 7) */
+  due: number
   chest: RewardChest | null
 }
 
-/** Fokus-Ergebnis einer Woche bis einschliesslich bis (meist heute) */
+/**
+ * Fokus-Ergebnis einer Woche bis einschliesslich bis (meist heute).
+ * Gold: jeder Fokus-Habit an allen faelligen Tagen. Silber: an mindestens 5 von 7 (anteilig) der faelligen Tage.
+ */
 export function focusWeek(save: Save, week: string, until: string): FocusResult | null {
   const plan = save.weeks[week]
   if (!plan?.focusIds.length) return null
   const habits = plan.focusIds.map((id) => save.habits.find((h) => h.id === id)).filter((h) => !!h)
   if (!habits.length) return null
-  let days = Infinity
-  for (const h of habits) {
-    const n = daysOfWeek(week).filter((d) => d <= until && isDone(h, save.logs[d])).length
-    days = Math.min(days, n)
-  }
-  const chest: RewardChest | null = days >= 7 ? { kind: 'gold' } : days >= 5 ? { kind: 'silber' } : null
-  return { week, days, chest }
+  const tallies = habits.map((h) => focusTally(save, h, week, until))
+  // Der Habit mit dem kleinsten Anteil bestimmt die Anzeige
+  const worst = tallies.reduce((a, b) => (b.done * Math.max(a.due, 1) < a.done * Math.max(b.due, 1) ? b : a))
+  const gold = tallies.every((t) => t.due > 0 && t.done >= t.due)
+  const silver = tallies.every(focusOkFor)
+  const chest: RewardChest | null = gold ? { kind: 'gold' } : silver ? { kind: 'silber' } : null
+  return { week, days: worst.done, due: worst.due, chest }
 }
 
 export interface PendingReward {
@@ -119,15 +126,24 @@ export function pendingRewards(save: Save, today: string): PendingReward[] {
     if (claimed.has(key)) continue
     const r = focusWeek(save, week, today)
     if (!r?.chest) continue
-    out.push({ key, title: 'Fokus-Truhe', text: `Fokus an ${r.days} von 7 Tagen geschafft.`, chest: r.chest })
+    out.push({ key, title: 'Fokus-Truhe', text: `Fokus an ${r.days} von ${r.due} fälligen Tagen geschafft.`, chest: r.chest })
   }
   return out
 }
 
-/** Sonntag, Fokus bisher an 6 Tagen und heute noch offen: wer jetzt oeffnet, verschenkt die Goldtruhe */
+/** Sonntag, Fokus heute noch offen: wer jetzt oeffnet, verschenkt die Goldtruhe, die nach dem Abhaken moeglich waere */
 export function focusGoldPossible(save: Save, today: string): boolean {
   const week = weekStartOf(today)
-  if (today !== addDays(week, 6)) return false
+  if (today !== addDays(week, 6) || (save.game.claimed ?? []).includes(`fokus|${week}`)) return false
+  const plan = save.weeks[week]
   const r = focusWeek(save, week, today)
-  return !!r && r.days === 6 && !(save.game.claimed ?? []).includes(`fokus|${week}`) && focusWeek(save, week, addDays(today, -1))!.days === 6
+  if (!plan || !r || r.chest?.kind === 'gold' || !r.chest) return false
+  const log = save.logs[today]
+  return plan.focusIds.every((id) => {
+    const h = save.habits.find((x) => x.id === id)
+    if (!h) return true
+    const t = focusTally(save, h, week, today)
+    const open = !isDone(h, log) && isScheduled(save, h, today)
+    return t.done + (open ? 1 : 0) >= t.due
+  })
 }

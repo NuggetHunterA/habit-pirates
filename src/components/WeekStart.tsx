@@ -1,7 +1,7 @@
 import { motion } from 'motion/react'
 import { useState } from 'react'
 import type { Game } from '../game/store'
-import { RULES, reviewWeek } from '../game/rules'
+import { RULES, currentRhythm, reviewWeek, rhythmText } from '../game/rules'
 import { shortRange } from '../game/dates'
 import Jonte from './Jonte'
 
@@ -9,6 +9,7 @@ interface Props {
   game: Game
   onDone: () => void
   onAddHabit: (cb: (id: string) => void) => void
+  onEditHabit: (id: string) => void
   say: (msg: string) => void
 }
 
@@ -28,7 +29,7 @@ function Star({ on }: { on: boolean }) {
   )
 }
 
-export default function WeekStart({ game, onDone, onAddHabit, say }: Props) {
+export default function WeekStart({ game, onDone, onAddHabit, onEditHabit, say }: Props) {
   const save = game.save!
   const existing = game.plan
   const [active, setActive] = useState<string[]>(existing?.habitIds ?? game.suggestion.habitIds)
@@ -109,10 +110,12 @@ export default function WeekStart({ game, onDone, onAddHabit, say }: Props) {
       <div className="muted">Tippe zum An- und Abwählen. Der Stern macht einen Habit zum Fokus: doppelter Wind, höchstens {RULES.maxFocus}.</div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {save.habits.map((h, i) => {
+        {save.habits.filter((h) => !h.removedAt).map((h, i) => {
           const a = active.includes(h.id)
           const f = focus.includes(h.id)
-          const sub = !a ? 'Diese Woche pausiert' : h.always ? 'Immer dabei' : h.kind === 'lassen' ? 'Lassen · abends bestätigen' : f ? 'Fokus · doppelter Wind' : 'Abhaken'
+          const r = currentRhythm(h)
+          const base = !a ? 'Diese Woche pausiert' : h.always ? 'Immer dabei' : h.kind === 'lassen' ? 'Lassen · abends bestätigen' : f ? 'Fokus · doppelter Wind' : 'Abhaken'
+          const sub = r.kind === 'daily' ? base : `${base} · ${rhythmText(r)}`
           return (
             <motion.div
               key={h.id}
@@ -146,6 +149,17 @@ export default function WeekStart({ game, onDone, onAddHabit, say }: Props) {
                   <span>{h.name}</span>
                   <span style={{ fontSize: 12, opacity: 0.75 }}>{sub}</span>
                 </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onEditHabit(h.id)}
+                aria-label={'Bearbeiten: ' + h.name}
+                style={{ width: 44, height: 54, flex: 'none', border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'inherit', opacity: 0.8 }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z" />
+                  <path d="M13.5 6.5l4 4" />
+                </svg>
               </button>
               <button
                 type="button"
