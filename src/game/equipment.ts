@@ -2,7 +2,7 @@ import type { GameState, Item, PirateSlot, Save, Slot, Stats } from './types'
 import { itemBonus, STAT_ORDER } from './items'
 
 /** Grundwerte von Kapitaen Jonte ohne Ausruestung */
-export const BASE_STATS: Stats = { leben: 100, angriff: 10, ruestung: 5, tempo: 10, krit: 5, ausweichen: 5 }
+export const BASE_STATS: Stats = { leben: 100, angriff: 10, ruestung: 5, tempo: 10, krit: 5, ausweichen: 5, kritSchaden: 160 }
 
 export const SLOTS: Slot[] = ['waffe', 'hut', 'kleidung', 'talisman', 'schiff']
 export const PIRATE_SLOTS: PirateSlot[] = ['waffe', 'hut', 'kleidung', 'talisman']
@@ -39,7 +39,7 @@ export function wornUids(g: GameState): Set<string> {
 
 export function addStats(a: Stats, b: Partial<Stats>): Stats {
   const out = { ...a }
-  for (const k of STAT_ORDER) out[k] += b[k] ?? 0
+  for (const k of STAT_ORDER) if (b[k]) out[k] = (out[k] ?? 0) + b[k]!
   return out
 }
 
@@ -55,7 +55,7 @@ function sumBonus(items: (Item | undefined)[]): Partial<Stats> {
 
 /** Kampfkraft als eine Zahl fuer die Anzeige */
 export function power(s: Stats): number {
-  return Math.round(s.leben / 4 + s.angriff * 2 + s.ruestung * 1.5 + s.tempo + s.krit + s.ausweichen)
+  return Math.round(s.leben / 4 + s.angriff * 2 + s.ruestung * 1.5 + s.tempo + s.krit + s.ausweichen + ((s.kritSchaden ?? 160) - 160) / 4)
 }
 
 /** Wertunterschied, wenn `next` statt des aktuell angelegten Items im Slot getragen wird */

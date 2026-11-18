@@ -7,6 +7,7 @@ import { ENCOUNTERS, crewName, type CrewId, type CrewSetup } from './game/foes'
 import { STORIES } from './game/story'
 import { crewStats, levelFor } from './game/progress'
 import { gearBonus } from './game/equipment'
+import { crewExtras } from './game/schools'
 import { blocked } from './game/store'
 import FightScene from './fight/FightScene'
 import StoryScene from './components/StoryScene'
@@ -178,6 +179,7 @@ export default function App() {
                   crew={crew}
                   level={level}
                   bonus={fightBonus()}
+                  extras={(ids) => crewExtras(save!, ids)}
                   initialSetup={save!.game.setup as CrewSetup | undefined}
                   onSetup={(s) => game.saveSetup(s)}
                   canStart={scene.req.boss ? () => (game.bossTry() ? null : 'Heute sind keine Boss-Versuche mehr übrig. Morgen geht es weiter!') : undefined}

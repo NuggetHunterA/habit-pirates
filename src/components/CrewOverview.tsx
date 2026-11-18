@@ -46,7 +46,7 @@ export default function CrewOverview({ game, onOutfit }: { game: Game; onOutfit:
                 <span key={k}>
                   {STAT_LABEL[k]}
                   <b>
-                    {Math.round(stats[k] * 10) / 10}
+                    {Math.round((stats[k] ?? 0) * 10) / 10}
                     {isPercent(k) ? ' %' : ''}
                   </b>
                 </span>

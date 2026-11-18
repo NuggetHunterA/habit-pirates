@@ -1,4 +1,5 @@
-import type { Item, Rarity, Slot, Stats } from './types'
+import type { Item, Rarity, School, SetId, Slot, Stats } from './types'
+import type { Mods } from './combat'
 
 const art = import.meta.glob('../assets/items/*.webp', { eager: true, import: 'default' }) as Record<string, string>
 const ART: Record<string, string> = Object.fromEntries(Object.entries(art).map(([k, v]) => [k.split('/').pop()!.replace('.webp', ''), v]))
@@ -11,39 +12,45 @@ export interface ItemDef {
   bonus: Partial<Stats>
   /** Kurzer Flavour-Text fuer Detailansicht und Laden */
   text: string
+  /** Schule (nur episch und legendaer) */
+  school?: School
+  /** Set-Teil (ab Kapitel 2) */
+  set?: SetId
+  /** Effekt (episch: einer, legendaer: ein einzigartiger) */
+  effect?: { text: string; mods: Mods }
 }
 
 /** Alle Items im Spiel. Bilder: src/assets/items/<key>.webp (Anime-Stil C). */
 export const CATALOG: ItemDef[] = [
   // Waffen
   { key: 'entersaebel', name: 'Rostiger Entersäbel', slot: 'waffe', rarity: 'gewoehnlich', bonus: { angriff: 4 }, text: 'Hat schon bessere Tage gesehen. Schneidet trotzdem.' },
-  { key: 'dolch', name: 'Matrosendolch', slot: 'waffe', rarity: 'gewoehnlich', bonus: { angriff: 3, tempo: 2 }, text: 'Leicht und schnell zur Hand.' },
+  { key: 'dolch', name: 'Matrosendolch', slot: 'waffe', rarity: 'gewoehnlich', bonus: { angriff: 3 }, text: 'Leicht und schnell zur Hand.' },
   { key: 'enteraxt', name: 'Enteraxt', slot: 'waffe', rarity: 'selten', bonus: { angriff: 8 }, text: 'Für Taue, Planken und freche Krabben.' },
   { key: 'schlitzer', name: 'Wellenschlitzer', slot: 'waffe', rarity: 'selten', bonus: { angriff: 7, krit: 5 }, text: 'Die Klinge glänzt wie die Brandung.' },
   { key: 'pistole', name: 'Steinschlosspistole', slot: 'waffe', rarity: 'selten', bonus: { angriff: 6, tempo: 3 }, text: 'Ein Schuss, aber der sitzt.' },
-  { key: 'korallendegen', name: 'Korallendegen', slot: 'waffe', rarity: 'episch', bonus: { angriff: 11, krit: 8 }, text: 'Aus einem Riff gewachsen, das nie stillsteht.' },
-  { key: 'gezeitenklinge', name: 'Klinge der Gezeiten', slot: 'waffe', rarity: 'legendaer', bonus: { angriff: 16, krit: 10, tempo: 4 }, text: 'Wer sie führt, hat das Meer auf seiner Seite.' },
+  { key: 'korallendegen', name: 'Korallendegen', slot: 'waffe', rarity: 'episch', bonus: { angriff: 11, krit: 8 }, text: 'Aus einem Riff gewachsen, das nie stillsteht.', school: 'klinge', effect: { text: 'Kritische Treffer verursachen Blutung.', mods: { critBleed: true } } },
+  { key: 'gezeitenklinge', name: 'Klinge der Gezeiten', slot: 'waffe', rarity: 'legendaer', bonus: { angriff: 16, krit: 10, tempo: 4 }, text: 'Wer sie führt, hat das Meer auf seiner Seite.', school: 'klinge', effect: { text: 'Gegen blutende Ziele +30 % Krit-Chance. Jeder 3. Angriff trifft zweimal.', mods: { critVsBlutung: 30, doubleEvery: 3 } } },
   // Hüte
   { key: 'kopftuch', name: 'Rotes Kopftuch', slot: 'hut', rarity: 'gewoehnlich', bonus: { leben: 6 }, text: 'Hält Sonne und Schweiß aus den Augen.' },
   { key: 'dreispitz', name: 'Alter Dreispitz', slot: 'hut', rarity: 'gewoehnlich', bonus: { ruestung: 2 }, text: 'Zerbeult, aber stolz.' },
   { key: 'federhut', name: 'Hut mit Möwenfeder', slot: 'hut', rarity: 'selten', bonus: { ruestung: 4, tempo: 4 }, text: 'Die Möwe wollte die Feder nicht zurück.' },
-  { key: 'kapitaenshut', name: 'Goldener Kapitänshut', slot: 'hut', rarity: 'episch', bonus: { ruestung: 6, leben: 15, krit: 3 }, text: 'Jeder an Bord weiß sofort, wer hier das Sagen hat.' },
+  { key: 'kapitaenshut', name: 'Goldener Kapitänshut', slot: 'hut', rarity: 'episch', bonus: { ruestung: 6, leben: 15 }, text: 'Jeder an Bord weiß sofort, wer hier das Sagen hat.', school: 'gezeiten', effect: { text: 'Kampfstart: Schild über 10 % Leben.', mods: { startShield: 0.1 } } },
   // Kleidung
   { key: 'weste', name: 'Leinenweste', slot: 'kleidung', rarity: 'gewoehnlich', bonus: { ruestung: 3 }, text: 'Luftig und robust.' },
   { key: 'stiefel', name: 'Deckstiefel', slot: 'kleidung', rarity: 'gewoehnlich', bonus: { leben: 8 }, text: 'Rutschfest auf nassen Planken.' },
-  { key: 'schaerpe', name: 'Rote Schärpe', slot: 'kleidung', rarity: 'gewoehnlich', bonus: { tempo: 2, ausweichen: 1 }, text: 'Macht flink und sieht gut aus.' },
+  { key: 'schaerpe', name: 'Rote Schärpe', slot: 'kleidung', rarity: 'gewoehnlich', bonus: { tempo: 2 }, text: 'Macht flink und sieht gut aus.' },
   { key: 'lederwams', name: 'Gehärtetes Lederwams', slot: 'kleidung', rarity: 'selten', bonus: { ruestung: 6, leben: 8 }, text: 'Dreifach geschnallt, doppelt sicher.' },
-  { key: 'sturmmantel', name: 'Sturmmantel', slot: 'kleidung', rarity: 'episch', bonus: { ruestung: 9, ausweichen: 5 }, text: 'Im Saum knistern kleine Blitze.' },
+  { key: 'sturmmantel', name: 'Sturmmantel', slot: 'kleidung', rarity: 'episch', bonus: { ruestung: 9, ausweichen: 5 }, text: 'Im Saum knistern kleine Blitze.', school: 'glueck', effect: { text: 'Nach dem Ausweichen: Konter mit 60 % Schaden.', mods: { counter: 0.6 } } },
   // Talismane
   { key: 'muschel', name: 'Glatte Muschel', slot: 'talisman', rarity: 'gewoehnlich', bonus: { ausweichen: 2 }, text: 'Wer hineinhorcht, hört das Meer.' },
   { key: 'gluecksmuenze', name: 'Glücksmünze', slot: 'talisman', rarity: 'selten', bonus: { ausweichen: 3, krit: 2 }, text: 'Kopf oder Totenkopf?' },
   { key: 'haizahn', name: 'Haizahnkette', slot: 'talisman', rarity: 'selten', bonus: { angriff: 3, krit: 4 }, text: 'Der Hai brauchte sie nicht mehr.' },
-  { key: 'sturmkompass', name: 'Sturmkompass', slot: 'talisman', rarity: 'episch', bonus: { tempo: 8, ausweichen: 4 }, text: 'Zeigt immer dahin, wo der Wind herkommt.' },
-  { key: 'perle', name: 'Herz der Tiefe', slot: 'talisman', rarity: 'legendaer', bonus: { leben: 30, ausweichen: 8 }, text: 'Eine Perle, die im Dunkeln leise leuchtet.' },
+  { key: 'sturmkompass', name: 'Sturmkompass', slot: 'talisman', rarity: 'episch', bonus: { tempo: 8, ausweichen: 4 }, text: 'Zeigt immer dahin, wo der Wind herkommt.', school: 'gezeiten', effect: { text: 'Die ersten 2 Treffer verlangsamen das Ziel.', mods: { slowHits: 2 } } },
+  { key: 'perle', name: 'Herz der Tiefe', slot: 'talisman', rarity: 'legendaer', bonus: { leben: 30, ruestung: 4, ausweichen: 8 }, text: 'Eine Perle, die im Dunkeln leise leuchtet.', school: 'gezeiten', effect: { text: 'Einmal pro Kampf: Fällt das Leben unter 30 %, heilt der Träger 40 %.', mods: { lastStand: { below: 0.3, heal: 0.4 } } } },
   // Schiffsteile (gelten fuer die ganze Crew)
   { key: 'segeltuch', name: 'Geflicktes Segeltuch', slot: 'schiff', rarity: 'gewoehnlich', bonus: { tempo: 1 }, text: 'Mehr Flicken als Segel, aber es fängt Wind.' },
   { key: 'messingkanone', name: 'Messingkanone', slot: 'schiff', rarity: 'selten', bonus: { angriff: 3 }, text: 'Klein, laut und blank geputzt.' },
-  { key: 'galionsfigur', name: 'Meerjungfrau-Galionsfigur', slot: 'schiff', rarity: 'episch', bonus: { leben: 20, ruestung: 4 }, text: 'Sie wacht über Schiff und Crew.' },
+  { key: 'galionsfigur', name: 'Meerjungfrau-Galionsfigur', slot: 'schiff', rarity: 'episch', bonus: { leben: 20, ruestung: 4 }, text: 'Sie wacht über Schiff und Crew.', school: 'gezeiten', effect: { text: 'Jeder Pirat heilt bei jedem 4. Zug 5 % Leben.', mods: { regen: { every: 4, pct: 0.05 } } } },
 ]
 
 const BY_KEY: Record<string, ItemDef> = Object.fromEntries(CATALOG.map((d) => [d.key, d]))
@@ -63,11 +70,12 @@ export const STAT_LABEL: Record<keyof Stats, string> = {
   tempo: 'Tempo',
   krit: 'Krit',
   ausweichen: 'Ausweichen',
+  kritSchaden: 'Krit-Schaden',
 }
 
-export const STAT_ORDER: (keyof Stats)[] = ['leben', 'angriff', 'ruestung', 'tempo', 'krit', 'ausweichen']
+export const STAT_ORDER: (keyof Stats)[] = ['leben', 'angriff', 'ruestung', 'tempo', 'krit', 'kritSchaden', 'ausweichen']
 
-export const isPercent = (k: keyof Stats) => k === 'krit' || k === 'ausweichen'
+export const isPercent = (k: keyof Stats) => k === 'krit' || k === 'ausweichen' || k === 'kritSchaden'
 
 export function bonusText(b: Partial<Stats>): string {
   return STAT_ORDER.filter((k) => b[k])

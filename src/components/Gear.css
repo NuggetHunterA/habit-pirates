@@ -884,3 +884,138 @@
   margin: 0;
   flex: 1;
 }
+
+/* ---------- Effekte, Schulen, Sets ---------- */
+.school-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 99px;
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.itemx {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.itemx__fx {
+  background: #f3f0ff;
+  color: #2b1d5c;
+  border-radius: 12px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+
+.itemx__fx b {
+  color: #5f3dc4;
+}
+
+.itemx__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.itemx__note {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+.itemx__set {
+  background: #fff4e6;
+  border-radius: 12px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--ink-soft);
+}
+
+.itemx__set .on {
+  color: #2b8a3e;
+  font-weight: 900;
+}
+
+.boni {
+  margin: 10px 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.boni__box {
+  background: var(--parch);
+  color: var(--ink);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.boni__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.boni__title {
+  font-family: var(--display);
+  font-size: 19px;
+}
+
+.boni__more {
+  border: none;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: underline;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.boni__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.boni__txt {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.3;
+  padding-top: 2px;
+}
+
+.boni__txt.on,
+.boni__txt .on {
+  color: #2b8a3e;
+}
+
+.boni__hint {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  line-height: 1.35;
+}

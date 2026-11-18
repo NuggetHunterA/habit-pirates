@@ -6,6 +6,7 @@ import { CATALOG, itemBonus, type ItemDef } from '../game/items'
 import { RARITY_LABEL, SLOT_LABEL } from '../game/loot'
 import { SLOTS, copiesOf } from '../game/equipment'
 import ItemIcon, { RARITY_COLOR } from './ItemIcon'
+import ItemExtras from './ItemExtras'
 import { StatLines } from './ItemSheet'
 import Sheet from './Sheet'
 
@@ -78,6 +79,7 @@ export default function Collection({ game }: { game: Game }) {
             </div>
             <div style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--ink-soft)' }}>„{open.text}“</div>
             <StatLines bonus={itemBonus(open)} />
+            <ItemExtras itemKey={open.key} />
             <div style={{ fontSize: 14, fontWeight: 800 }}>Im Laderaum: {copiesOf(g, open.key).length}</div>
           </Sheet>
         )}

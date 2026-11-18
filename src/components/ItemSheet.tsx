@@ -9,6 +9,7 @@ import { RARITY_LABEL, SLOT_LABEL } from '../game/loot'
 import ItemIcon, { RARITY_COLOR } from './ItemIcon'
 import StatIcon from './StatIcon'
 import Sheet from './Sheet'
+import ItemExtras from './ItemExtras'
 
 export function StatLines({ bonus, diff }: { bonus: Partial<Stats>; diff?: Partial<Stats> }) {
   const keys = STAT_ORDER.filter((k) => bonus[k] || diff?.[k])
@@ -69,6 +70,7 @@ export default function ItemSheet({ game, item, who, onClose, say }: { game: Gam
       </div>
       {def && <div style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--ink-soft)' }}>„{def.text}“</div>}
       <StatLines bonus={itemBonus(item)} diff={diff} />
+      <ItemExtras itemKey={item.key} save={save} who={who} />
       {diff && !ship && <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>Pfeile: Unterschied zu {name}s jetziger Ausrüstung.</div>}
       {!wornByMe && !ship && others.length > 0 && free.length === 0 && (
         <div className="itemsheet__note">

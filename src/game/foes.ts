@@ -1,4 +1,5 @@
 import type { AbilityId, FighterDef, FighterStats, Row } from './combat'
+import { applyExtra, type Extra } from './extra.ts'
 
 export type CrewId = 'jonte' | 'kanonier' | 'navigatorin' | 'smutje' | 'ausguck'
 
@@ -23,7 +24,7 @@ export const CREW: Record<CrewId, CrewMember> = {
     name: 'Jonte',
     title: 'Kapitän Jonte',
     ranged: false,
-    stats: { leben: 100, angriff: 10, ruestung: 5, tempo: 10, krit: 5, ausweichen: 5 },
+    stats: { leben: 100, angriff: 10, ruestung: 5, tempo: 10, krit: 5, ausweichen: 5, kritSchaden: 160 },
     abilities: ['sturmklinge', 'kapitaensruf'],
     secret: false,
   },
@@ -32,7 +33,7 @@ export const CREW: Record<CrewId, CrewMember> = {
     name: 'Bolle',
     title: 'Kanonier Bolle',
     ranged: true,
-    stats: { leben: 85, angriff: 11, ruestung: 3, tempo: 7, krit: 8, ausweichen: 2 },
+    stats: { leben: 85, angriff: 11, ruestung: 3, tempo: 7, krit: 8, ausweichen: 2, kritSchaden: 160 },
     abilities: ['donnerbuechse', 'kettenkugel'],
     secret: true,
   },
@@ -41,7 +42,7 @@ export const CREW: Record<CrewId, CrewMember> = {
     name: 'Mara',
     title: 'Navigatorin Mara',
     ranged: false,
-    stats: { leben: 80, angriff: 9, ruestung: 3, tempo: 14, krit: 12, ausweichen: 15 },
+    stats: { leben: 80, angriff: 9, ruestung: 3, tempo: 14, krit: 12, ausweichen: 15, kritSchaden: 160 },
     abilities: ['sternenkurs', 'windstille'],
     secret: true,
     hideAbilities: true,
@@ -51,7 +52,7 @@ export const CREW: Record<CrewId, CrewMember> = {
     name: 'Grummel',
     title: 'Smutje Grummel',
     ranged: true,
-    stats: { leben: 110, angriff: 7, ruestung: 6, tempo: 8, krit: 3, ausweichen: 2 },
+    stats: { leben: 110, angriff: 7, ruestung: 6, tempo: 8, krit: 3, ausweichen: 2, kritSchaden: 160 },
     abilities: ['kombuesenfeuer', 'eintopf'],
     secret: true,
     hideAbilities: true,
@@ -61,7 +62,7 @@ export const CREW: Record<CrewId, CrewMember> = {
     name: 'Pip',
     title: 'Ausguck Pip',
     ranged: true,
-    stats: { leben: 75, angriff: 9, ruestung: 2, tempo: 11, krit: 10, ausweichen: 10 },
+    stats: { leben: 75, angriff: 9, ruestung: 2, tempo: 11, krit: 10, ausweichen: 10, kritSchaden: 160 },
     abilities: ['adlerauge', 'sturzflug'],
     secret: true,
     hideAbilities: true,
@@ -112,7 +113,8 @@ export const lvl = (s: FighterStats, level: number): FighterStats => {
 export const crewName = (id: CrewId, hidden: boolean) => (hidden && CREW[id].secret ? '???' : CREW[id].name)
 export const crewTitle = (id: CrewId, hidden: boolean) => (hidden && CREW[id].secret ? (id === 'kanonier' ? 'Zweiter Pirat' : 'Geheimer Pirat') : CREW[id].title)
 
-export function crewDefs(setup: CrewSetup, level = 1, bonus?: Partial<Record<CrewId, FighterStats>>, hidden = false): FighterDef[] {
+/** Kampf-Figuren der Crew. extras: Item-Effekte, Schul- und Set-Boni (game/schools) */
+export function crewDefs(setup: CrewSetup, level = 1, bonus?: Partial<Record<CrewId, FighterStats>>, hidden = false, extras?: Partial<Record<CrewId, Extra>>): FighterDef[] {
   return setup.map((p) => {
     const m = CREW[p.id]
     return {
@@ -122,8 +124,9 @@ export function crewDefs(setup: CrewSetup, level = 1, bonus?: Partial<Record<Cre
       side: 'crew',
       row: p.row,
       ranged: m.ranged,
-      stats: bonus?.[p.id] ?? lvl(m.stats, level),
+      stats: applyExtra(bonus?.[p.id] ?? lvl(m.stats, level), extras?.[p.id]),
       ability: p.ability,
+      mods: extras?.[p.id]?.mods,
     }
   })
 }
