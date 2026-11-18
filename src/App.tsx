@@ -22,6 +22,8 @@ import MapPanel from './components/MapPanel'
 import ChestScene from './components/ChestScene'
 import AddHabitSheet from './components/AddHabitSheet'
 import MenuSheet from './components/MenuSheet'
+import StreakSheet, { FlameIcon, RingIcon } from './components/StreakSheet'
+import { streakInfo, type PendingReward } from './game/motivation'
 import Equipment from './components/Equipment'
 import Shop from './components/Shop'
 import TabBar, { type Tab } from './components/TabBar'
@@ -29,7 +31,7 @@ import { RULES, windAvailable } from './game/rules'
 
 type Left = 'woche' | 'tag'
 type Right = 'karte' | 'truhe'
-type Scene = { k: 'fight'; req: FightRequest; n: number } | { k: 'story'; id: string }
+type Scene = { k: 'fight'; req: FightRequest; n: number } | { k: 'story'; id: string } | { k: 'reward'; r: PendingReward }
 
 /** Aufgeklappt (Fold innen) ab dieser Breite: zwei Spalten */
 const WIDE = '(min-width: 680px)'
@@ -53,7 +55,7 @@ export default function App() {
   /** Untere Tab-Leiste. Aufgeklappt steht "Deck" immer links, rechts die anderen Tabs. */
   const [tab, setTab] = useState<Tab>('deck')
   const [toast, setToast] = useState('')
-  const [sheet, setSheet] = useState<null | 'add' | 'menu'>(null)
+  const [sheet, setSheet] = useState<null | 'add' | 'menu' | 'streak'>(null)
   const addCb = useRef<((id: string) => void) | null>(null)
   const toastT = useRef<number>(0)
   const [scene, setScene] = useState<Scene | null>(null)
@@ -139,6 +141,13 @@ export default function App() {
   const showLeft = wide || tab === 'deck'
   const showRight = wide || tab !== 'deck'
   const wind = save ? windAvailable(save) : 0
+  const streak = save ? streakInfo(save, game.today) : null
+
+  const openReward = (r: PendingReward) => {
+    setTab('karte')
+    setRight('karte')
+    setScene({ k: 'reward', r })
+  }
 
   return (
     <div className={`app ${wide ? 'app--open' : ''}`}>
@@ -146,6 +155,16 @@ export default function App() {
         <div className="topbar__title">Habit Pirates</div>
         {game.save && (
           <div className="topbar__right">
+            <button
+              type="button"
+              className="pill pill--streak"
+              onClick={() => setSheet('streak')}
+              aria-label={`Serie: ${streak?.days ?? 0} Tage${streak?.ringFree ? ', Rettungsring bereit' : ''}`}
+            >
+              <FlameIcon />
+              {streak?.days ?? 0}
+              {streak?.ringFree && <RingIcon size={16} />}
+            </button>
             <div className="pill pill--wind" aria-label={`${Math.max(0, wind)} Wind`}>
               <svg className="pill__icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M3 9h11a3 3 0 1 0-3-3M3 14h15a3 3 0 1 1-3 3M3 19h7" />
@@ -194,7 +213,7 @@ export default function App() {
                   {leftShown === 'woche' ? (
                     <WeekStart game={game} say={say} onAddHabit={(cb) => openAdd(cb)} onDone={() => setLeft('tag')} />
                   ) : (
-                    <Today game={game} wide={wide} onMap={goMap} onWeek={() => setLeft('woche')} onAddHabit={() => openAdd()} />
+                    <Today game={game} wide={wide} onMap={goMap} onWeek={() => setLeft('woche')} onAddHabit={() => openAdd()} onReward={openReward} />
                   )}
                 </motion.div>
               </AnimatePresence>
@@ -223,6 +242,23 @@ export default function App() {
                   cap={chapter.cap}
                   chapter={chapter.n}
                   onExit={(r) => endFight(scene.req, r)}
+                />
+              ) : rightTab === 'karte' && scene?.k === 'reward' ? (
+                <ChestScene
+                  key={scene.r.key}
+                  title={scene.r.title}
+                  kicker={scene.r.title}
+                  kind={scene.r.chest.kind}
+                  sure={scene.r.chest.sure}
+                  chapter={chapter.n}
+                  goldBonus={chestGoldBonus()}
+                  found={save!.game.found}
+                  onCollect={(gold, items) => {
+                    game.claimReward(scene.r.key, gold, items)
+                    setScene(null)
+                    setTab('deck')
+                    say(`+${gold} Gold und ${items.length} Items im Laderaum!`)
+                  }}
                 />
               ) : rightTab === 'karte' && scene?.k === 'story' ? (
                 <StoryScene key={scene.id} id={scene.id} chapter={chapter.n} onDone={(gold, items) => endStory(scene.id, gold, items)} />
@@ -299,6 +335,7 @@ export default function App() {
           />
         )}
         {sheet === 'menu' && <MenuSheet game={game} say={say} onClose={() => setSheet(null)} />}
+        {sheet === 'streak' && <StreakSheet game={game} onClose={() => setSheet(null)} />}
       </AnimatePresence>
     </div>
   )

@@ -2,7 +2,7 @@ import { AnimatePresence, motion, useAnimationControls } from 'motion/react'
 import { useState } from 'react'
 import { CHEST_LABEL, rollChest, RARITY_LABEL, SLOT_LABEL, type ChestKind } from '../game/loot'
 import { sellPrice } from '../game/items'
-import type { Item } from '../game/types'
+import type { Item, Rarity } from '../game/types'
 import ItemIcon, { RARITY_COLOR } from './ItemIcon'
 import ItemExtras from './ItemExtras'
 import holz from '../assets/truhen/truhe_holz.webp'
@@ -29,6 +29,10 @@ interface Props {
   onGuardian?: () => void
   onLeave?: () => void
   onCollect: (gold: number, items: Item[]) => void
+  /** Mindestens ein Item dieser Seltenheit (Serien-Truhen) */
+  sure?: Rarity
+  /** Ueberschrift ueber der Truhe statt der Truhenart */
+  kicker?: string
 }
 
 type Phase = 'idle' | 'shake' | 'open'
@@ -55,9 +59,9 @@ function Coins({ n = 26 }: { n?: number }) {
   )
 }
 
-export default function ChestScene({ title, kind = 'holz', chapter = 1, goldBonus = 0, found = [], guardWon = false, onGuardian, onLeave, onCollect }: Props) {
+export default function ChestScene({ title, kind = 'holz', chapter = 1, goldBonus = 0, found = [], guardWon = false, onGuardian, onLeave, onCollect, sure, kicker }: Props) {
   const [phase, setPhase] = useState<Phase>('idle')
-  const [loot] = useState(() => rollChest(kind, chapter, goldBonus))
+  const [loot] = useState(() => rollChest(kind, chapter, goldBonus, sure))
   const [known] = useState(() => new Set(found))
   const [cheer, setCheer] = useState({ kind: 'cheer' as const, n: 0 })
   const shake = useAnimationControls()
@@ -95,7 +99,7 @@ export default function ChestScene({ title, kind = 'holz', chapter = 1, goldBonu
 
       <div className="chest__content">
         <div className="kicker" style={{ color: 'var(--gold-text)' }}>
-          {CHEST_LABEL[kind]} · {title}
+          {kicker ?? `${CHEST_LABEL[kind]} · ${title}`}
         </div>
         <motion.div className="display chest__title" key={isOpen ? 'o' : 'c'} initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
           {isOpen ? 'Beute!' : 'Eine Truhe!'}
