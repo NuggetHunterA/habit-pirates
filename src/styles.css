@@ -656,3 +656,27 @@ input:focus-visible {
   font-size: 12px;
   font-weight: 800;
 }
+
+/* Ladebildschirm mit Logo */
+.splash {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+}
+.splash__logo {
+  width: 150px;
+  height: 150px;
+  border-radius: 24%;
+  box-shadow: 0 8px 0 rgba(11, 18, 54, 0.45);
+}
+.splash__title {
+  font-size: 32px;
+  color: var(--gold-text);
+  line-height: 1;
+}

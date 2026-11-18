@@ -18,6 +18,7 @@ import { EVENT_AFTER_FARM, rollEvent, type RolledEvent } from './game/events'
 import type { FightRequest } from './components/MapPanel'
 import type { Item } from './game/types'
 import ProfilePick from './components/ProfilePick'
+import { freshBuildNotice, useUpdateCheck } from './game/update'
 import WeekStart from './components/WeekStart'
 import Today from './components/Today'
 import MapPanel from './components/MapPanel'
@@ -72,6 +73,13 @@ export default function App() {
     clearTimeout(toastT.current)
     toastT.current = window.setTimeout(() => setToast(''), 2600)
   }, [])
+
+  // Update-Hinweis: einmal nach dem Start einer neuen Version, und Neuladen nach langer Pause
+  useEffect(() => {
+    const msg = freshBuildNotice()
+    if (msg) setTimeout(() => say(msg), 600)
+  }, [say])
+  useUpdateCheck(!!scene || !!sheet)
 
   const needsWeek = !!game.save && !game.plan
   const leftShown: Left = needsWeek ? 'woche' : left
@@ -233,8 +241,10 @@ export default function App() {
       </header>
 
       {!game.save && game.profile ? (
-        <div className="muted" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800 }}>
-          Spielstand wird geladen …
+        <div className="splash">
+          <motion.img src={ART.logo} alt="" className="splash__logo" animate={{ y: [0, -6, 0] }} transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }} />
+          <div className="display splash__title">Habit Pirates</div>
+          <div className="muted">Spielstand wird geladen …</div>
         </div>
       ) : !game.save ? (
         <ProfilePick onPick={game.chooseProfile} />
