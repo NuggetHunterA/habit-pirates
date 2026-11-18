@@ -82,6 +82,8 @@ export interface Save {
   version: 1
   profile: string
   createdAt: string
+  /** Zeitpunkt der letzten Aenderung (leer = unberuehrter neuer Stand). Beim Abgleich gewinnt der neuere. */
+  updatedAt?: string
   habits: Habit[]
   weeks: Record<string, WeekPlan>
   logs: Record<string, DayLog>

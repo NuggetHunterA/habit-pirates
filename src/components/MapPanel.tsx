@@ -117,11 +117,16 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
       <div style={{ position: 'absolute', left: 12, right: 12, top: 12, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, pointerEvents: 'none' }}>
         <div className="map-chip">
           <div className="display" style={{ fontSize: 20, lineHeight: 1 }}>
-            Kapitel {chapter.n}
+            Kapitel {chapter.n} <span style={{ fontSize: 15, opacity: 0.85 }}>von {CHAPTERS.length}</span>
           </div>
           <div style={{ fontSize: 12, fontWeight: 800 }}>
             {chapter.name} · Feld {ship + 1}/{fields.length}
           </div>
+          {chapter.n === CHAPTERS.length && (
+            <div style={{ marginTop: 5, display: 'inline-block', fontSize: 11, fontWeight: 900, padding: '2px 8px', borderRadius: 999, background: '#ffe066', color: '#3b1d00' }}>
+              Letztes fertiges Kapitel
+            </div>
+          )}
         </div>
         <div className="map-chip map-chip--level" aria-label={`Stufe ${lp.level}`}>
           <div className="display" style={{ fontSize: 20, lineHeight: 1 }}>

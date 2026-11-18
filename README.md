@@ -2,7 +2,7 @@
 
 Gute Gewohnheiten als Piratenreise: Jeder erledigte Habit bringt Wind in die Segel, das Schiff segelt über die Seekarte und findet Truhen. Installierbare Web-App für das Galaxy Fold (zugeklappt eine Spalte, aufgeklappt zwei Spalten).
 
-## Stand: Prototyp 0.1
+## Stand: 0.2 (Phase 1 des Release-Plans)
 
 - Profil wählen (Adrian oder Ulrike, ohne Passwort)
 - Wochenstart mit Kapitän Jonte: Habits der Vorwoche vorausgewählt, bis zu 2 Fokus-Habits (doppelter Wind), neue Habits anlegen
@@ -11,7 +11,11 @@ Gute Gewohnheiten als Piratenreise: Jeder erledigte Habit bringt Wind in die Seg
 - Seekarte Kapitel 1 mit 12 Feldern, animiertes Segeln
 - Truhe öffnen mit Gold und Items (gewöhnlich, selten, selten episch)
 
-Noch nicht enthalten: Kämpfe, Story-Szenen, Shop, Ausrüstungs-Tab, frei verschiebbare Karte, Supabase-Sync. Der Spielstand liegt im Prototyp im Browser des Geräts.
+## Spielstand
+
+Der Spielstand liegt in Supabase (Projekt von Putzy, Schema `pirates`, ein Datensatz pro Profil, siehe `supabase/migrations/`). Die App spricht nur mit den Funktionen `pirates_load` und `pirates_save`. Im Browser bleibt eine Kopie für offline. Beim Start, beim Zurückkehren in die App und nach jeder Änderung wird abgeglichen; bei einem Konflikt gewinnt der neuere Stand.
+
+Der Testmodus (+3 Wind, +100 Gold, +100 Erfahrung) ist nur in der Vercel-Vorschau und lokal sichtbar. In der Live-Version schaltet man ihn mit 7-mal Tippen auf die Versionszeile im Menü frei.
 
 ## Entwickeln
 
