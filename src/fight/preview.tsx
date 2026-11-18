@@ -5,6 +5,7 @@ import '../styles.css'
 import FightScene, { type FightResult } from './FightScene'
 import { ENCOUNTERS, FULL_CREW, KRABBENBANDE, START_CREW } from '../game/foes'
 import { setSpoilerFree } from './art'
+import PoseLab from './PoseLab'
 
 const params = new URLSearchParams(location.search)
 // Fuer Tests: ?e=<encounter-id>&lvl=<stufe>&spoiler=0
@@ -45,8 +46,16 @@ function Preview() {
   )
 }
 
+const POSES = params.get('poses')
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Preview />
+    {POSES ? (
+      <div style={{ width: '100vw', height: '100vh' }}>
+        <PoseLab group={POSES} />
+      </div>
+    ) : (
+      <Preview />
+    )}
   </StrictMode>,
 )

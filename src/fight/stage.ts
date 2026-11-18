@@ -1,9 +1,11 @@
 /**
- * Kampfbuehne: zeichnet Hintergrund, Figuren aus Einzelteilen, Projektile, Partikel
+ * Kampfbuehne: zeichnet Hintergrund, nahtlos animierte Figuren, Projektile, Partikel
  * und Schadenszahlen in ein Canvas. Alle Animationen laufen in Spielzeit (Tempo 1x/2x).
  */
 import type { Look, Side } from '../game/combat'
-import { FIGHT_ART, isSpoilerFree, spriteFor } from './art'
+import { FIGHT_ART, figureImage, isSpoilerFree } from './art'
+import { FIGURES, scaleSpec } from './figures'
+import { I, MeshRenderer, apply, around, mul, type BoneMats, type MeshSpec } from './mesh'
 
 export const STAGE_W = 960
 export const STAGE_H = 536
@@ -85,8 +87,6 @@ interface Ring {
   c: string
 }
 
-type Pose = { rot: number; dx: number; dy: number; sx: number; sy: number; around?: [number, number, number]; pivot?: number }
-
 const ease = {
   out: (t: number) => 1 - Math.pow(1 - t, 3),
   inout: (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
@@ -115,22 +115,27 @@ export const ANIM_LEN: Record<AnimKind, number> = {
   dodge: 0.4,
 }
 
-/** Bodenpunkt und Massstab je Figur */
-const LOOK = {
-  jonte: { cx: 260, fy: 487, scale: 0.4, h: 200 },
-  kanonier: { cx: 0, fy: 0, scale: 0.6, h: 192 },
-  navigatorin: { cx: 0, fy: 0, scale: 0.6, h: 200 },
-  smutje: { cx: 0, fy: 0, scale: 0.6, h: 192 },
-  ausguck: { cx: 0, fy: 0, scale: 0.6, h: 170 },
-  krabbenbandit: { cx: 200, fy: 300, scale: 0.68, h: 155 },
-  krabbenmatrose: { cx: 200, fy: 300, scale: 0.47, h: 102 },
-  moewenpirat: { cx: 0, fy: 0, scale: 1, h: 110 },
-  nebelqualle: { cx: 0, fy: 0, scale: 1, h: 135 },
-  geisterpirat: { cx: 0, fy: 0, scale: 1, h: 185 },
-  irrlicht: { cx: 0, fy: 0, scale: 1, h: 105 },
-  schalbart: { cx: 0, fy: 0, scale: 1, h: 265 },
-  grauhand: { cx: 0, fy: 0, scale: 1, h: 290 },
-} as const
+/** Hoehe des ganzen Bildes je Figur auf der Buehne */
+const HEIGHT: Record<Look, number> = {
+  jonte: 205,
+  kanonier: 192,
+  navigatorin: 200,
+  smutje: 192,
+  ausguck: 170,
+  krabbenbandit: 170,
+  krabbenmatrose: 118,
+  moewenpirat: 110,
+  nebelqualle: 135,
+  geisterpirat: 185,
+  irrlicht: 105,
+  schalbart: 265,
+  grauhand: 290,
+}
+
+/** Lebensbalken sitzt ueber der Figur, nicht ueber Waffenspitzen */
+const BAR_H: Partial<Record<Look, number>> = { krabbenbandit: 150, krabbenmatrose: 100 }
+
+type Spring = { v: number; x: number }
 
 export class Stage {
   actors = new Map<string, Actor>()
@@ -158,13 +163,17 @@ export class Stage {
   private reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
 
   private cv: HTMLCanvasElement
+  private mesh = MeshRenderer.create()
+  private springs = new Map<string, Record<string, Spring>>()
+  private specs = new Map<string, MeshSpec>()
+  /** Waffenspitze je Figur in Buehnen-Koordinaten (fuer Muendungsfeuer) */
+  private tips = new Map<string, { x: number; y: number }>()
 
   constructor(cv: HTMLCanvasElement) {
     this.cv = cv
     this.ctx = cv.getContext('2d')!
     for (const src of Object.values(FIGHT_ART.backgrounds)) this.load(src)
-    for (const src of FIGHT_ART.allSprites) this.load(src)
-    for (const { parts } of Object.values(FIGHT_ART.rigs)) for (const src of Object.values(parts)) this.load(src)
+    for (const src of FIGHT_ART.allFigures) this.load(src)
     this.ro = new ResizeObserver(() => this.resize())
     this.ro.observe(cv)
     this.resize()
@@ -172,6 +181,7 @@ export class Stage {
   }
 
   destroy() {
+    this.mesh?.destroy()
     this.alive = false
     cancelAnimationFrame(this.raf)
     this.ro.disconnect()
@@ -200,8 +210,7 @@ export class Stage {
   }
 
   addActor(a: Omit<Actor, 'dx' | 'dy' | 'anim' | 'at' | 'alpha' | 'flash' | 'scale' | 'h' | 'hpShown' | 'holtAus' | 'brand' | 'buff'>) {
-    const L = LOOK[a.look]
-    this.actors.set(a.id, { ...a, dx: 0, dy: 0, anim: 'idle', at: 0, alpha: 1, flash: 0, scale: L.scale, h: L.h, hpShown: a.hp, holtAus: false, brand: 0, buff: 0 })
+    this.actors.set(a.id, { ...a, dx: 0, dy: 0, anim: 'idle', at: 0, alpha: 1, flash: 0, scale: 1, h: BAR_H[a.look] ?? HEIGHT[a.look], hpShown: a.hp, holtAus: false, brand: 0, buff: 0 })
   }
 
   // ---------- Zeit ----------
@@ -264,9 +273,11 @@ export class Stage {
     return new Promise((done) => this.projs.push({ kind, x0: from.x, y0: from.y, x1: to.x, y1: to.y, arc, t: 0, dur, done }))
   }
 
-  /** Muendung der Kanone (Silhouette, nach rechts gespiegelt) */
+  /** Muendung bzw. Waffenspitze */
   muzzle(id: string) {
     const a = this.actors.get(id)!
+    const tip = this.tips.get(id)
+    if (tip) return tip
     const dir = a.side === 'crew' ? 1 : -1
     return { x: a.x + a.dx + dir * 50, y: a.y + a.dy - a.h * 0.42 }
   }
@@ -408,8 +419,8 @@ export class Stage {
       ctx.fillRect(0, 0, cv.width, cv.height)
     }
     ctx.setTransform(V)
-    // leichte Wellenbewegung auf dem Wasser
-    ctx.globalAlpha = 0.25
+    // leichte Wellenbewegung auf dem Wasser (nur am Strand, im Nebel laege sie auf dem Sand)
+    ctx.globalAlpha = this.bg === 'strand' ? 0.25 : 0
     ctx.strokeStyle = '#ffffff'
     ctx.lineWidth = 2
     for (let i = 0; i < 4; i++) {
@@ -597,8 +608,7 @@ export class Stage {
     const { ctx } = this
     if (a.alpha <= 0.01) return
     ctx.globalAlpha = Math.max(0, a.alpha)
-    if (spriteFor(a.look)) this.drawSprite(a, V)
-    else this.drawRig(a, V)
+    this.drawFigure(a, V)
     ctx.globalAlpha = 1
     ctx.filter = 'none'
   }
@@ -612,210 +622,203 @@ export class Stage {
     return f.length ? f.join(' ') : 'none'
   }
 
-  private drawSprite(a: Actor, V: DOMMatrix) {
-    const { ctx } = this
-    const im = this.img(spriteFor(a.look)!)
-    if (!im) return
+  private spec(look: Look, im: HTMLImageElement): MeshSpec {
+    const key = look + ':' + im.naturalHeight
+    let s = this.specs.get(key)
+    if (!s) {
+      const fig = FIGURES[look]
+      s = scaleSpec(fig.spec, im.naturalHeight / fig.refH)
+      this.specs.set(key, s)
+    }
+    return s
+  }
+
+  private spring(a: Actor, name: string, target: number, k: number, d: number, dt: number) {
+    let m = this.springs.get(a.id)
+    if (!m) this.springs.set(a.id, (m = {}))
+    const s = (m[name] ??= { v: 0, x: target })
+    s.v += (k * (target - s.x) - d * s.v) * dt
+    s.x += s.v * dt
+    return s.x
+  }
+
+  /** Knochen-Stellung aus Ruhe-Bewegung und aktueller Animation */
+  private pose(a: Actor, s: MeshSpec): BoneMats {
     const t = a.at
-    const dir = a.side === 'crew' ? 1 : -1
-    const floats = ['nebelqualle', 'geisterpirat', 'irrlicht', 'grauhand', 'moewenpirat'].includes(a.look)
-    const silhouette = isSpoilerFree() && a.side === 'crew'
-    let dx = a.dx
-    let dy = a.dy + (floats ? -10 + Math.sin(this.time * 2.4 + a.x) * 6 : 0)
-    let rot = Math.sin(this.time * 1.7 + a.x) * (floats ? 0.03 : 0.01)
-    let sy = 1 + Math.sin(this.time * 2.1 + a.x) * 0.014
-    let sx = 1
+    const T = this.time + a.x * 0.013
+    const m = this.reduce ? 0.3 : 1
+    const dt = 1 / 60
+    const fwd = s.facesRight ? 1 : -1
+    const b = Math.sin(T * 2.1)
+    let lean = (s.float ? 0.03 : 0.012) * Math.sin(T * 0.9) * m
+    let rootRot = 0
+    let squash = 1
+    let aRot = 0.04 * Math.sin(T * 2.1 + 0.8) * m
+    let bRot = -0.04 * Math.sin(T * 2.1 + 0.3) * m
+    let head = 0
+    if (s.flap) {
+      const f = Math.sin(T * 9)
+      aRot = 0.22 * f
+      bRot = -0.22 * f
+    }
     switch (a.anim) {
       case 'attack':
-      case 'cast': {
-        const k = a.anim === 'cast' ? 1.6 : 1
-        rot += dir * kf(t, [[0, 0], [0.15, -0.08 * k, 'out'], [0.26, 0.14 * k, 'in'], [0.5, 0]])
-        sy *= kf(t, [[0, 1], [0.15, 0.92, 'out'], [0.26, 1.06, 'in'], [0.5, 1]])
+        if (s.shoot) {
+          aRot += fwd * kf(t, [[0, 0], [0.1, -0.12, 'out'], [0.18, 0.22, 'out'], [0.5, 0]])
+          lean += -fwd * kf(t, [[0, 0], [0.18, 0.07, 'out'], [0.5, 0]])
+        } else {
+          aRot += fwd * kf(t, [[0, 0], [0.16, 0.34, 'out'], [0.27, -0.3, 'in'], [0.36, -0.26], [0.5, 0]])
+          bRot += fwd * kf(t, [[0, 0], [0.16, -0.12], [0.27, 0.12], [0.5, 0]])
+          lean += fwd * kf(t, [[0, 0], [0.16, -0.08, 'out'], [0.27, 0.14, 'in'], [0.36, 0.12], [0.5, 0]])
+        }
+        squash = kf(t, [[0, 1], [0.15, 0.95, 'out'], [0.26, 1.03, 'in'], [0.5, 1]])
         break
+      case 'cast':
+        aRot += -fwd * kf(t, [[0, 0], [0.3, 0.32, 'out'], [0.7, 0.28], [0.9, 0]])
+        bRot += fwd * kf(t, [[0, 0], [0.3, 0.26, 'out'], [0.7, 0.24], [0.9, 0]])
+        lean += -fwd * kf(t, [[0, 0], [0.3, 0.07], [0.7, 0.07], [0.9, 0]])
+        squash = kf(t, [[0, 1], [0.2, 0.94], [0.4, 1.05], [0.9, 1]])
+        break
+      case 'hit':
+        lean += -fwd * kf(t, [[0, 0], [0.07, 0.14, 'out'], [0.35, 0]])
+        head = -fwd * kf(t, [[0, 0], [0.07, 0.2, 'out'], [0.35, 0]])
+        aRot += fwd * kf(t, [[0, 0], [0.07, 0.14, 'out'], [0.35, 0]])
+        bRot += -fwd * kf(t, [[0, 0], [0.07, 0.14, 'out'], [0.35, 0]])
+        squash = kf(t, [[0, 1], [0.06, 0.9, 'out'], [0.3, 1]])
+        break
+      case 'dodge':
+        lean += -fwd * kf(t, [[0, 0], [0.12, 0.14, 'out'], [0.4, 0]])
+        break
+      case 'down':
+        rootRot = -fwd * kf(t, [[0, 0], [0.7, s.float ? 0.5 : 1.45, 'in']])
+        aRot += fwd * kf(t, [[0, 0], [0.5, 0.2]])
+        break
+      case 'cheer':
+        aRot += -fwd * kf(t, [[0, 0], [0.2, 0.05], [0.5, 0.36], [1.0, 0.32], [1.4, 0]])
+        bRot += fwd * kf(t, [[0, 0], [0.2, 0.05], [0.5, 0.3], [1.0, 0.28], [1.4, 0]])
+        squash = kf(t, [[0, 1], [0.16, 0.9], [0.32, 1.06], [0.7, 1], [0.86, 0.93], [1.05, 1.02], [1.25, 1]])
+        break
+    }
+    if (a.holtAus && a.alive) {
+      aRot += fwd * (0.3 + Math.sin(this.time * 9) * 0.03)
+      lean += -fwd * 0.05
+    }
+    aRot *= s.armScale ?? 1
+    bRot *= s.armScale ?? 1
+
+    const tf = {} as BoneMats
+    tf.root = around(s.feet, rootRot, 1 / Math.sqrt(squash), squash)
+    tf.body = mul(tf.root, around(s.feet, lean))
+    tf.chest = mul(tf.body, around(s.waist, 0.006 * Math.sin(T * 1.3) * m, 1 - 0.006 * b * m, 1 + 0.014 * b * m))
+    const headRot = 0.03 * Math.sin(T * 1.1 + 0.5) * m + this.spring(a, 'head', -lean * 1.2 + head, 70, 7, dt)
+    tf.head = mul(tf.chest, around(s.neck, headRot, 1, 1, 0, -1.5 * b * m))
+    const hatRot = this.spring(a, 'hat', -headRot * 0.8 + head * 0.5, 90, 6, dt)
+    tf.hat = s.brow != null ? mul(tf.head, around({ x: s.neck.x, y: s.brow }, hatRot)) : tf.head
+    tf.armA = s.armA ? mul(tf.chest, around(s.armA.path[0], aRot)) : tf.chest
+    tf.armB = s.armB ? mul(tf.chest, around(s.armB.path[0], bRot)) : tf.chest
+    const pend = s.pendants ?? []
+    for (let i = 0; i < 2; i++) {
+      const pd = pend[i]
+      const bone = i ? 'pend1' : 'pend0'
+      if (!pd) {
+        tf[bone] = I
+        continue
       }
+      // Haengt an der Hand, wenn der Aufhaengepunkt am Arm liegt, sonst an der Brust
+      const parent = i === 0 && s.armB ? tf.armB : tf.chest
+      const swing = this.spring(a, bone, -(lean + aRot * 0.3 + bRot) * 1.2 + 0.08 * Math.sin(T * 1.4 + i * 2), 30, 3, dt)
+      tf[bone] = mul(parent, around(pd.pivot, swing))
+    }
+    return tf
+  }
+
+  private drawFigure(a: Actor, V: DOMMatrix) {
+    const { ctx } = this
+    const im = this.img(figureImage(a.look))
+    if (!im) return
+    const s = this.spec(a.look, im)
+    const t = a.at
+    const dir = a.side === 'crew' ? 1 : -1
+    const silhouette = isSpoilerFree() && a.side === 'crew' && a.look !== 'jonte'
+    let dx = a.dx
+    let dy = a.dy + (s.float ? -10 + Math.sin(this.time * 2.4 + a.x) * 6 : 0)
+    let rot = 0
+    switch (a.anim) {
       case 'hit':
         dx += -dir * kf(t, [[0, 0], [0.08, 12, 'out'], [0.35, 0]])
-        rot += -dir * kf(t, [[0, 0], [0.08, 0.1, 'out'], [0.35, 0]])
-        sx = kf(t, [[0, 1], [0.06, 1.08, 'out'], [0.3, 1]])
-        sy *= kf(t, [[0, 1], [0.06, 0.92, 'out'], [0.3, 1]])
         break
       case 'dodge':
         dx += -dir * kf(t, [[0, 0], [0.12, 40, 'out'], [0.4, 0]])
         break
       case 'down':
-        rot = -dir * kf(t, [[0, 0], [0.6, 1.4, 'in']])
-        if (floats) dy += kf(t, [[0, 0], [0.8, 40, 'in']])
+        if (s.float) dy += kf(t, [[0, 0], [0.8, 40, 'in']])
         break
       case 'cheer':
-        dy += kf(t, [[0, 0], [0.2, 0], [0.5, -30, 'out'], [0.85, 0, 'in']])
-        sy *= kf(t, [[0, 1], [0.2, 0.9], [0.5, 1.08], [1, 1]])
+        dy += kf(t, [[0, 0], [0.16, 0], [0.5, -34, 'out'], [0.86, 0, 'in']])
         break
       case 'spin':
         rot = -Math.PI * 2 * kf(t, [[0, 0], [0.8, 1, 'inout']])
+        dy -= kf(t, [[0, 0], [0.4, 26, 'out'], [0.8, 0, 'in']])
         break
     }
-    const h = a.h
-    const w = (im.width / im.height) * h
-    const flip = a.side === 'crew' ? -1 : 1
-    ctx.setTransform(V.translate(a.x + dx, a.y + dy).translate(0, -h / 2).rotate(rot * 57.3).translate(0, h / 2).scale(flip * sx, sy))
+    const hs = HEIGHT[a.look] / im.naturalHeight
+    const flip = (a.side === 'crew') !== !!s.facesRight ? -1 : 1
+    // Bild-Koordinaten -> Buehne: Fuesse stehen auf (x, y)
+    const M = V.translate(a.x + dx, a.y + dy)
+      .translate(0, -HEIGHT[a.look] / 2)
+      .rotate(rot * 57.2958)
+      .translate(0, HEIGHT[a.look] / 2)
+      .scale(flip * hs, hs)
+      .translate(-s.feet.x, -s.feet.y)
     ctx.filter = silhouette ? `drop-shadow(0 0 3px rgba(150,240,255,0.9)) ${this.filterFor(a)}`.replace(' none', '') : this.filterFor(a)
-    ctx.drawImage(im, -w / 2, -h, w, h)
+    const mats = this.pose(a, s)
+    const tipLimb = s.armA
+    if (tipLimb) {
+      const last = tipLimb.extra?.length ? tipLimb.extra[0][tipLimb.extra[0].length - 1] : tipLimb.path[tipLimb.path.length - 1]
+      const tip = apply(mats.armA, last)
+      const local = new DOMMatrix().translate(a.x + dx, a.y + dy).scale(flip * hs, hs).translate(-s.feet.x, -s.feet.y).transformPoint(new DOMPoint(tip.x, tip.y))
+      this.tips.set(a.id, { x: local.x, y: local.y })
+    }
+    ctx.setTransform(M)
+    if (this.mesh) {
+      const k = Math.hypot(M.a, M.b)
+      const r = this.mesh.render(a.look + ':' + im.naturalHeight, im, s, mats, this.time, k)
+      ctx.drawImage(this.mesh.canvas, 0, 0, r.sw, r.sh, r.x, r.y, r.w, r.h)
+    } else {
+      // ohne WebGL: ganzes Bild, nur als Ganzes bewegt
+      ctx.drawImage(im, 0, 0)
+    }
     ctx.filter = 'none'
     ctx.setTransform(V)
+    // Hiebspur beim Nahkampf: Die Figur selbst biegt sich nur leicht, der Schwung kommt vom Bogen
+    if (a.anim === 'attack' && !s.shoot && t > 0.17 && t < 0.42) {
+      const H = HEIGHT[a.look]
+      const u = (t - 0.17) / 0.25
+      const a0 = -Math.PI * 0.7
+      const a1 = Math.PI * 0.3
+      const end = a0 + (a1 - a0) * Math.min(1, u * 1.8)
+      const start = a0 + (a1 - a0) * Math.max(0, u * 1.8 - 0.8)
+      ctx.setTransform(V.translate(a.x + dx + dir * H * 0.22, a.y + dy - H * 0.5).scale(dir, 1))
+      ctx.globalAlpha = Math.max(0, 1 - u) * a.alpha
+      ctx.lineCap = 'round'
+      ctx.shadowColor = 'rgba(160,230,255,0.9)'
+      ctx.shadowBlur = 14
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)'
+      ctx.lineWidth = 9 * (1 - u) + 2
+      ctx.beginPath()
+      ctx.arc(0, 0, H * 0.42, start, end)
+      ctx.stroke()
+      ctx.shadowBlur = 0
+      ctx.globalAlpha = Math.max(0, a.alpha)
+      ctx.setTransform(V)
+    }
     if (silhouette) {
       ctx.globalAlpha *= 0.85
       ctx.font = '900 54px Nunito, system-ui, sans-serif'
       ctx.textAlign = 'center'
       ctx.fillStyle = 'rgba(180,240,255,0.55)'
-      ctx.fillText('?', a.x + dx, a.y + dy - h * 0.45)
+      ctx.fillText('?', a.x + dx, a.y + dy - HEIGHT[a.look] * 0.45)
     }
-  }
-
-  private drawRig(a: Actor, V: DOMMatrix) {
-    const isCrab = a.look !== 'jonte'
-    const { rig, parts } = isCrab ? FIGHT_ART.rigs.krabbe : FIGHT_ART.rigs.jonte
-    const L = LOOK[a.look]
-    const names = Object.keys(rig)
-    const P: Record<string, Pose> = {}
-    for (const k of names) P[k] = { rot: 0, dx: 0, dy: 0, sx: 1, sy: 1 }
-    const root: Pose = { rot: 0, dx: 0, dy: 0, sx: 1, sy: 1 }
-    if (isCrab) this.poseCrab(a, P, root)
-    else this.poseJonte(a, P, root)
-    const hidden = a.look === 'krabbenmatrose' ? new Set(['tuch', 'saebel', 'schild']) : new Set<string>()
-
-    const rootM = new DOMMatrix()
-      .translate(a.x + a.dx, a.y + a.dy)
-      .scale(a.scale)
-      .translate(root.dx, root.dy - (root.pivot ?? 0))
-      .rotate(root.rot * 57.2958)
-      .translate(0, root.pivot ?? 0)
-      .scale(root.sx, root.sy)
-      .translate(-L.cx, -L.fy)
-    const cache: Record<string, DOMMatrix> = {}
-    const mat = (k: string): DOMMatrix => {
-      if (cache[k]) return cache[k]
-      const r = rig[k]
-      const p = P[k]
-      const px = r.x + r.px
-      const py = r.y + r.py
-      let M = r.parent ? mat(r.parent) : rootM
-      if (p.around) M = M.translate(p.around[0], p.around[1]).rotate(p.around[2] * 57.2958).translate(-p.around[0], -p.around[1])
-      M = M.translate(px + p.dx, py + p.dy)
-        .rotate(((r.r ?? 0) + p.rot) * 57.2958)
-        .scale((r.s ?? 1) * p.sx, (r.s ?? 1) * p.sy)
-        .translate(-px, -py)
-      return (cache[k] = M)
-    }
-    const { ctx } = this
-    ctx.filter = this.filterFor(a)
-    for (const k of [...names].sort((x, y) => rig[x].z - rig[y].z)) {
-      if (hidden.has(k)) continue
-      const im = this.img(parts[rig[k].img])
-      if (!im) continue
-      ctx.setTransform(V.multiply(mat(k)))
-      ctx.drawImage(im, rig[k].x, rig[k].y)
-    }
-    ctx.filter = 'none'
-    ctx.setTransform(V)
-  }
-
-  private poseJonte(a: Actor, P: Record<string, Pose>, root: Pose) {
-    const T = this.time
-    const b = Math.sin(T * 2.2 + a.x)
-    P.torso.sy = 1 + 0.018 * b
-    P.torso.sx = 1 - 0.008 * b
-    P.kopf.dy = -1.5 * b
-    P.kopf.rot = 0.025 * Math.sin(T * 1.1)
-    P.oberarm_b.rot = 0.05 * Math.sin(T * 2.2 + 0.6)
-    P.oberarm_f.rot = -0.04 * Math.sin(T * 2.2 + 0.4)
-    P.unterarm_f.rot = -0.05 * Math.sin(T * 2.2 + 0.9)
-    P.mantel_r.rot = 0.05 * Math.sin(T * 1.7)
-    P.mantel_l.rot = -0.04 * Math.sin(T * 1.9 + 1)
-    P.hut.rot = 0.02 * Math.sin(T * 2.2 - 0.8)
-    const t = a.at
-    switch (a.anim) {
-      case 'attack':
-      case 'cast': {
-        const k = a.anim === 'cast' ? 1.8 : 1
-        const keys = (v: number[]): Key[] => [[0, 0], [0.18 * k, v[0], 'out'], [0.26 * k, v[1], 'in'], [0.34 * k, v[2], 'out'], [0.5 * k, 0]]
-        P.oberarm_f.rot += kf(t, keys([-1.9, 0.9, 0.7]))
-        P.unterarm_f.rot += kf(t, keys([-0.6, 0.4, 0.3]))
-        P.oberarm_b.rot += kf(t, keys([0.3, -0.3, -0.2]))
-        root.rot = kf(t, keys([-0.06, 0.12, 0.1]))
-        P.kopf.rot += kf(t, keys([-0.05, 0.08, 0.06]))
-        P.mantel_l.rot += kf(t, keys([0.1, -0.25, -0.2]))
-        P.mantel_r.rot += kf(t, keys([0.1, -0.3, -0.2]))
-        P.hut.rot += kf(t, keys([-0.06, 0.1, 0.05]))
-        break
-      }
-      case 'hit':
-        root.rot = kf(t, [[0, 0], [0.07, -0.14, 'out'], [0.35, 0]])
-        P.hut.rot += kf(t, [[0, 0], [0.1, -0.25, 'out'], [0.35, 0]])
-        P.oberarm_f.rot += kf(t, [[0, 0], [0.07, 0.3, 'out'], [0.35, 0]])
-        break
-      case 'dodge':
-        root.dx = kf(t, [[0, 0], [0.12, -40, 'out'], [0.4, 0]])
-        root.rot = kf(t, [[0, 0], [0.12, -0.1, 'out'], [0.4, 0]])
-        break
-      case 'down':
-        root.rot = kf(t, [[0, 0], [0.7, -1.45, 'in']])
-        root.dy = kf(t, [[0, 0], [0.7, 10, 'in']])
-        P.hut.dy = kf(t, [[0, 0], [0.5, -40, 'out'], [0.9, 30, 'in']])
-        break
-      case 'cheer':
-        root.dy = kf(t, [[0, 0], [0.18, 0], [0.55, -38, 'out'], [0.9, 0, 'in'], [1.4, 0]])
-        P.oberarm_f.rot = kf(t, [[0, 0], [0.2, 0.25], [0.5, -2.3], [1.0, -2.2], [1.4, 0]])
-        P.hut.dy = kf(t, [[0, 0], [0.3, 0], [0.62, -21, 'out'], [0.95, 0, 'in'], [1.4, 0]])
-        break
-    }
-  }
-
-  private poseCrab(a: Actor, P: Record<string, Pose>, root: Pose) {
-    const T = this.time + a.x * 0.01
-    const walk = Math.abs(a.dx) > 2 ? 3 : 1
-    P.bein_1.rot = 0.08 * Math.sin(T * 3 * walk) * walk
-    P.bein_2.rot = 0.1 * Math.sin(T * 3 * walk + 1.5) * walk
-    P.bein_3.rot = -0.1 * Math.sin(T * 3 * walk + 0.7) * walk
-    P.bein_4.rot = -0.08 * Math.sin(T * 3 * walk + 2.2) * walk
-    P.koerper.dy = Math.sin(T * 3) * 2
-    P.koerper.sy = 1 + Math.sin(T * 3) * 0.015
-    P.tuch.rot = Math.sin(T * 2) * 0.03
-    P.arm_f.rot = Math.sin(T * 2.5) * 0.04
-    P.arm_b.rot = Math.sin(T * 2.5 + 1) * 0.05
-    // Saebel haengt an der Schere (nicht im Rig verknuepft): gleiche Drehung um den Scherenpunkt
-    const ab = FIGHT_ART.rigs.krabbe.rig.arm_b
-    const pivot: [number, number] = [ab.x + ab.px, ab.y + ab.py]
-    let swing = 0
-    const t = a.at
-    if (a.holtAus && a.alive) swing = 0.7 + Math.sin(this.time * 9) * 0.06
-    switch (a.anim) {
-      case 'attack':
-        swing = kf(t, [[0, 0], [0.18, 0.6, 'out'], [0.28, -0.9, 'in'], [0.36, -0.8], [0.5, 0]])
-        P.arm_f.rot += kf(t, [[0, 0], [0.18, 0.3, 'out'], [0.28, -0.5, 'in'], [0.5, 0]])
-        root.rot = kf(t, [[0, 0], [0.18, 0.05], [0.28, -0.1], [0.5, 0]])
-        break
-      case 'spin':
-        root.rot = kf(t, [[0, 0], [0.8, -Math.PI * 4, 'inout']])
-        root.pivot = 110
-        root.dy = -kf(t, [[0, 0], [0.4, 30, 'out'], [0.8, 0, 'in']])
-        swing = -0.9
-        break
-      case 'hit':
-        root.sx = kf(t, [[0, 1], [0.06, 1.12, 'out'], [0.35, 1]])
-        root.sy = kf(t, [[0, 1], [0.06, 0.86, 'out'], [0.35, 1]])
-        root.rot = kf(t, [[0, 0], [0.07, 0.1, 'out'], [0.35, 0]])
-        break
-      case 'dodge':
-        root.dx = kf(t, [[0, 0], [0.12, 60, 'out'], [0.4, 0]])
-        break
-      case 'down':
-        root.pivot = 100
-        root.rot = kf(t, [[0, 0], [0.6, Math.PI * 0.95, 'in']])
-        root.dy = kf(t, [[0, 0], [0.3, -60, 'out'], [0.6, 0, 'in']])
-        break
-    }
-    P.arm_b.rot += swing
-    P.saebel.around = [pivot[0], pivot[1], swing]
   }
 }
 
