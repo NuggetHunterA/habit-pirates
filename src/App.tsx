@@ -136,7 +136,11 @@ export default function App() {
         )}
       </header>
 
-      {!game.save ? (
+      {!game.save && game.profile ? (
+        <div className="muted" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800 }}>
+          Spielstand wird geladen …
+        </div>
+      ) : !game.save ? (
         <ProfilePick onPick={game.chooseProfile} />
       ) : (
         <main className="main">

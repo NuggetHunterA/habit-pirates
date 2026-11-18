@@ -1,22 +1,27 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Glass, Habit, HabitKind, Item, Save, Slot, WeekPlan } from './types'
 import { dateKey, weekStartOf } from './dates'
 import { RULES, emptyLog, windAvailable, previousWeek } from './rules'
-import { chapterOf } from './map'
+import { CHAPTERS, chapterOf } from './map'
 import { PRICE, itemDef, makeItem, sellPrice } from './items'
 import { START_CREW } from './foes'
 import { xpTotal } from './progress'
 import { STORIES } from './story'
+import { loadRemote, ms, saveRemote } from './cloud'
 
 /** Boss-Versuche pro Tag */
 export const BOSS_TRIES = 3
 
 /**
- * Spielstand pro Profil. Im Prototyp liegt er im Browser (localStorage).
- * Das Format passt zum spaeteren Supabase-Schema `pirates` (ein Datensatz pro Profil).
+ * Spielstand pro Profil. Er liegt in Supabase (Schema `pirates`, ein Datensatz pro Profil)
+ * und als Kopie im Browser, damit die App auch offline laeuft.
+ * Beim Start, beim Zurueckkehren in die App und nach jeder Aenderung wird abgeglichen.
+ * Bei einem Konflikt gewinnt der neuere Stand.
  */
 const PROFILE_KEY = 'hp.profile'
-const saveKey = (p: string) => `hp.save.${p}`
+/** Neuer Schluessel ab Phase 1: die alten Staende (hp.save.*) waren Tests und werden nicht uebernommen */
+const saveKey = (p: string) => `hp2.save.${p}`
+const OLD_KEYS = ['hp.save.Adrian', 'hp.save.Ulrike']
 
 function read<T>(k: string): T | null {
   try {
@@ -30,9 +35,17 @@ function write(k: string, v: unknown) {
   try {
     localStorage.setItem(k, JSON.stringify(v))
   } catch {
-    /* privater Modus: Spiel laeuft trotzdem, nur ohne Speichern */
+    /* privater Modus: Spiel laeuft trotzdem, nur ohne lokale Kopie */
   }
 }
+try {
+  for (const k of OLD_KEYS) localStorage.removeItem(k)
+} catch {
+  /* egal */
+}
+
+/** Stand des Abgleichs mit Supabase */
+export type SyncState = 'loading' | 'synced' | 'pending' | 'offline'
 
 const uid = () => Math.random().toString(36).slice(2, 9)
 
@@ -46,7 +59,8 @@ function migrate(s: Save | null): Save | null {
   return { ...s, game: { ...PROGRESS(), ...g, equipped: g.equipped ?? {}, shop: g.shop ?? { day: '', bought: [] } } }
 }
 
-function newSave(profile: string): Save {
+/** Neuer Stand. touched=false: unberuehrt, ein Stand aus Supabase gewinnt immer. */
+function newSave(profile: string, touched = false): Save {
   const habits: Habit[] = [
     { id: 'trinken', name: 'Genug trinken', kind: 'drink', always: true },
     { id: uid(), name: 'Vitamin D', kind: 'tap' },
@@ -60,6 +74,7 @@ function newSave(profile: string): Save {
     version: 1,
     profile,
     createdAt: new Date().toISOString(),
+    updatedAt: touched ? new Date().toISOString() : '',
     habits,
     weeks: {},
     logs: {},
@@ -97,24 +112,130 @@ export function useGame() {
   const [profile, setProfileState] = useState<string | null>(() => read<string>(PROFILE_KEY))
   const [save, setSave] = useState<Save | null>(() => {
     const p = read<string>(PROFILE_KEY)
-    return p ? migrate(read<Save>(saveKey(p))) ?? newSave(p) : null
+    return p ? migrate(read<Save>(saveKey(p))) : null
   })
+  const [sync, setSync] = useState<SyncState>(() => (profile && !save ? 'loading' : 'pending'))
+  const [syncedAt, setSyncedAt] = useState<number | null>(null)
   const today = useToday()
   const week = weekStartOf(today)
 
+  /** Aktueller Stand und letzter bekannter Zeitstempel in Supabase (fuer Abgleich ausserhalb von React) */
+  const saveRef = useRef(save)
   useEffect(() => {
-    if (save) write(saveKey(save.profile), save)
+    saveRef.current = save
   }, [save])
+  const remoteAt = useRef(0)
+  const pushT = useRef(0)
+  const busy = useRef(false)
+  const again = useRef<() => void>(() => {})
 
-  const update = useCallback((fn: (s: Save) => Save) => setSave((s) => (s ? fn(s) : s)), [])
+  /** Stand aus Supabase uebernehmen, wenn er neuer ist als der lokale */
+  const adopt = useCallback((data: Save, at: string) => {
+    remoteAt.current = Math.max(remoteAt.current, ms(at))
+    setSave((cur) => {
+      if (!cur || cur.profile !== data.profile) return cur
+      return ms(at) > ms(cur.updatedAt) ? (migrate(data) ?? cur) : cur
+    })
+    setSync('synced')
+    setSyncedAt(Date.now())
+  }, [])
+
+  const push = useCallback(
+    async (keepalive = false) => {
+      const s = saveRef.current
+      if (!s || busy.current || ms(s.updatedAt) <= remoteAt.current) return
+      busy.current = true
+      try {
+        const r = await saveRemote(s, keepalive)
+        adopt(r.data, r.updated_at)
+        // Waehrend des Speicherns geaendert: gleich nochmal
+        if (ms(saveRef.current?.updatedAt) > remoteAt.current) pushT.current = window.setTimeout(() => again.current(), 300)
+      } catch {
+        setSync('offline')
+      } finally {
+        busy.current = false
+      }
+    },
+    [adopt],
+  )
+  useEffect(() => {
+    again.current = () => void push()
+  }, [push])
+
+  const pull = useCallback(
+    async (p: string) => {
+      try {
+        const r = await loadRemote(p)
+        if (saveRef.current && saveRef.current.profile !== p) return
+        if (r) adopt(r.data, r.updated_at)
+        if (!saveRef.current) setSave(r ? migrate(r.data) : newSave(p))
+        if (!r) setSync('synced')
+        void push()
+      } catch {
+        // Offline und noch kein lokaler Stand: neu beginnen, Supabase gewinnt spaeter, solange nichts geaendert wurde
+        setSave((cur) => cur ?? newSave(p))
+        setSync('offline')
+      }
+    },
+    [adopt, push],
+  )
+
+  // Beim Start und bei jedem Profilwechsel abgleichen
+  useEffect(() => {
+    if (!profile) return
+    remoteAt.current = 0
+    void pull(profile)
+  }, [profile, pull])
+
+  // Lokale Kopie schreiben und Aenderungen kurz gesammelt nach Supabase schicken
+  useEffect(() => {
+    if (!save) return
+    write(saveKey(save.profile), save)
+    if (ms(save.updatedAt) > remoteAt.current) {
+      setSync((x) => (x === 'offline' ? x : 'pending'))
+      clearTimeout(pushT.current)
+      pushT.current = window.setTimeout(() => void push(), 1200)
+    }
+  }, [save, push])
+
+  // Zurueck in der App oder wieder online: neu abgleichen. Beim Verlassen sofort speichern.
+  useEffect(() => {
+    const vis = () => {
+      if (document.visibilityState === 'hidden') void push(true)
+      else if (profile) void pull(profile)
+    }
+    const online = () => profile && void pull(profile)
+    document.addEventListener('visibilitychange', vis)
+    window.addEventListener('online', online)
+    const t = setInterval(() => sync === 'offline' && void push(), 60_000)
+    return () => {
+      document.removeEventListener('visibilitychange', vis)
+      window.removeEventListener('online', online)
+      clearInterval(t)
+    }
+  }, [profile, pull, push, sync])
+
+  /** Aenderung am Spielstand: bekommt einen neuen Zeitstempel */
+  const update = useCallback(
+    (fn: (s: Save) => Save) =>
+      setSave((s) => {
+        if (!s) return s
+        const n = fn(s)
+        return n === s ? s : { ...n, updatedAt: new Date().toISOString() }
+      }),
+    [],
+  )
 
   const chooseProfile = useCallback((p: string) => {
     write(PROFILE_KEY, p)
+    const local = migrate(read<Save>(saveKey(p)))
+    setSave(local)
+    setSync(local ? 'pending' : 'loading')
     setProfileState(p)
-    setSave(migrate(read<Save>(saveKey(p))) ?? newSave(p))
   }, [])
 
   const logoutProfile = useCallback(() => {
+    void push(true)
     try {
       localStorage.removeItem(PROFILE_KEY)
     } catch {
@@ -122,7 +243,7 @@ export function useGame() {
     }
     setProfileState(null)
     setSave(null)
-  }, [])
+  }, [push])
 
   const plan: WeekPlan | undefined = save?.weeks[week]
 
@@ -250,7 +371,7 @@ export function useGame() {
       nextChapter() {
         update((s) => {
           const g = s.game
-          if (!g.bossBeaten.includes(g.chapter) || g.chapter >= 2) return s
+          if (!g.bossBeaten.includes(g.chapter) || g.chapter >= CHAPTERS.length) return s
           return { ...s, game: { ...g, chapter: g.chapter + 1, field: 0, looted: [], cleared: [] } }
         })
       },
@@ -324,13 +445,13 @@ export function useGame() {
         update((s) => ({ ...s, game: { ...s.game, gold: s.game.gold + 100 } }))
       },
       resetGame() {
-        update((s) => newSave(s.profile))
+        update((s) => newSave(s.profile, true))
       },
     }),
     [update, week, today, save],
   )
 
-  return { profile, save, today, week, plan, suggestion, previousWeek: previousWeek(week), chooseProfile, logoutProfile, ...actions }
+  return { profile, save, sync, syncedAt, today, week, plan, suggestion, previousWeek: previousWeek(week), chooseProfile, logoutProfile, ...actions }
 }
 
 export type Game = ReturnType<typeof useGame>
