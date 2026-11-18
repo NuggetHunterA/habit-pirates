@@ -12,7 +12,7 @@ import './Gear.css'
 /** Laden des Haendlers: vier Tagesangebote, neu ab Mitternacht */
 export default function Shop({ game, say, onGear }: { game: Game; say: (m: string) => void; onGear: () => void }) {
   const save = game.save!
-  const offer = useMemo(() => shopOffer(save.profile, game.today), [save.profile, game.today])
+  const offer = useMemo(() => shopOffer(save.profile, game.today, save.game.chapter), [save.profile, game.today, save.game.chapter])
   const bought = save.game.shop.day === game.today ? save.game.shop.bought : []
   const [flash, setFlash] = useState<string | null>(null)
 

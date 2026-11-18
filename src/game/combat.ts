@@ -72,9 +72,51 @@ export interface Mods {
   goldBonus?: number
   /** Zusaetzliche Chance auf ein Item nach dem Kampf */
   extraItem?: number
+  /** Chance pro Treffer auf Brand, Blutung, Gift, Schwaeche oder Verlangsamen */
+  burnChance?: number
+  bleedChance?: number
+  poisonChance?: number
+  weakChance?: number
+  slowChance?: number
+  /** Mehr Krit-Schaden (Prozentpunkte) gegen blutende Ziele */
+  kritVsBlutung?: number
+  /** Nach jedem Krit: +n Ausweichen bzw. +n Tempo bis Kampfende, hoechstens 3-mal */
+  critDodge?: number
+  critTempo?: number
+  /** Faellt ein Gegner: die Crew bekommt +n Krit-Schaden bis Kampfende */
+  killRush?: number
+  /** Nach dem Ausweichen ist der naechste Treffer kritisch */
+  dodgeCrit?: boolean
+  /** Nach dem Ausweichen heilt der Traeger diesen Anteil vom Leben */
+  dodgeHeal?: number
+  /** Wer den Traeger verfehlt, wird geschwaecht */
+  weakOnMiss?: boolean
+  /** Lebensraub nur gegen vergiftete Ziele */
+  lifestealVsGift?: number
+  /** Mehr Schaden gegen vergiftete bzw. brennende Ziele */
+  dmgVsGift?: number
+  dmgVsBrand?: number
+  /** Angreifer erleiden diesen Anteil ihres Schadens selbst */
+  thorns?: number
+  /** Chance, dass ein Angreifer Feuer faengt */
+  burnBack?: number
+  /** Die ersten n Angriffe gegen den Traeger gehen ins Leere */
+  veils?: number
+  /** Einmal pro Kampf: faellt der Traeger, steht er mit diesem Anteil Leben wieder auf */
+  revive?: number
+  /** Fuer die ganze Crew: mehr Ausweichen, Schild zum Start, Energie und Zugleiste zum Start */
+  teamDodge?: number
+  teamShield?: number
+  startEnergy?: number
+  startGauge?: number
+  /** Kampfstart: alle Gegner brennen bzw. sind vergiftet */
+  startBurn?: boolean
+  startPoison?: boolean
+  /** Staerkende Faehigkeiten des Traegers heilen zusaetzlich diesen Anteil */
+  buffHeal?: number
 }
 
-const MAX_KEYS: (keyof Mods)[] = ['bleedMax', 'counter']
+const MAX_KEYS: (keyof Mods)[] = ['bleedMax', 'counter', 'revive', 'teamDodge', 'teamShield', 'startEnergy', 'startGauge']
 
 /** Mods zusammenfuehren: Zahlen addieren (Konter und Blutungs-Stapel: hoechster Wert), Schalter verodern */
 export function mergeMods(...list: (Mods | undefined)[]): Mods {
@@ -254,6 +296,13 @@ export interface Fighter extends FighterDef {
   attacks: number
   /** Restliche verlangsamende Treffer */
   slowHitsLeft: number
+  /** Restliche Angriffe, die ins Leere gehen */
+  veils: number
+  /** Stapel aus Krit-Boni (Ausweichen und Tempo) */
+  critStacks: number
+  /** Naechster Treffer ist kritisch */
+  nextCrit: boolean
+  revived: boolean
 }
 
 export type FightEvent =
@@ -306,9 +355,25 @@ export function createBattle(defs: FighterDef[], seed = (Math.random() * 2 ** 31
   }
 }
 
-/** Wirkungen zum Kampfstart: Gegner verlangsamt (Gezeiten-Schule) */
+/** Wirkungen zum Kampfstart: Crew-Boni, Gegner verlangsamt, brennend oder vergiftet */
 function startEffects(fs: Fighter[]): Fighter[] {
-  if (fs.some((f) => f.side === 'crew' && f.mods?.slowFoesAtStart)) for (const f of fs) if (f.side === 'feind') f.slow = 2
+  const crew = fs.filter((f) => f.side === 'crew')
+  const foes = fs.filter((f) => f.side === 'feind')
+  const best = (k: 'teamDodge' | 'teamShield' | 'startEnergy' | 'startGauge') => Math.max(0, ...crew.map((f) => f.mods?.[k] ?? 0))
+  const td = best('teamDodge')
+  const ts = best('teamShield')
+  const se = best('startEnergy')
+  const sg = best('startGauge')
+  for (const f of crew) {
+    f.stats.ausweichen += td
+    f.shield += Math.round(ts * f.stats.leben)
+    if (f.ability) f.energy = Math.min(100, f.energy + se)
+    f.gauge += sg
+  }
+  if (crew.some((f) => f.mods?.slowFoesAtStart)) for (const f of foes) f.slow = 2
+  const burner = crew.find((f) => f.mods?.startBurn)
+  if (burner) for (const f of foes) applyBrand(burner, f)
+  if (crew.some((f) => f.mods?.startPoison)) for (const f of foes) f.gift = 3
   return fs
 }
 
@@ -343,6 +408,10 @@ function spawn(d: FighterDef, i: number): Fighter {
       firstDone: false,
       attacks: 0,
       slowHitsLeft: d.mods?.slowHits ?? 0,
+      veils: d.mods?.veils ?? 0,
+      critStacks: 0,
+      nextCrit: false,
+      revived: false,
   }
 }
 
@@ -399,7 +468,7 @@ function armor(t: Fighter) {
 }
 
 function dodge(t: Fighter) {
-  let d = t.stats.ausweichen + (t.flink > 0 ? 40 : 0)
+  let d = t.stats.ausweichen + (t.flink > 0 ? 40 : 0) + (t.mods?.critDodge ? Math.min(3, t.critStacks) * t.mods.critDodge : 0)
   if (t.traits?.includes('nebelkapitaen') && t.phase === 1) d += 30
   return d
 }
@@ -447,12 +516,24 @@ function strike(b: Battle, me: Fighter, t: Fighter, mult: number, ev: FightEvent
     ev.push({ t: 'durch', who: me.id, target: t.id })
     return
   }
+  if (t.veils > 0 && !opts.area) {
+    t.veils--
+    ev.push({ t: 'effekt', target: t.id, text: 'Schattenhaft', tone: tone(t) })
+    ev.push({ t: 'verfehlt', who: me.id, target: t.id })
+    return
+  }
   if (!opts.noDodge && rnd(b) * 100 < dodge(t)) {
     ev.push({ t: 'verfehlt', who: me.id, target: t.id })
     if (t.mods?.poisonOnMiss && me.hp > 0) {
       me.gift = 3
       ev.push({ t: 'effekt', target: me.id, text: 'Vergiftet', tone: me.side === 'crew' ? 'schlecht' : 'gut' })
     }
+    if (t.mods?.weakOnMiss && me.hp > 0) {
+      me.weak = 2
+      ev.push({ t: 'effekt', target: me.id, text: 'Geschwächt', tone: tone(t) })
+    }
+    if (t.mods?.dodgeCrit) t.nextCrit = true
+    if (t.mods?.dodgeHeal) heal(t, t.stats.leben * t.mods.dodgeHeal, ev)
     if (t.mods?.counter && !opts.chain && t.hp > 0 && me.hp > 0) {
       ev.push({ t: 'effekt', target: t.id, text: 'Konter!', tone: t.side === 'crew' ? 'gut' : 'schlecht' })
       strike(b, t, me, t.mods.counter, ev, { noDodge: true, chain: true })
@@ -464,9 +545,13 @@ function strike(b: Battle, me: Fighter, t: Fighter, mult: number, ev: FightEvent
   let chance = me.stats.krit
   if (t.brand > 0) chance += me.mods?.critVsBrand ?? 0
   if (t.bleed > 0) chance += me.mods?.critVsBlutung ?? 0
-  const krit = first || rnd(b) * 100 < chance
+  const forced = me.nextCrit && !opts.chain
+  if (forced) me.nextCrit = false
+  const krit = first || forced || rnd(b) * 100 < chance
   let dmg = attackPower(b, me) * mult * (20 / (20 + armor(t))) * (0.9 + rnd(b) * 0.2)
-  if (krit) dmg *= (me.stats.kritSchaden ?? KRIT_SCHADEN) / 100
+  if (krit) dmg *= ((me.stats.kritSchaden ?? KRIT_SCHADEN) + (t.bleed > 0 ? (me.mods?.kritVsBlutung ?? 0) : 0)) / 100
+  if (t.gift > 0) dmg *= 1 + (me.mods?.dmgVsGift ?? 0)
+  if (t.brand > 0) dmg *= 1 + (me.mods?.dmgVsBrand ?? 0)
   const geblockt = !opts.area && !!t.traits?.includes('ankerschild')
   if (geblockt) dmg *= 0.65
   if (t.markiert) dmg *= 1.3
@@ -481,10 +566,17 @@ function strike(b: Battle, me: Fighter, t: Fighter, mult: number, ev: FightEvent
   t.hp = Math.max(0, t.hp - d)
   if (t.ability) t.energy = Math.min(100, t.energy + ENERGY_PER_HIT)
   ev.push({ t: 'treffer', who: me.id, target: t.id, dmg: d, krit, geblockt })
-  const steal = (me.mods?.lifesteal ?? 0) * (raging(me) ? 2 : 1)
+  const steal = (me.mods?.lifesteal ?? 0) * (raging(me) ? 2 : 1) + (t.gift > 0 ? (me.mods?.lifestealVsGift ?? 0) : 0)
   if (steal > 0) heal(me, d * steal, ev)
+  if (krit && me.critStacks < 3 && (me.mods?.critDodge || me.mods?.critTempo)) {
+    me.critStacks++
+    if (me.mods.critTempo) me.stats.tempo += me.mods.critTempo
+  }
+  if (!opts.chain && me.hp > 0) hitBack(b, me, t, d, ev)
   if (t.hp === 0) {
+    if (revive(t, ev)) return
     ev.push({ t: 'besiegt', who: t.id })
+    killRush(b, t, ev)
     explodeIfBurning(b, t, ev, opts)
     return
   }
@@ -493,10 +585,79 @@ function strike(b: Battle, me: Fighter, t: Fighter, mult: number, ev: FightEvent
   if (me.slowHitsLeft > 0) {
     me.slowHitsLeft--
     t.slow = 2
-    ev.push({ t: 'effekt', target: t.id, text: 'Verlangsamt', tone: me.side === 'crew' ? 'gut' : 'schlecht' })
+    ev.push({ t: 'effekt', target: t.id, text: 'Verlangsamt', tone: tone(me) })
   }
+  if (!opts.chain) onHitChances(b, me, t, ev)
   afterDamage(t, ev)
   bossPhase(b, t, ev)
+}
+
+/** Ton eines Hinweises: gut, wenn es der Crew hilft */
+const tone = (helped: Fighter): 'gut' | 'schlecht' => (helped.side === 'crew' ? 'gut' : 'schlecht')
+
+/** Zufaellige Zustaende durch Treffer (Item-Effekte) */
+function onHitChances(b: Battle, me: Fighter, t: Fighter, ev: FightEvent[]) {
+  const m = me.mods
+  if (!m || t.hp <= 0) return
+  if (m.burnChance && rnd(b) < m.burnChance) {
+    applyBrand(me, t)
+    ev.push({ t: 'effekt', target: t.id, text: 'Brand', tone: tone(me) })
+  }
+  if (m.bleedChance && rnd(b) < m.bleedChance) applyBleed(me, t, ev)
+  if (m.poisonChance && rnd(b) < m.poisonChance) {
+    t.gift = 3
+    ev.push({ t: 'effekt', target: t.id, text: 'Vergiftet', tone: tone(me) })
+  }
+  if (m.weakChance && rnd(b) < m.weakChance) {
+    t.weak = 2
+    ev.push({ t: 'effekt', target: t.id, text: 'Geschwächt', tone: tone(me) })
+  }
+  if (m.slowChance && rnd(b) < m.slowChance) {
+    t.slow = 2
+    ev.push({ t: 'effekt', target: t.id, text: 'Verlangsamt', tone: tone(me) })
+  }
+}
+
+/** Dornen und Feuer am Getroffenen schlagen auf den Angreifer zurueck */
+function hitBack(b: Battle, me: Fighter, t: Fighter, d: number, ev: FightEvent[]) {
+  const th = t.mods?.thorns
+  if (th) {
+    const x = Math.max(1, Math.round(d * th))
+    me.hp = Math.max(0, me.hp - x)
+    ev.push({ t: 'brand', target: me.id, dmg: x })
+    if (me.hp === 0 && !revive(me, ev)) {
+      ev.push({ t: 'besiegt', who: me.id })
+      killRush(b, me, ev)
+      return
+    }
+  }
+  if (t.mods?.burnBack && me.brand <= 0 && rnd(b) < t.mods.burnBack) {
+    applyBrand(t, me)
+    ev.push({ t: 'effekt', target: me.id, text: 'Brand', tone: tone(t) })
+  }
+}
+
+/** Einmal pro Kampf wieder aufstehen. true, wenn es geklappt hat. */
+function revive(t: Fighter, ev: FightEvent[]): boolean {
+  if (!t.mods?.revive || t.revived) return false
+  t.revived = true
+  t.hp = Math.max(1, Math.round(t.stats.leben * t.mods.revive))
+  t.brand = 0
+  t.gift = 0
+  t.bleed = 0
+  ev.push({ t: 'effekt', target: t.id, text: 'Steht wieder auf!', tone: tone(t) })
+  ev.push({ t: 'heilung', target: t.id, amount: t.hp })
+  return true
+}
+
+/** Faellt ein Gegner, bekommt die Gegenseite Krit-Schaden (Kapitaensrock) */
+function killRush(b: Battle, dead: Fighter, ev: FightEvent[]) {
+  const other = alive(b, dead.side === 'crew' ? 'feind' : 'crew')
+  const k = Math.max(0, ...other.map((f) => f.mods?.killRush ?? 0))
+  if (!k) return
+  for (const f of other) f.stats.kritSchaden = (f.stats.kritSchaden ?? KRIT_SCHADEN) + k
+  const src = other.find((f) => f.mods?.killRush)
+  if (src) ev.push({ t: 'effekt', target: src.id, text: `+${k} % Krit-Schaden`, tone: tone(src) })
 }
 
 /** Schild-Erneuerung und letzte Rettung, wenn das Leben faellt */
@@ -578,7 +739,7 @@ function castAbility(b: Battle, me: Fighter, ev: FightEvent[]) {
       ev.push({ t: 'faehigkeit', who: me.id, ability: 'kapitaensruf', targets: crew.map((f) => f.id) })
       for (const f of crew) {
         f.ruf = 3
-        heal(f, f.stats.leben * 0.08 * (1 + (me.mods?.healBonus ?? 0)), ev)
+        heal(f, f.stats.leben * (0.08 + (me.mods?.buffHeal ?? 0)) * (1 + (me.mods?.healBonus ?? 0)), ev)
       }
       break
     }
@@ -620,6 +781,7 @@ function castAbility(b: Battle, me: Fighter, ev: FightEvent[]) {
         if (me.ability === 'eintopf') {
           f.ruf = 3
           if (f.ability && f.id !== me.id) f.energy = Math.min(100, f.energy + 20)
+          if (me.mods?.buffHeal) heal(f, f.stats.leben * me.mods.buffHeal * (1 + (me.mods.healBonus ?? 0)), ev)
         } else {
           heal(f, f.stats.leben * 0.22 * (1 + (me.mods?.healBonus ?? 0)), ev)
         }
@@ -694,8 +856,9 @@ export function step(b: Battle, wants: Set<string>): FightEvent[] {
     const d = me.brandDmg
     me.hp = Math.max(0, me.hp - d)
     ev.push({ t: 'brand', target: me.id, dmg: d })
-    if (me.hp === 0) {
+    if (me.hp === 0 && !revive(me, ev)) {
       ev.push({ t: 'besiegt', who: me.id })
+      killRush(b, me, ev)
       me.brand = Math.max(1, me.brand)
       explodeIfBurning(b, me, ev, {})
       checkEnd(b, ev)
@@ -707,8 +870,9 @@ export function step(b: Battle, wants: Set<string>): FightEvent[] {
     const d = Math.max(1, Math.round(me.stats.leben * 0.04))
     me.hp = Math.max(0, me.hp - d)
     ev.push({ t: 'brand', target: me.id, dmg: d, gift: true })
-    if (me.hp === 0) {
+    if (me.hp === 0 && !revive(me, ev)) {
       ev.push({ t: 'besiegt', who: me.id })
+      killRush(b, me, ev)
       checkEnd(b, ev)
       return ev
     }
@@ -718,8 +882,9 @@ export function step(b: Battle, wants: Set<string>): FightEvent[] {
     me.hp = Math.max(0, me.hp - d)
     ev.push({ t: 'brand', target: me.id, dmg: d, blut: true })
     if (--me.bleedTurns <= 0) me.bleed = 0
-    if (me.hp === 0) {
+    if (me.hp === 0 && !revive(me, ev)) {
       ev.push({ t: 'besiegt', who: me.id })
+      killRush(b, me, ev)
       checkEnd(b, ev)
       return ev
     }

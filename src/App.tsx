@@ -185,10 +185,11 @@ export default function App() {
                   canStart={scene.req.boss ? () => (game.bossTry() ? null : 'Heute sind keine Boss-Versuche mehr übrig. Morgen geht es weiter!') : undefined}
                   xp={save!.game.xp}
                   cap={chapter.cap}
+                  chapter={chapter.n}
                   onExit={(r) => endFight(scene.req, r)}
                 />
               ) : rightTab === 'karte' && scene?.k === 'story' ? (
-                <StoryScene key={scene.id} id={scene.id} onDone={(gold, items) => endStory(scene.id, gold, items)} />
+                <StoryScene key={scene.id} id={scene.id} chapter={chapter.n} onDone={(gold, items) => endStory(scene.id, gold, items)} />
               ) : rightTab === 'ausruestung' ? (
                 <Equipment game={game} say={say} onShop={() => setTab('laden')} />
               ) : rightTab === 'laden' ? (
@@ -197,6 +198,7 @@ export default function App() {
                 <ChestScene
                   key={field}
                   title={here.name}
+                  chapter={chapter.n}
                   onCollect={(gold, items) => {
                     game.collectChest(field, gold, items)
                     setRight('karte')
