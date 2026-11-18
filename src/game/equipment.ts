@@ -47,3 +47,16 @@ export function diffIfEquipped(save: Save, next: Item): Partial<Stats> {
   }
   return d
 }
+
+/** Ausruestungs-Boni getrennt: Jontes eigene Teile und das Schiffsteil (gilt fuer die ganze Crew) */
+export function gearBonus(save: Save): { jonte: Partial<Stats>; ship: Partial<Stats> } {
+  const eq = equippedItems(save)
+  const sum = (slots: Slot[]) => slots.reduce<Partial<Stats>>((acc, s) => {
+    const it = eq[s]
+    if (!it) return acc
+    const b = itemBonus(it)
+    for (const k of STAT_ORDER) if (b[k]) acc[k] = (acc[k] ?? 0) + b[k]!
+    return acc
+  }, {})
+  return { jonte: sum(['waffe', 'hut', 'kleidung', 'talisman']), ship: sum(['schiff']) }
+}

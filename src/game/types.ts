@@ -60,6 +60,22 @@ export interface GameState {
   equipped: Partial<Record<Slot, string>>
   /** Heute im Laden gekaufte Angebote */
   shop: { day: string; bought: string[] }
+  /** Aktuelles Kapitel (1, 2, ...) */
+  chapter: number
+  /** Crew an Bord (ids aus game/foes) */
+  crew: string[]
+  /** Erfahrung der Crew. Die Stufe ergibt sich daraus (game/progress). */
+  xp: number
+  /** Gewonnene Kaempfe auf Feldern im aktuellen Kapitel */
+  cleared: number[]
+  /** Gesehene Story-Szenen */
+  seen: string[]
+  /** Zuletzt gewaehlte Aufstellung */
+  setup?: { id: string; row: 'vorne' | 'hinten'; ability: string }[]
+  /** Boss-Versuche heute */
+  bossTries: { day: string; n: number }
+  /** Kapitel, deren Boss besiegt ist */
+  bossBeaten: number[]
 }
 
 export interface Save {

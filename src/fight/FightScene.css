@@ -522,3 +522,24 @@
   opacity: 0.4;
   cursor: default;
 }
+
+.prep__note {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 77, 109, 0.18);
+  color: #ffd6de;
+  font-weight: 800;
+  text-align: center;
+}
+
+.result-card__level {
+  margin: 4px 0 10px;
+  font-size: 24px;
+  color: #1c7ed6;
+  text-align: center;
+}
+
+.result-card .loot {
+  margin-bottom: 12px;
+}

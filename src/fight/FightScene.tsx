@@ -18,6 +18,10 @@ import {
 } from '../game/combat'
 import { CREW, MAX_PER_ROW, START_CREW, abilityLabel, crewDefs, crewName, crewTitle, defaultSetup, fighterSlots, type CrewId, type CrewSetup, type Encounter } from '../game/foes'
 import { isSpoilerFree, portraitFor } from './art'
+import { rollItem } from '../game/loot'
+import { levelFor } from '../game/progress'
+import type { Item } from '../game/types'
+import LootList from '../components/LootList'
 import { Stage } from './stage'
 import './FightScene.css'
 
@@ -25,6 +29,7 @@ export interface FightResult {
   sieg: boolean
   xp: number
   gold: number
+  items: Item[]
 }
 
 interface Props {
@@ -34,6 +39,14 @@ interface Props {
   level?: number
   /** Fertige Kampfwerte je Pirat (Stufe plus Ausruestung). Ohne: nur Stufe. */
   bonus?: Partial<Record<CrewId, FighterStats>>
+  /** Zuletzt gewaehlte Aufstellung */
+  initialSetup?: CrewSetup
+  onSetup?: (s: CrewSetup) => void
+  /** Vor jedem Start gefragt. Ein Text bedeutet: nicht starten (z. B. keine Boss-Versuche mehr). */
+  canStart?: () => string | null
+  /** Erfahrung vor dem Kampf und Hoechststufe, fuer die Stufen-Anzeige */
+  xp?: number
+  cap?: number
   onExit: (r: FightResult | null) => void
 }
 
@@ -75,23 +88,33 @@ function place(defs: FighterDef[]) {
   })
 }
 
-export default function FightScene({ encounter, crew = START_CREW, level = 1, bonus, onExit }: Props) {
+export default function FightScene({ encounter, crew = START_CREW, level = 1, bonus, initialSetup, onSetup, canStart, xp, cap, onExit }: Props) {
   const [phase, setPhase] = useState<Phase>('vorbereitung')
-  const [setup, setSetup] = useState<CrewSetup>(() => defaultSetup(crew))
+  const [setup, setSetup] = useState<CrewSetup>(() => validSetup(initialSetup, crew) ?? defaultSetup(crew))
   const [result, setResult] = useState<FightResult | null>(null)
   const [runId, setRunId] = useState(0)
+  const [note, setNote] = useState<string | null>(null)
 
   const start = () => {
+    const err = canStart?.() ?? null
+    setNote(err)
+    if (err) {
+      setPhase('vorbereitung')
+      return
+    }
+    onSetup?.(setup)
     setRunId((n) => n + 1)
     setPhase('kampf')
   }
+  const lvBefore = xp != null && cap ? levelFor(xp, cap) : 0
+  const lvAfter = xp != null && cap && result?.sieg ? levelFor(xp + result.xp, cap) : 0
 
   return (
     <div className="fight">
       <AnimatePresence mode="wait" initial={false}>
         {phase === 'vorbereitung' && (
           <motion.div key="prep" className="fight__prep" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            <Prep encounter={encounter} crew={crew} setup={setup} setSetup={setSetup} onStart={start} onBack={() => onExit(null)} />
+            <Prep encounter={encounter} crew={crew} setup={setup} setSetup={setSetup} onStart={start} onBack={() => onExit(null)} note={note} />
           </motion.div>
         )}
         {phase !== 'vorbereitung' && (
@@ -114,21 +137,19 @@ export default function FightScene({ encounter, crew = START_CREW, level = 1, bo
                     {result.sieg ? (
                       <>
                         <p>{encounter.outro}</p>
-                        <div className="result-card__loot">
-                          <span>
-                            <b>+{result.xp}</b> Erfahrung
-                          </span>
-                          <span>
-                            <span className="coin" /> <b>+{result.gold}</b> Gold
-                          </span>
-                        </div>
+                        {lvAfter > lvBefore && (
+                          <motion.div className="result-card__level display" initial={{ scale: 0 }} animate={{ scale: [0, 1.3, 1] }} transition={{ delay: 0.5 }}>
+                            Stufe {lvAfter} erreicht!
+                          </motion.div>
+                        )}
+                        <LootList xp={result.xp} gold={result.gold} items={result.items} />
                       </>
                     ) : (
                       <p>Du verlierst nichts. Probier eine andere Aufstellung oder Fähigkeit, sammle Ausrüstung und versuch es nochmal.</p>
                     )}
                     <div className="result-card__actions">
                       {!result.sieg && (
-                        <button type="button" className="btn-sea" onClick={() => setPhase('vorbereitung')}>
+                        <button type="button" className="btn-sea" onClick={() => (setNote(null), setPhase('vorbereitung'))}>
                           Aufstellung ändern
                         </button>
                       )}
@@ -147,6 +168,12 @@ export default function FightScene({ encounter, crew = START_CREW, level = 1, bo
   )
 }
 
+/** Gespeicherte Aufstellung nur nutzen, wenn alle darin noch an Bord sind */
+function validSetup(s: CrewSetup | undefined, crew: CrewId[]): CrewSetup | null {
+  if (!s?.length || s.some((p) => !crew.includes(p.id) || !CREW[p.id].abilities.includes(p.ability))) return null
+  return s
+}
+
 const isSecret = (look: string) => isSpoilerFree() && look in CREW && CREW[look as CrewId].secret
 
 // ---------------------------------------------------------------- Vorbereitung
@@ -157,6 +184,7 @@ function Prep({
   setSetup,
   onStart,
   onBack,
+  note,
 }: {
   encounter: Encounter
   crew: CrewId[]
@@ -164,6 +192,7 @@ function Prep({
   setSetup: (s: CrewSetup) => void
   onStart: () => void
   onBack: () => void
+  note?: string | null
 }) {
   const slots = fighterSlots(crew.length)
   const traits = Array.from(new Set(encounter.foes.flatMap((f) => f.traits ?? [])))
@@ -283,6 +312,11 @@ function Prep({
         {rowBox('hinten')}
       </section>
 
+      {note && (
+        <p className="prep__note" role="alert">
+          {note}
+        </p>
+      )}
       <button type="button" className="btn-gold prep__go" onClick={onStart}>
         Angreifen!
       </button>
@@ -366,7 +400,8 @@ function BattleView({ encounter, setup, level, bonus, onEnd }: { encounter: Enco
       if (win) for (const f of alive(b, 'crew')) stage.play(f.id, 'cheer')
       await stage.wait(1.2)
       const [g0, g1] = encounter.reward.gold
-      onEnd({ sieg: win, xp: win ? encounter.reward.xp : 0, gold: win ? g0 + Math.floor(Math.random() * (g1 - g0 + 1)) : 0 })
+      const items = win && Math.random() < encounter.reward.itemChance ? [rollItem(encounter.boss ? 'selten' : 'gewoehnlich')] : []
+      onEnd({ sieg: win, xp: win ? encounter.reward.xp : 0, gold: win ? g0 + Math.floor(Math.random() * (g1 - g0 + 1)) : 0, items })
     }
     void run()
     return () => {

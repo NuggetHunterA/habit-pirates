@@ -33,6 +33,17 @@ export default function MenuSheet({ game, onClose, say }: { game: Game; onClose:
       >
         Testmodus: +100 Gold
       </button>
+      <button
+        type="button"
+        className="small-btn"
+        style={{ height: 48 }}
+        onClick={() => {
+          game.testXp()
+          say('Testmodus: +100 Erfahrung')
+        }}
+      >
+        Testmodus: +100 Erfahrung
+      </button>
       {confirmReset ? (
         <button
           type="button"

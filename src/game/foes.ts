@@ -103,7 +103,7 @@ export function defaultSetup(crew: CrewId[]): CrewSetup {
 export const DEFAULT_SETUP = defaultSetup(START_CREW)
 
 /** Werte steigen pro Stufe um 8 % */
-const lvl = (s: FighterStats, level: number): FighterStats => {
+export const lvl = (s: FighterStats, level: number): FighterStats => {
   const f = 1 + 0.08 * (level - 1)
   return { ...s, leben: Math.round(s.leben * f), angriff: Math.round(s.angriff * f * 10) / 10, ruestung: Math.round(s.ruestung * f) }
 }
@@ -156,6 +156,12 @@ const T: Record<string, FoeTemplate> = {
     stats: { leben: 48, angriff: 7, ruestung: 2, tempo: 11, krit: 5, ausweichen: 10 },
     traits: ['flink'],
   },
+  wache: {
+    name: 'Schneckenwache',
+    look: 'krabbenmatrose',
+    stats: { leben: 72, angriff: 10, ruestung: 3, tempo: 11, krit: 5, ausweichen: 10 },
+    traits: ['flink'],
+  },
   bandit: {
     name: 'Krabbenbandit',
     look: 'krabbenbandit',
@@ -184,14 +190,18 @@ const T: Record<string, FoeTemplate> = {
   },
 }
 
-const foe = (key: keyof typeof T, id: string, row: Row): FighterDef => ({ ...T[key], id, side: 'feind', row })
+/** Gegner aus Vorlage. k = [Leben, Angriff] als Faktor, damit ein Kapitel staerker sein kann als das letzte. */
+const foe = (key: keyof typeof T, id: string, row: Row, k: [number, number] = [1, 1]): FighterDef => {
+  const t = T[key]
+  return { ...t, id, side: 'feind', row, stats: { ...t.stats, leben: Math.round(t.stats.leben * k[0]), angriff: Math.round(t.stats.angriff * k[1] * 10) / 10 } }
+}
 
 export const MOEWEN: Encounter = {
   id: 'moewen',
   name: 'Möwenpiraten',
   intro: 'Kreischend stürzen sich Möwenpiraten aus dem Wrack auf euer Deck!',
   bg: 'strand',
-  foes: [foe('moewe', 'moewe1', 'vorne'), foe('moewe', 'moewe2', 'vorne'), foe('moewe', 'moewe3', 'hinten')],
+  foes: [foe('moewe', 'moewe1', 'vorne', [1.6, 1.6]), foe('moewe', 'moewe2', 'vorne', [1.6, 1.6]), foe('moewe', 'moewe3', 'hinten', [1.6, 1.6])],
   reward: { xp: 30, gold: [10, 18], itemChance: 0.3 },
   outro: 'Die Möwen flattern davon und lassen ein paar glänzende Münzen fallen.',
 }
@@ -202,7 +212,7 @@ export const KRABBENBANDE: Encounter = {
   name: 'Krabbenbande',
   intro: 'Der Krabbenbandit und seine Matrosen versperren die Durchfahrt!',
   bg: 'strand',
-  foes: [foe('bandit', 'bandit', 'vorne'), foe('matrose', 'matrose1', 'vorne'), foe('matrose', 'matrose2', 'hinten')],
+  foes: [foe('bandit', 'bandit', 'vorne', [1.4, 1.4]), foe('matrose', 'matrose1', 'vorne', [1.4, 1.4]), foe('matrose', 'matrose2', 'hinten', [1.4, 1.4])],
   reward: { xp: 45, gold: [18, 30], itemChance: 0.35 },
   outro: 'Die Krabbenbande zieht sich ins Riff zurück. Der Weg ist frei.',
 }
@@ -220,12 +230,12 @@ export const SCHALBART: Encounter = {
       look: 'schalbart',
       side: 'feind',
       row: 'vorne',
-      stats: { leben: 560, angriff: 15, ruestung: 8, tempo: 8, krit: 5, ausweichen: 0 },
+      stats: { leben: 840, angriff: 21, ruestung: 8, tempo: 8, krit: 5, ausweichen: 0 },
       traits: ['festung'],
       big: { name: 'Ankerflut', every: 3, mult: 2.4, below: 0.25 },
     },
-    foe('matrose', 'wache1', 'vorne'),
-    foe('matrose', 'wache2', 'hinten'),
+    foe('wache', 'wache1', 'vorne'),
+    foe('wache', 'wache2', 'hinten'),
   ],
   reward: { xp: 120, gold: [80, 120], itemChance: 1 },
   outro: 'Fürst Schalbart zieht sich grummelnd in sein Haus zurück. Der Weg ins Nebelriff ist frei.',
@@ -236,7 +246,7 @@ export const QUALLEN: Encounter = {
   name: 'Nebelquallen',
   intro: 'Aus dem Nebel schweben leuchtende Quallen heran.',
   bg: 'nebel',
-  foes: [foe('qualle', 'qualle1', 'vorne'), foe('qualle', 'qualle2', 'vorne'), foe('qualle', 'qualle3', 'hinten')],
+  foes: [foe('qualle', 'qualle1', 'vorne', [3, 2.8]), foe('qualle', 'qualle2', 'vorne', [3, 2.8]), foe('qualle', 'qualle3', 'hinten', [3, 2.8])],
   reward: { xp: 60, gold: [24, 36], itemChance: 0.35 },
   outro: 'Die Quallen sinken leuchtend in die Tiefe.',
 }
@@ -246,7 +256,7 @@ export const GEISTERTRUPP: Encounter = {
   name: 'Geistertrupp',
   intro: 'Zwei Geisterpiraten und ein Irrlicht versperren den Weg zum Leuchtturm.',
   bg: 'nebel',
-  foes: [foe('geist', 'geist1', 'vorne'), foe('geist', 'geist2', 'vorne'), foe('irrlicht', 'irrlicht1', 'hinten')],
+  foes: [foe('geist', 'geist1', 'vorne', [2.4, 2.2]), foe('geist', 'geist2', 'vorne', [2.4, 2.2]), foe('irrlicht', 'irrlicht1', 'hinten', [2.4, 2.2])],
   reward: { xp: 75, gold: [30, 44], itemChance: 0.4 },
   outro: 'Die Geister lösen sich im Nebel auf. Nur das Irrlicht kichert noch eine Weile.',
 }
@@ -256,7 +266,7 @@ export const GEISTERSCHIFF: Encounter = {
   name: 'Geisterschiff',
   intro: 'Die Crew des Geisterschiffs entert euch!',
   bg: 'nebel',
-  foes: [foe('geist', 'geist1', 'vorne'), foe('qualle', 'qualle1', 'vorne'), foe('irrlicht', 'irrlicht1', 'hinten'), foe('geist', 'geist2', 'hinten')],
+  foes: [foe('geist', 'geist1', 'vorne', [2.9, 2.7]), foe('qualle', 'qualle1', 'vorne', [2.9, 2.7]), foe('irrlicht', 'irrlicht1', 'hinten', [2.9, 2.7]), foe('geist', 'geist2', 'hinten', [2.9, 2.7])],
   reward: { xp: 90, gold: [36, 50], itemChance: 0.45 },
   outro: 'Das Geisterschiff verschwindet lautlos im Nebel.',
 }
@@ -274,12 +284,12 @@ export const GRAUHAND: Encounter = {
       look: 'grauhand',
       side: 'feind',
       row: 'vorne',
-      stats: { leben: 900, angriff: 19, ruestung: 7, tempo: 10, krit: 8, ausweichen: 5 },
+      stats: { leben: 2160, angriff: 42, ruestung: 7, tempo: 10, krit: 8, ausweichen: 5 },
       traits: ['nebelkapitaen'],
       big: { name: 'Totenglocke', every: 3, mult: 2.5, below: 0.3 },
-      adds: [foe('geist', 'geist', 'vorne'), foe('geist', 'geist', 'hinten')],
+      adds: [foe('geist', 'geist', 'vorne', [2.4, 2.4]), foe('geist', 'geist', 'hinten', [2.4, 2.4])],
     },
-    foe('irrlicht', 'irrlicht1', 'hinten'),
+    foe('irrlicht', 'irrlicht1', 'hinten', [2.4, 2.4]),
   ],
   reward: { xp: 200, gold: [140, 200], itemChance: 1 },
   outro: 'Grauhands Laterne erlischt. Der Nebel hebt sich, und am Horizont glüht es rot.',

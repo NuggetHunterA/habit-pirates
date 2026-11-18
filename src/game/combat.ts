@@ -135,6 +135,8 @@ export interface Fighter extends FighterDef {
   energy: number
   /** laufende Zustaende in Zuegen */
   brand: number
+  /** Schaden pro Brand-Tick, haengt vom Angreifer ab */
+  brandDmg: number
   ruf: number
   ruestungHalb: boolean
   /** Grossangriff angekuendigt */
@@ -208,6 +210,7 @@ function spawn(d: FighterDef, i: number): Fighter {
       gauge: (i * 7) % 20,
       energy: 0,
       brand: 0,
+      brandDmg: 0,
       ruf: 0,
       ruestungHalb: false,
       holtAus: false,
@@ -362,7 +365,10 @@ function castAbility(b: Battle, me: Fighter, ev: FightEvent[]) {
       ev.push({ t: 'faehigkeit', who: me.id, ability: 'donnerbuechse', targets: foes.map((f) => f.id) })
       for (const t of foes) {
         strike(b, me, t, 1.2, ev, { area: true, noDodge: true })
-        if (t.hp > 0) t.brand = 3
+        if (t.hp > 0) {
+          t.brand = 3
+          t.brandDmg = Math.max(1, Math.round(Math.min(t.stats.leben * 0.05, me.stats.angriff * 0.6)))
+        }
       }
       break
     }
@@ -457,7 +463,7 @@ export function step(b: Battle, wants: Set<string>): FightEvent[] {
   // Brand tickt zu Beginn des eigenen Zugs
   if (me.brand > 0) {
     me.brand--
-    const d = Math.max(1, Math.round(me.stats.leben * 0.05))
+    const d = me.brandDmg
     me.hp = Math.max(0, me.hp - d)
     ev.push({ t: 'brand', target: me.id, dmg: d })
     if (me.hp === 0) {

@@ -44,3 +44,13 @@ export function rollChest(): ChestLoot {
   items.sort((a, b) => order.indexOf(a.rarity) - order.indexOf(b.rarity))
   return { gold: 25 + Math.floor(Math.random() * 16), items }
 }
+
+const RARITY_ORDER: Rarity[] = ['gewoehnlich', 'selten', 'episch', 'legendaer']
+
+/** Ein einzelnes Item (Kampfbeute, Story). min hebt die Seltenheit an, z. B. beim Boss. */
+export function rollItem(min: Rarity = 'gewoehnlich'): Item {
+  let rarity = rollRarity()
+  if (RARITY_ORDER.indexOf(rarity) < RARITY_ORDER.indexOf(min)) rarity = min
+  const pool = CATALOG.filter((t) => t.rarity === rarity)
+  return makeItem(pick(pool.length ? pool : CATALOG))
+}

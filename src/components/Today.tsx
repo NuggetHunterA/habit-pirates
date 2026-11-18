@@ -2,7 +2,8 @@ import { motion } from 'motion/react'
 import type { Game } from '../game/store'
 import { activeHabits, dayResult, habitWind, isDone, windAvailable, RULES } from '../game/rules'
 import { longDate } from '../game/dates'
-import { CHAPTER_1 } from '../game/map'
+import { chapterOf } from '../game/map'
+import { doneFields } from '../game/store'
 import HabitCard from './HabitCard'
 import SailMeter from './SailMeter'
 import SeaMap from './SeaMap'
@@ -22,15 +23,17 @@ export default function Today({ game, wide, onMap, onWeek, onAddHabit }: Props) 
   const res = dayResult(save, game.today)
   const wind = windAvailable(save)
   const ship = save.game.field
-  const next = CHAPTER_1[Math.min(ship + 1, CHAPTER_1.length - 1)]
+  const chapter = chapterOf(save.game.chapter)
+  const fields = chapter.fields
+  const next = fields[Math.min(ship + 1, fields.length - 1)]
 
   return (
     <div className="screen">
       {!wide && (
         <div style={{ position: 'relative', height: 190, borderRadius: 18, border: '3px solid var(--brass)', overflow: 'hidden', boxShadow: '0 6px 0 #062631', flex: 'none' }}>
-          <SeaMap field={ship} looted={save.game.looted} mini />
+          <SeaMap key={chapter.n} chapter={chapter} field={ship} done={doneFields(save)} mini />
           <div className="minimap-label">
-            Feld {ship + 1} von {CHAPTER_1.length} · nächstes: {next.name}
+            Kapitel {chapter.n} · Feld {ship + 1} von {fields.length}{ship < fields.length - 1 ? ` · nächstes: ${next.name}` : ''}
           </div>
           <button type="button" className="btn-gold" onClick={onMap} style={{ position: 'absolute', right: 10, bottom: 10, minHeight: 42, fontSize: 14, padding: '0 14px', boxShadow: '0 4px 0 var(--gold-lo)' }}>
             Zur Karte

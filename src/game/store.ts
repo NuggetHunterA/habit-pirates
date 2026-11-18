@@ -2,8 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Glass, Habit, HabitKind, Item, Save, Slot, WeekPlan } from './types'
 import { dateKey, weekStartOf } from './dates'
 import { RULES, emptyLog, windAvailable, previousWeek } from './rules'
-import { CHAPTER_1 } from './map'
+import { chapterOf } from './map'
 import { PRICE, itemDef, makeItem, sellPrice } from './items'
+import { START_CREW } from './foes'
+import { xpTotal } from './progress'
+import { STORIES } from './story'
+
+/** Boss-Versuche pro Tag */
+export const BOSS_TRIES = 3
 
 /**
  * Spielstand pro Profil. Im Prototyp liegt er im Browser (localStorage).
@@ -31,11 +37,13 @@ function write(k: string, v: unknown) {
 const uid = () => Math.random().toString(36).slice(2, 9)
 
 /** Aeltere Spielstaende auf das aktuelle Format bringen */
+const PROGRESS = () => ({ chapter: 1, crew: [...START_CREW], xp: 0, cleared: [], seen: [], bossTries: { day: '', n: 0 }, bossBeaten: [] })
+
 function migrate(s: Save | null): Save | null {
   if (!s) return s
   const g = s.game
-  if (g.equipped && g.shop) return s
-  return { ...s, game: { ...g, equipped: g.equipped ?? {}, shop: g.shop ?? { day: '', bought: [] } } }
+  if (g.equipped && g.shop && g.chapter) return s
+  return { ...s, game: { ...PROGRESS(), ...g, equipped: g.equipped ?? {}, shop: g.shop ?? { day: '', bought: [] } } }
 }
 
 function newSave(profile: string): Save {
@@ -55,8 +63,20 @@ function newSave(profile: string): Save {
     habits,
     weeks: {},
     logs: {},
-    game: { gold: 0, windGift: RULES.startWind, windSpent: 0, field: 0, looted: [], inventory: [], equipped: {}, shop: { day: '', bought: [] } },
+    game: { gold: 0, windGift: RULES.startWind, windSpent: 0, field: 0, looted: [], inventory: [], equipped: {}, shop: { day: '', bought: [] }, ...PROGRESS() },
   }
+}
+
+/** Kampf auf dem aktuellen Feld, der noch nicht gewonnen ist: Weitersegeln geht erst nach dem Sieg */
+export function blocked(s: Save): boolean {
+  const f = chapterOf(s.game.chapter).fields[s.game.field]
+  return !!f.enc && !s.game.cleared.includes(s.game.field) && f.kind !== 'boss'
+}
+
+/** Boss-Versuche, die heute noch frei sind */
+export function bossTriesLeft(s: Save, today: string): number {
+  const t = s.game.bossTries
+  return BOSS_TRIES - (t.day === today ? t.n : 0)
 }
 
 export function useToday(): string {
@@ -170,9 +190,72 @@ export function useGame() {
       },
       sail() {
         update((s) => {
-          if (windAvailable(s) < RULES.windPerField || s.game.field >= CHAPTER_1.length - 1) return s
+          const fields = chapterOf(s.game.chapter).fields
+          if (windAvailable(s) < RULES.windPerField || s.game.field >= fields.length - 1 || blocked(s)) return s
           return { ...s, game: { ...s.game, field: s.game.field + 1, windSpent: s.game.windSpent + RULES.windPerField } }
         })
+      },
+      /**
+       * Sieg in einem Kampf. field: Feld des Kampfs (null beim Beutezug).
+       * Beutezuege kosten Wind, aber erst beim Sieg.
+       */
+      winFight(opts: { field: number | null; boss: boolean; farm: boolean; xp: number; gold: number; items: Item[] }) {
+        update((s) => {
+          const g = s.game
+          const cap = chapterOf(g.chapter).cap
+          return {
+            ...s,
+            game: {
+              ...g,
+              xp: Math.min(xpTotal(cap), g.xp + opts.xp),
+              gold: g.gold + opts.gold,
+              inventory: [...g.inventory, ...opts.items],
+              cleared: opts.field != null && !g.cleared.includes(opts.field) ? [...g.cleared, opts.field] : g.cleared,
+              bossBeaten: opts.boss && !g.bossBeaten.includes(g.chapter) ? [...g.bossBeaten, g.chapter] : g.bossBeaten,
+              windSpent: g.windSpent + (opts.farm ? RULES.windPerField : 0),
+            },
+          }
+        })
+      },
+      /** Zaehlt einen Boss-Versuch. Gibt false zurueck, wenn heute keiner mehr frei ist. */
+      bossTry(): boolean {
+        if (!save) return false
+        const t = save.game.bossTries
+        const n = t.day === today ? t.n : 0
+        if (n >= BOSS_TRIES) return false
+        update((s) => ({ ...s, game: { ...s.game, bossTries: { day: today, n: n + 1 } } }))
+        return true
+      },
+      saveSetup(setup: NonNullable<Save['game']['setup']>) {
+        update((s) => ({ ...s, game: { ...s.game, setup } }))
+      },
+      /** Szene gesehen: Belohnung, Crew-Beitritt. Bei Ereignis-Feldern zaehlt das Feld als erledigt. */
+      finishStory(id: string, gold: number, items: Item[]) {
+        update((s) => {
+          const g = s.game
+          if (g.seen.includes(id)) return s
+          const st = STORIES[id]
+          return {
+            ...s,
+            game: {
+              ...g,
+              seen: [...g.seen, id],
+              gold: g.gold + gold,
+              inventory: [...g.inventory, ...items],
+              crew: st?.join && !g.crew.includes(st.join) ? [...g.crew, st.join] : g.crew,
+            },
+          }
+        })
+      },
+      nextChapter() {
+        update((s) => {
+          const g = s.game
+          if (!g.bossBeaten.includes(g.chapter) || g.chapter >= 2) return s
+          return { ...s, game: { ...g, chapter: g.chapter + 1, field: 0, looted: [], cleared: [] } }
+        })
+      },
+      testXp() {
+        update((s) => ({ ...s, game: { ...s.game, xp: Math.min(xpTotal(chapterOf(s.game.chapter).cap), s.game.xp + 100) } }))
       },
       collectChest(field: number, gold: number, items: Item[]) {
         update((s) =>
@@ -251,3 +334,17 @@ export function useGame() {
 }
 
 export type Game = ReturnType<typeof useGame>
+
+/** Felder im aktuellen Kapitel, die erledigt sind (fuer die Karte) */
+export function doneFields(s: Save): number[] {
+  const fields = chapterOf(s.game.chapter).fields
+  return fields
+    .map((f, i) => {
+      if (f.kind === 'boss') return s.game.bossBeaten.includes(s.game.chapter)
+      if (f.enc) return s.game.cleared.includes(i)
+      if (f.kind === 'truhe') return s.game.looted.includes(i)
+      if (f.story && f.kind !== 'start') return s.game.seen.includes(f.story)
+      return false
+    })
+    .flatMap((d, i) => (d ? [i] : []))
+}

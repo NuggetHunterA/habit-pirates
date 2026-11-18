@@ -2,7 +2,16 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ART } from './assets'
 import { useGame } from './game/store'
-import { CHAPTER_1 } from './game/map'
+import { chapterOf } from './game/map'
+import { ENCOUNTERS, crewName, type CrewId, type CrewSetup } from './game/foes'
+import { STORIES } from './game/story'
+import { crewStats, levelFor } from './game/progress'
+import { gearBonus } from './game/equipment'
+import { blocked } from './game/store'
+import FightScene from './fight/FightScene'
+import StoryScene from './components/StoryScene'
+import type { FightRequest } from './components/MapPanel'
+import type { Item } from './game/types'
 import ProfilePick from './components/ProfilePick'
 import WeekStart from './components/WeekStart'
 import Today from './components/Today'
@@ -17,6 +26,7 @@ import { RULES, windAvailable } from './game/rules'
 
 type Left = 'woche' | 'tag'
 type Right = 'karte' | 'truhe'
+type Scene = { k: 'fight'; req: FightRequest; n: number } | { k: 'story'; id: string }
 
 /** Aufgeklappt (Fold innen) ab dieser Breite: zwei Spalten */
 const WIDE = '(min-width: 680px)'
@@ -43,6 +53,7 @@ export default function App() {
   const [sheet, setSheet] = useState<null | 'add' | 'menu'>(null)
   const addCb = useRef<((id: string) => void) | null>(null)
   const toastT = useRef<number>(0)
+  const [scene, setScene] = useState<Scene | null>(null)
 
   const say = useCallback((m: string) => {
     setToast(m)
@@ -55,7 +66,12 @@ export default function App() {
 
   const save = game.save
   const field = save?.game.field ?? 0
-  const chestAvailable = !!save && CHAPTER_1[field].kind === 'truhe' && !save.game.looted.includes(field)
+  const chapter = chapterOf(save?.game.chapter)
+  const here = chapter.fields[field]
+  const chestAvailable = !!save && here.kind === 'truhe' && !save.game.looted.includes(field)
+  const actionHere = !!save && ((here.story && !save.game.seen.includes(here.story)) || blocked(save))
+  const level = save ? levelFor(save.game.xp, chapter.cap) : 1
+  const crew = (save?.game.crew ?? []) as CrewId[]
   const rightShown: Right = right === 'truhe' && chestAvailable ? 'truhe' : 'karte'
 
   const openAdd = (cb?: (id: string) => void) => {
@@ -69,6 +85,26 @@ export default function App() {
   }
 
   const rightTab: Tab = tab === 'deck' ? 'karte' : tab
+
+  const fightBonus = () => {
+    const g = gearBonus(save!)
+    return crewStats(level, g.jonte, g.ship)
+  }
+
+  const endFight = (req: FightRequest, r: { sieg: boolean; xp: number; gold: number; items: Item[] } | null) => {
+    setScene(null)
+    if (!r?.sieg) return
+    game.winFight({ field: req.field, boss: req.boss, farm: req.farm, xp: r.xp, gold: r.gold, items: r.items })
+    if (req.boss) window.setTimeout(() => setScene({ k: 'story', id: chapter.outro }), 250)
+    else if (r.items.length) say(`${r.items[0].name} liegt jetzt im Laderaum!`)
+  }
+
+  const endStory = (id: string, gold: number, items: Item[]) => {
+    setScene(null)
+    game.finishStory(id, gold, items)
+    const join = STORIES[id]?.join
+    if (join) say(`${crewName(join, false)} ist jetzt an Bord! Stell die Crew vor dem nächsten Kampf auf.`)
+  }
   const showLeft = wide || tab === 'deck'
   const showRight = wide || tab !== 'deck'
   const wind = save ? windAvailable(save) : 0
@@ -130,15 +166,31 @@ export default function App() {
             </div>
           )}
           {showRight && (
-            <div className={`col-right ${rightTab === 'karte' ? '' : 'col-right--scroll'}`}>
-              {rightTab === 'ausruestung' ? (
+            <div className={`col-right ${rightTab === 'karte' && scene?.k !== 'fight' ? '' : 'col-right--scroll'}`}>
+              {rightTab === 'karte' && scene?.k === 'fight' ? (
+                <FightScene
+                  key={scene.n}
+                  encounter={ENCOUNTERS[scene.req.enc]}
+                  crew={crew}
+                  level={level}
+                  bonus={fightBonus()}
+                  initialSetup={save!.game.setup as CrewSetup | undefined}
+                  onSetup={(s) => game.saveSetup(s)}
+                  canStart={scene.req.boss ? () => (game.bossTry() ? null : 'Heute sind keine Boss-Versuche mehr übrig. Morgen geht es weiter!') : undefined}
+                  xp={save!.game.xp}
+                  cap={chapter.cap}
+                  onExit={(r) => endFight(scene.req, r)}
+                />
+              ) : rightTab === 'karte' && scene?.k === 'story' ? (
+                <StoryScene key={scene.id} id={scene.id} onDone={(gold, items) => endStory(scene.id, gold, items)} />
+              ) : rightTab === 'ausruestung' ? (
                 <Equipment game={game} say={say} onShop={() => setTab('laden')} />
               ) : rightTab === 'laden' ? (
                 <Shop game={game} say={say} onGear={() => setTab('ausruestung')} />
               ) : rightShown === 'truhe' ? (
                 <ChestScene
                   key={field}
-                  title={CHAPTER_1[field].name}
+                  title={here.name}
                   onCollect={(gold, items) => {
                     game.collectChest(field, gold, items)
                     setRight('karte')
@@ -146,7 +198,14 @@ export default function App() {
                   }}
                 />
               ) : (
-                <MapPanel game={game} say={say} onChest={() => setRight('truhe')} onShop={() => setTab('laden')} />
+                <MapPanel
+                  game={game}
+                  say={say}
+                  onChest={() => setRight('truhe')}
+                  onShop={() => setTab('laden')}
+                  onFight={(req) => setScene({ k: 'fight', req, n: Date.now() })}
+                  onStory={(id) => setScene({ k: 'story', id })}
+                />
               )}
             </div>
           )}
@@ -158,7 +217,7 @@ export default function App() {
           tab={wide && tab === 'deck' ? 'karte' : tab}
           wide={wide}
           onTab={setTab}
-          badges={{ karte: chestAvailable || wind >= RULES.windPerField, deck: needsWeek }}
+          badges={{ karte: chestAvailable || actionHere || wind >= RULES.windPerField, deck: needsWeek }}
         />
       )}
 
