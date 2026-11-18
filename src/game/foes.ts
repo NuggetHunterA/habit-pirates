@@ -4,7 +4,7 @@ export type CrewId = 'jonte' | 'kanonier' | 'navigatorin' | 'smutje' | 'ausguck'
 
 export interface CrewMember {
   id: CrewId
-  /** Name im Kampf. Noch nicht enthuellte Piraten heissen "???" */
+  /** Name im Kampf */
   name: string
   title: string
   ranged: boolean
@@ -29,8 +29,8 @@ export const CREW: Record<CrewId, CrewMember> = {
   },
   kanonier: {
     id: 'kanonier',
-    name: '???',
-    title: 'Zweiter Pirat',
+    name: 'Bolle',
+    title: 'Kanonier Bolle',
     ranged: true,
     stats: { leben: 85, angriff: 11, ruestung: 3, tempo: 7, krit: 8, ausweichen: 2 },
     abilities: ['donnerbuechse', 'kettenkugel'],
@@ -38,8 +38,8 @@ export const CREW: Record<CrewId, CrewMember> = {
   },
   navigatorin: {
     id: 'navigatorin',
-    name: '???',
-    title: 'Geheimer Pirat',
+    name: 'Mara',
+    title: 'Navigatorin Mara',
     ranged: false,
     stats: { leben: 80, angriff: 9, ruestung: 3, tempo: 14, krit: 12, ausweichen: 15 },
     abilities: ['sternenkurs', 'windstille'],
@@ -48,8 +48,8 @@ export const CREW: Record<CrewId, CrewMember> = {
   },
   smutje: {
     id: 'smutje',
-    name: '???',
-    title: 'Geheimer Pirat',
+    name: 'Grummel',
+    title: 'Smutje Grummel',
     ranged: true,
     stats: { leben: 110, angriff: 7, ruestung: 6, tempo: 8, krit: 3, ausweichen: 2 },
     abilities: ['kombuesenfeuer', 'eintopf'],
@@ -58,8 +58,8 @@ export const CREW: Record<CrewId, CrewMember> = {
   },
   ausguck: {
     id: 'ausguck',
-    name: '???',
-    title: 'Geheimer Pirat',
+    name: 'Pip',
+    title: 'Ausguck Pip',
     ranged: true,
     stats: { leben: 75, angriff: 9, ruestung: 2, tempo: 11, krit: 10, ausweichen: 10 },
     abilities: ['adlerauge', 'sturzflug'],
@@ -84,8 +84,8 @@ export const START_CREW: CrewId[] = ['jonte', 'kanonier']
 export const FULL_CREW: CrewId[] = ['jonte', 'kanonier', 'navigatorin', 'smutje', 'ausguck']
 
 /** Name einer Faehigkeit, wie der Spieler ihn sehen darf */
-export function abilityLabel(id: CrewId, ability: AbilityId, names: Record<AbilityId, { name: string }>): string {
-  return CREW[id].hideAbilities ? 'Spezialfähigkeit' : names[ability].name
+export function abilityLabel(id: CrewId, ability: AbilityId, names: Record<AbilityId, { name: string }>, hidden = false): string {
+  return hidden && CREW[id].hideAbilities ? 'Spezialfähigkeit' : names[ability].name
 }
 
 /** Vorschlag: Nahkaempfer vorne, Fernkaempfer hinten */
@@ -108,12 +108,16 @@ const lvl = (s: FighterStats, level: number): FighterStats => {
   return { ...s, leben: Math.round(s.leben * f), angriff: Math.round(s.angriff * f * 10) / 10, ruestung: Math.round(s.ruestung * f) }
 }
 
-export function crewDefs(setup: CrewSetup, level = 1, bonus?: Partial<Record<CrewId, FighterStats>>): FighterDef[] {
+/** Name und Titel, wie der Spieler sie sehen darf (Vorschau: geheime Crew bleibt "???") */
+export const crewName = (id: CrewId, hidden: boolean) => (hidden && CREW[id].secret ? '???' : CREW[id].name)
+export const crewTitle = (id: CrewId, hidden: boolean) => (hidden && CREW[id].secret ? (id === 'kanonier' ? 'Zweiter Pirat' : 'Geheimer Pirat') : CREW[id].title)
+
+export function crewDefs(setup: CrewSetup, level = 1, bonus?: Partial<Record<CrewId, FighterStats>>, hidden = false): FighterDef[] {
   return setup.map((p) => {
     const m = CREW[p.id]
     return {
       id: p.id,
-      name: m.name,
+      name: crewName(p.id, hidden),
       look: p.id,
       side: 'crew',
       row: p.row,
@@ -128,8 +132,68 @@ export interface Encounter {
   id: string
   name: string
   intro: string
+  /** Kampfhintergrund */
+  bg: 'strand' | 'nebel'
+  boss?: boolean
   foes: FighterDef[]
   reward: { xp: number; gold: [number, number]; itemChance: number }
+  /** Text nach dem Sieg */
+  outro: string
+}
+
+type FoeTemplate = Omit<FighterDef, 'id' | 'side' | 'row'>
+
+const T: Record<string, FoeTemplate> = {
+  moewe: {
+    name: 'Möwenpirat',
+    look: 'moewenpirat',
+    stats: { leben: 32, angriff: 6, ruestung: 1, tempo: 13, krit: 8, ausweichen: 18 },
+    traits: ['sturzflieger', 'flink'],
+  },
+  matrose: {
+    name: 'Matrose',
+    look: 'krabbenmatrose',
+    stats: { leben: 48, angriff: 7, ruestung: 2, tempo: 11, krit: 5, ausweichen: 10 },
+    traits: ['flink'],
+  },
+  bandit: {
+    name: 'Krabbenbandit',
+    look: 'krabbenbandit',
+    stats: { leben: 170, angriff: 12, ruestung: 9, tempo: 8, krit: 5, ausweichen: 0 },
+    traits: ['ankerschild', 'scherenwirbel'],
+    big: { name: 'Scherenwirbel', every: 4, mult: 2.2 },
+  },
+  qualle: {
+    name: 'Nebelqualle',
+    look: 'nebelqualle',
+    stats: { leben: 74, angriff: 10, ruestung: 3, tempo: 9, krit: 5, ausweichen: 8 },
+    traits: ['gift'],
+  },
+  geist: {
+    name: 'Geisterpirat',
+    look: 'geisterpirat',
+    stats: { leben: 92, angriff: 14, ruestung: 4, tempo: 11, krit: 8, ausweichen: 10 },
+    traits: ['geisterhaft'],
+  },
+  irrlicht: {
+    name: 'Irrlicht',
+    look: 'irrlicht',
+    ranged: true,
+    stats: { leben: 58, angriff: 6, ruestung: 2, tempo: 12, krit: 5, ausweichen: 15 },
+    traits: ['irrlicht'],
+  },
+}
+
+const foe = (key: keyof typeof T, id: string, row: Row): FighterDef => ({ ...T[key], id, side: 'feind', row })
+
+export const MOEWEN: Encounter = {
+  id: 'moewen',
+  name: 'Möwenpiraten',
+  intro: 'Kreischend stürzen sich Möwenpiraten aus dem Wrack auf euer Deck!',
+  bg: 'strand',
+  foes: [foe('moewe', 'moewe1', 'vorne'), foe('moewe', 'moewe2', 'vorne'), foe('moewe', 'moewe3', 'hinten')],
+  reward: { xp: 30, gold: [10, 18], itemChance: 0.3 },
+  outro: 'Die Möwen flattern davon und lassen ein paar glänzende Münzen fallen.',
 }
 
 /** Erster Kampf in Kapitel 1 */
@@ -137,34 +201,96 @@ export const KRABBENBANDE: Encounter = {
   id: 'krabbenbande',
   name: 'Krabbenbande',
   intro: 'Der Krabbenbandit und seine Matrosen versperren die Durchfahrt!',
+  bg: 'strand',
+  foes: [foe('bandit', 'bandit', 'vorne'), foe('matrose', 'matrose1', 'vorne'), foe('matrose', 'matrose2', 'hinten')],
+  reward: { xp: 45, gold: [18, 30], itemChance: 0.35 },
+  outro: 'Die Krabbenbande zieht sich ins Riff zurück. Der Weg ist frei.',
+}
+
+export const SCHALBART: Encounter = {
+  id: 'schalbart',
+  name: 'Fürst Schalbart',
+  intro: 'Die Klippenfestung erhebt sich aus dem Wasser. Sie hat Beine.',
+  bg: 'strand',
+  boss: true,
   foes: [
     {
-      id: 'bandit',
-      name: 'Krabbenbandit',
-      look: 'krabbenbandit',
+      id: 'schalbart',
+      name: 'Fürst Schalbart',
+      look: 'schalbart',
       side: 'feind',
       row: 'vorne',
-      stats: { leben: 170, angriff: 12, ruestung: 9, tempo: 8, krit: 5, ausweichen: 0 },
-      traits: ['ankerschild', 'scherenwirbel'],
+      stats: { leben: 560, angriff: 15, ruestung: 8, tempo: 8, krit: 5, ausweichen: 0 },
+      traits: ['festung'],
+      big: { name: 'Ankerflut', every: 3, mult: 2.4, below: 0.25 },
     },
-    {
-      id: 'matrose1',
-      name: 'Matrose',
-      look: 'krabbenmatrose',
-      side: 'feind',
-      row: 'vorne',
-      stats: { leben: 48, angriff: 7, ruestung: 2, tempo: 12, krit: 5, ausweichen: 10 },
-      traits: ['flink'],
-    },
-    {
-      id: 'matrose2',
-      name: 'Matrose',
-      look: 'krabbenmatrose',
-      side: 'feind',
-      row: 'hinten',
-      stats: { leben: 48, angriff: 7, ruestung: 2, tempo: 11, krit: 5, ausweichen: 10 },
-      traits: ['flink'],
-    },
+    foe('matrose', 'wache1', 'vorne'),
+    foe('matrose', 'wache2', 'hinten'),
   ],
-  reward: { xp: 40, gold: [18, 30], itemChance: 0.35 },
+  reward: { xp: 120, gold: [80, 120], itemChance: 1 },
+  outro: 'Fürst Schalbart zieht sich grummelnd in sein Haus zurück. Der Weg ins Nebelriff ist frei.',
 }
+
+export const QUALLEN: Encounter = {
+  id: 'quallen',
+  name: 'Nebelquallen',
+  intro: 'Aus dem Nebel schweben leuchtende Quallen heran.',
+  bg: 'nebel',
+  foes: [foe('qualle', 'qualle1', 'vorne'), foe('qualle', 'qualle2', 'vorne'), foe('qualle', 'qualle3', 'hinten')],
+  reward: { xp: 60, gold: [24, 36], itemChance: 0.35 },
+  outro: 'Die Quallen sinken leuchtend in die Tiefe.',
+}
+
+export const GEISTERTRUPP: Encounter = {
+  id: 'geistertrupp',
+  name: 'Geistertrupp',
+  intro: 'Zwei Geisterpiraten und ein Irrlicht versperren den Weg zum Leuchtturm.',
+  bg: 'nebel',
+  foes: [foe('geist', 'geist1', 'vorne'), foe('geist', 'geist2', 'vorne'), foe('irrlicht', 'irrlicht1', 'hinten')],
+  reward: { xp: 75, gold: [30, 44], itemChance: 0.4 },
+  outro: 'Die Geister lösen sich im Nebel auf. Nur das Irrlicht kichert noch eine Weile.',
+}
+
+export const GEISTERSCHIFF: Encounter = {
+  id: 'geisterschiff',
+  name: 'Geisterschiff',
+  intro: 'Die Crew des Geisterschiffs entert euch!',
+  bg: 'nebel',
+  foes: [foe('geist', 'geist1', 'vorne'), foe('qualle', 'qualle1', 'vorne'), foe('irrlicht', 'irrlicht1', 'hinten'), foe('geist', 'geist2', 'hinten')],
+  reward: { xp: 90, gold: [36, 50], itemChance: 0.45 },
+  outro: 'Das Geisterschiff verschwindet lautlos im Nebel.',
+}
+
+export const GRAUHAND: Encounter = {
+  id: 'grauhand',
+  name: 'Kapitän Grauhand',
+  intro: 'Eine Laterne leuchtet in der Höhle auf. Kapitän Grauhand erwartet euch.',
+  bg: 'nebel',
+  boss: true,
+  foes: [
+    {
+      id: 'grauhand',
+      name: 'Kapitän Grauhand',
+      look: 'grauhand',
+      side: 'feind',
+      row: 'vorne',
+      stats: { leben: 900, angriff: 19, ruestung: 7, tempo: 10, krit: 8, ausweichen: 5 },
+      traits: ['nebelkapitaen'],
+      big: { name: 'Totenglocke', every: 3, mult: 2.5, below: 0.3 },
+      adds: [foe('geist', 'geist', 'vorne'), foe('geist', 'geist', 'hinten')],
+    },
+    foe('irrlicht', 'irrlicht1', 'hinten'),
+  ],
+  reward: { xp: 200, gold: [140, 200], itemChance: 1 },
+  outro: 'Grauhands Laterne erlischt. Der Nebel hebt sich, und am Horizont glüht es rot.',
+}
+
+/** Zufallskaempfe beim Farmen vor dem Boss */
+export const FARM: Record<number, Encounter[]> = {
+  1: [MOEWEN, KRABBENBANDE],
+  2: [QUALLEN, GEISTERTRUPP, GEISTERSCHIFF],
+}
+
+export const ENCOUNTERS: Record<string, Encounter> = Object.fromEntries(
+  [MOEWEN, KRABBENBANDE, SCHALBART, QUALLEN, GEISTERTRUPP, GEISTERSCHIFF, GRAUHAND].map((e) => [e.id, e]),
+)

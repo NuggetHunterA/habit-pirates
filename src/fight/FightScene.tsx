@@ -13,10 +13,11 @@ import {
   type Battle,
   type FightEvent,
   type FighterDef,
+  type FighterStats,
   type Row,
 } from '../game/combat'
-import { CREW, MAX_PER_ROW, START_CREW, abilityLabel, crewDefs, defaultSetup, fighterSlots, type CrewId, type CrewSetup, type Encounter } from '../game/foes'
-import { FIGHT_ART } from './art'
+import { CREW, MAX_PER_ROW, START_CREW, abilityLabel, crewDefs, crewName, crewTitle, defaultSetup, fighterSlots, type CrewId, type CrewSetup, type Encounter } from '../game/foes'
+import { isSpoilerFree, portraitFor } from './art'
 import { Stage } from './stage'
 import './FightScene.css'
 
@@ -31,6 +32,8 @@ interface Props {
   /** Alle Piraten, die schon an Bord sind */
   crew?: CrewId[]
   level?: number
+  /** Fertige Kampfwerte je Pirat (Stufe plus Ausruestung). Ohne: nur Stufe. */
+  bonus?: Partial<Record<CrewId, FighterStats>>
   onExit: (r: FightResult | null) => void
 }
 
@@ -53,7 +56,10 @@ const SLOTS = {
       [600, 470],
       [700, 505],
     ],
-    hinten: [[800, 455]],
+    hinten: [
+      [805, 452],
+      [870, 505],
+    ],
   },
 } as const
 
@@ -69,7 +75,7 @@ function place(defs: FighterDef[]) {
   })
 }
 
-export default function FightScene({ encounter, crew = START_CREW, level = 1, onExit }: Props) {
+export default function FightScene({ encounter, crew = START_CREW, level = 1, bonus, onExit }: Props) {
   const [phase, setPhase] = useState<Phase>('vorbereitung')
   const [setup, setSetup] = useState<CrewSetup>(() => defaultSetup(crew))
   const [result, setResult] = useState<FightResult | null>(null)
@@ -94,6 +100,7 @@ export default function FightScene({ encounter, crew = START_CREW, level = 1, on
               encounter={encounter}
               setup={setup}
               level={level}
+              bonus={bonus}
               onEnd={(r) => {
                 setResult(r)
                 setPhase('ende')
@@ -106,7 +113,7 @@ export default function FightScene({ encounter, crew = START_CREW, level = 1, on
                     <div className="result-card__title display">{result.sieg ? 'Sieg!' : 'Rückzug'}</div>
                     {result.sieg ? (
                       <>
-                        <p>Die Krabbenbande zieht sich ins Riff zurück. Der Weg ist frei.</p>
+                        <p>{encounter.outro}</p>
                         <div className="result-card__loot">
                           <span>
                             <b>+{result.xp}</b> Erfahrung
@@ -140,7 +147,7 @@ export default function FightScene({ encounter, crew = START_CREW, level = 1, on
   )
 }
 
-const isSecret = (look: string) => look in CREW && CREW[look as CrewId].secret
+const isSecret = (look: string) => isSpoilerFree() && look in CREW && CREW[look as CrewId].secret
 
 // ---------------------------------------------------------------- Vorbereitung
 function Prep({
@@ -181,14 +188,15 @@ function Prep({
   const card = (id: CrewId) => {
     const p = picked(id)!
     const m = CREW[id]
+    const hide = isSpoilerFree() && !!m.hideAbilities
     const other: Row = p.row === 'vorne' ? 'hinten' : 'vorne'
     const full = inRow(other).length >= MAX_PER_ROW
     return (
       <div className="prep-pirate" key={id}>
         <div className="prep-pirate__head">
-          <img src={FIGHT_ART.portraits[id]} alt="" className={m.secret ? 'is-secret' : ''} />
+          <img src={portraitFor(id)} alt="" className={isSecret(id) ? 'is-secret' : ''} />
           <div className="prep-pirate__who">
-            <div className="prep-pirate__name">{m.title}</div>
+            <div className="prep-pirate__name">{crewTitle(id, isSpoilerFree())}</div>
             <div className="prep-pirate__row">{m.ranged ? 'Fernkampf' : 'Nahkampf'}</div>
           </div>
           <button type="button" className="btn-wood prep-pirate__move" disabled={full} onClick={() => move(id)}>
@@ -198,8 +206,8 @@ function Prep({
         <div className="prep-pirate__abilities" role="radiogroup" aria-label="Fähigkeit wählen">
           {m.abilities.map((ab, i) => (
             <button key={ab} type="button" role="radio" aria-checked={p.ability === ab} className="ability-chip" onClick={() => setAbility(id, ab)}>
-              <b>{m.hideAbilities ? `Fähigkeit ${i + 1}` : ABILITIES[ab].name}</b>
-              <span>{m.hideAbilities ? 'Wird verraten, wenn dieser Pirat an Bord kommt.' : ABILITIES[ab].text}</span>
+              <b>{hide ? `Fähigkeit ${i + 1}` : ABILITIES[ab].name}</b>
+              <span>{hide ? 'Wird verraten, wenn dieser Pirat an Bord kommt.' : ABILITIES[ab].text}</span>
             </button>
           ))}
         </div>
@@ -230,7 +238,7 @@ function Prep({
       <section className="prep__foes" aria-label="Gegner">
         {encounter.foes.map((f) => (
           <div key={f.id} className="foe-chip">
-            <img src={FIGHT_ART.portraits[f.look]} alt="" className={f.look === 'krabbenmatrose' ? 'is-matrose' : ''} />
+            <img src={portraitFor(f.look)} alt="" className={f.look === 'krabbenmatrose' ? 'is-matrose' : ''} />
             <div>
               <b>{f.name}</b>
               <span>
@@ -255,13 +263,12 @@ function Prep({
         </div>
         <div className="roster" role="group" aria-label="Crew an Bord">
           {crew.map((id) => {
-            const m = CREW[id]
             const on = !!picked(id)
             const blocked = !on && setup.length >= slots
             return (
               <button key={id} type="button" className={`roster__pirate ${on ? 'is-on' : ''}`} aria-pressed={on} disabled={blocked || (on && setup.length === 1)} onClick={() => toggle(id)}>
-                <img src={FIGHT_ART.portraits[id]} alt="" className={m.secret ? 'is-secret' : ''} />
-                <span>{m.secret ? '???' : m.name}</span>
+                <img src={portraitFor(id)} alt="" className={isSecret(id) ? 'is-secret' : ''} />
+                <span>{crewName(id, isSpoilerFree())}</span>
               </button>
             )
           })}
@@ -291,7 +298,7 @@ interface Banner {
   tone: 'crew' | 'feind' | 'info'
 }
 
-function BattleView({ encounter, setup, level, onEnd }: { encounter: Encounter; setup: CrewSetup; level: number; onEnd: (r: FightResult) => void }) {
+function BattleView({ encounter, setup, level, bonus, onEnd }: { encounter: Encounter; setup: CrewSetup; level: number; bonus?: Partial<Record<CrewId, FighterStats>>; onEnd: (r: FightResult) => void }) {
   const cvRef = useRef<HTMLCanvasElement>(null)
   const stageRef = useRef<Stage | null>(null)
   const battleRef = useRef<Battle | null>(null)
@@ -321,7 +328,8 @@ function BattleView({ encounter, setup, level, onEnd }: { encounter: Encounter; 
     const stage = new Stage(cvRef.current!)
     stage.speed = speed
     stageRef.current = stage
-    const defs = [...crewDefs(setup, level), ...encounter.foes]
+    const defs = [...crewDefs(setup, level, bonus, isSpoilerFree()), ...encounter.foes]
+    stage.bg = encounter.bg
     const b = createBattle(defs)
     battleRef.current = b
     for (const { d, x, y } of place(defs)) {
@@ -384,7 +392,7 @@ function BattleView({ encounter, setup, level, onEnd }: { encounter: Encounter; 
             <motion.img
               layout
               key={id + '-' + i}
-              src={FIGHT_ART.portraits[f.look]}
+              src={portraitFor(f.look)}
               alt={f.name}
               className={`order-icon order-icon--${f.side} ${f.look === 'krabbenmatrose' ? 'is-matrose' : ''} ${isSecret(f.look) ? 'is-secret' : ''} ${i === 0 ? 'is-next' : ''}`}
             />
@@ -433,13 +441,13 @@ function BattleView({ encounter, setup, level, onEnd }: { encounter: Encounter; 
                 wants.current.add(f.id)
                 rerender()
               }}
-              aria-label={`${abilityLabel(f.id as CrewId, f.ability!, ABILITIES)} auslösen`}
+              aria-label={`${abilityLabel(f.id as CrewId, f.ability!, ABILITIES, isSpoilerFree())} auslösen`}
             >
               <span className="skill__ring" style={{ ['--e' as string]: `${Math.min(100, f.energy)}%` }}>
-                <img src={FIGHT_ART.portraits[f.look]} alt="" className={isSecret(f.look) ? 'is-secret' : ''} />
+                <img src={portraitFor(f.look)} alt="" className={isSecret(f.look) ? 'is-secret' : ''} />
               </span>
               <span className="skill__text">
-                <b>{abilityLabel(f.id as CrewId, f.ability!, ABILITIES)}</b>
+                <b>{abilityLabel(f.id as CrewId, f.ability!, ABILITIES, isSpoilerFree())}</b>
                 <small>{f.hp <= 0 ? 'Kampfunfähig' : queued ? 'Gleich!' : ready ? (hint ? 'Jetzt! Unterbricht den Großangriff' : 'Bereit, antippen') : `${Math.round(f.energy)} %`}</small>
               </span>
             </button>
@@ -465,8 +473,10 @@ function describe(b: Battle, ev: FightEvent[]): string[] {
   for (const e of ev) {
     if (e.t === 'treffer') out.push(`${n(e.who)} trifft ${n(e.target)}: ${e.dmg}${e.krit ? ' (kritisch!)' : ''}${e.geblockt ? ' (Ankerschild)' : ''}`)
     else if (e.t === 'verfehlt') out.push(`${n(e.target)} weicht ${n(e.who)} aus`)
-    else if (e.t === 'faehigkeit') out.push(`${n(e.who)} setzt ${e.who in CREW ? abilityLabel(e.who as CrewId, e.ability, ABILITIES) : ABILITIES[e.ability].name} ein`)
-    else if (e.t === 'holtAus') out.push(`${n(e.who)} holt zum Scherenwirbel aus!`)
+    else if (e.t === 'faehigkeit') out.push(`${n(e.who)} setzt ${e.who in CREW ? abilityLabel(e.who as CrewId, e.ability, ABILITIES, isSpoilerFree()) : ABILITIES[e.ability].name} ein`)
+    else if (e.t === 'holtAus') out.push(`${n(e.who)} holt zum ${e.name} aus!`)
+    else if (e.t === 'phase') out.push(e.text)
+    else if (e.t === 'durch') out.push(`${n(e.who)} schlägt durch ${n(e.target)} hindurch`)
     else if (e.t === 'unterbrochen') out.push(`${n(e.who)} wurde unterbrochen`)
     else if (e.t === 'brand') out.push(`${n(e.target)} brennt: ${e.dmg}`)
     else if (e.t === 'heilung') out.push(`${n(e.target)} heilt ${e.amount}`)
@@ -482,7 +492,7 @@ async function playEvents(stage: Stage, b: Battle, ev: FightEvent[], banner: (t:
   /** Treffer-Ereignisse, die direkt zu einer Aktion gehoeren */
   const takeHits = () => {
     const out: FightEvent[] = []
-    while (i < ev.length && ['treffer', 'verfehlt', 'besiegt', 'zurueck', 'unterbrochen', 'heilung'].includes(ev[i].t)) out.push(ev[i++])
+    while (i < ev.length && ['treffer', 'verfehlt', 'besiegt', 'zurueck', 'unterbrochen', 'heilung', 'durch', 'phase', 'verstaerkung'].includes(ev[i].t)) out.push(ev[i++])
     return out
   }
   const showHits = async (hits: FightEvent[]) => {
@@ -511,6 +521,25 @@ async function playEvents(stage: Stage, b: Battle, ev: FightEvent[], banner: (t:
         const c = stage.center(h.who)
         stage.floatAt(c.x, c.y - 90, 'Unterbrochen!', '#63e6be', 34)
         stage.ring(c.x, c.y, 120, 'rgba(99,230,190,0.9)')
+      } else if (h.t === 'durch') {
+        stage.play(h.target, 'dodge')
+        stage.float(h.target, 'Durch den Schleier!', '#ced4da', 20)
+      } else if (h.t === 'phase') {
+        banner(h.text, 'feind')
+        stage.play(h.who, 'cheer')
+        stage.doShake(10)
+        const c = stage.center(h.who)
+        stage.ring(c.x, c.y, 160, 'rgba(255,135,135,0.9)')
+        await stage.wait(1.1)
+      } else if (h.t === 'verstaerkung') {
+        const free = [...SLOTS.feind.vorne, ...SLOTS.feind.hinten].filter(([x, y]) => ![...stage.actors.values()].some((a) => a.alive && a.side === 'feind' && Math.abs(a.x - x) < 30 && Math.abs(a.y - y) < 30))
+        h.adds.forEach((id, k) => {
+          const f = byId(b, id)
+          const [x, y] = free[k] ?? [760 + k * 50, 480]
+          stage.addActor({ id, look: f.look, side: 'feind', name: f.name, x, y, hp: f.hp, hpMax: f.stats.leben, energy: 0, hasAbility: false, alive: true })
+          stage.burst(x, y - 60, 18, ['#dee2e6', '#adb5bd', '#96f2d7'], 160, -120, true)
+        })
+        await stage.wait(0.8)
       } else if (h.t === 'heilung') {
         const a = stage.actors.get(h.target)!
         a.hp = Math.min(a.hpMax, a.hp + h.amount)
@@ -529,9 +558,9 @@ async function playEvents(stage: Stage, b: Battle, ev: FightEvent[], banner: (t:
       case 'brand': {
         const a = stage.actors.get(e.target)!
         a.hp = Math.max(0, a.hp - e.dmg)
-        stage.float(e.target, String(e.dmg), '#ff922b', 24)
+        stage.float(e.target, String(e.dmg), e.gift ? '#8ce99a' : '#ff922b', 24)
         const c = stage.center(e.target)
-        stage.burst(c.x, c.y, 10, ['#ffd43b', '#ff922b', '#f03e3e'], 140, -200, true)
+        stage.burst(c.x, c.y, 10, e.gift ? ['#b2f2bb', '#69db7c', '#2b8a3e'] : ['#ffd43b', '#ff922b', '#f03e3e'], 140, -200, true)
         await stage.wait(0.35)
         break
       }
@@ -556,7 +585,7 @@ async function playEvents(stage: Stage, b: Battle, ev: FightEvent[], banner: (t:
       }
       case 'faehigkeit': {
         stage.setDim(1)
-        banner(abilityLabel(e.who as CrewId, e.ability, ABILITIES), 'crew', name(e.who) === '???' ? undefined : name(e.who))
+        banner(abilityLabel(e.who as CrewId, e.ability, ABILITIES, isSpoilerFree()), 'crew', name(e.who) === '???' ? undefined : name(e.who))
         stage.play(e.who, 'cast')
         await stage.wait(0.45)
         if (e.ability === 'sturmklinge') {
@@ -635,7 +664,7 @@ async function playEvents(stage: Stage, b: Battle, ev: FightEvent[], banner: (t:
       }
       case 'holtAus': {
         stage.actors.get(e.who)!.holtAus = true
-        banner('Scherenwirbel!', 'feind', `${name(e.who)} holt zum Großangriff aus`)
+        banner(`${e.name}!`, 'feind', `${name(e.who)} holt zum Großangriff aus`)
         stage.doShake(4)
         await stage.wait(1.0)
         break
@@ -643,7 +672,7 @@ async function playEvents(stage: Stage, b: Battle, ev: FightEvent[], banner: (t:
       case 'wirbel': {
         const a = stage.actors.get(e.who)!
         a.holtAus = false
-        banner('Scherenwirbel', 'feind')
+        banner(e.name, 'feind')
         stage.setDim(0.6)
         const crewIds = e.targets
         await stage.lunge(e.who, crewIds[0], 0.25)
@@ -662,6 +691,9 @@ async function playEvents(stage: Stage, b: Battle, ev: FightEvent[], banner: (t:
       case 'zurueck':
       case 'unterbrochen':
       case 'heilung':
+      case 'durch':
+      case 'phase':
+      case 'verstaerkung':
         i--
         await showHits(takeHits())
         await stage.wait(0.4)

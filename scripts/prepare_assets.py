@@ -99,3 +99,56 @@ print('kampf ok')
 bg = Image.open(SRC / 'kampf/kampf_strand.png').convert('RGB')
 bg.thumbnail((1200, 1200), Image.LANCZOS)
 webp(bg, OUT / 'kampf/strand.webp', 80)
+
+# ---------- Kapitel 1 und 2: ganze Figuren freigestellt (Gegner, Bosse, Crew) ----------
+def freistellen(path, height):
+    """Weissen Hintergrund vom Rand her entfernen, Kante weich, auf Hoehe skalieren."""
+    im = Image.open(path).convert('RGB')
+    w, h = im.size
+    # Hintergrund-Maske: alles fast-weisse, das vom Rand aus erreichbar ist
+    near = im.convert('L').point(lambda v: 255 if v >= 236 else 0)
+    flood = near.copy()
+    for xy in [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1), (w // 2, 0), (w // 2, h - 1), (0, h // 2), (w - 1, h // 2)]:
+        if flood.getpixel(xy) == 255:
+            ImageDraw.floodfill(flood, xy, 128)
+    alpha = flood.point(lambda v: 0 if v == 128 else 255).filter(ImageFilter.GaussianBlur(1.2))
+    rgba = im.convert('RGBA'); rgba.putalpha(alpha)
+    rgba = rgba.crop(alpha.point(lambda v: 255 if v > 40 else 0).getbbox())
+    s = height / rgba.height
+    return rgba.resize((max(1, round(rgba.width * s)), height), Image.LANCZOS)
+
+SPRITES = [
+    ('gegner/moewenpirat.png', 'figuren/moewenpirat', 300, (0.02, 0.5)),
+    ('gegner/nebelqualle.png', 'figuren/nebelqualle', 300),
+    ('gegner/geisterpirat.png', 'figuren/geisterpirat', 320),
+    ('gegner/irrlicht.png', 'figuren/irrlicht', 260, (0.18, 0.55)),
+    ('boss/schalbart.png', 'figuren/schalbart', 460, (0.22, 0.42)),
+    ('boss/grauhand.png', 'figuren/grauhand', 460),
+    ('crew-geheim/kanonier.png', 'figuren/kanonier', 400),
+    ('crew-geheim/navigatorin.png', 'figuren/navigatorin', 400),
+    ('crew-geheim/smutje.png', 'figuren/smutje', 400),
+    ('crew-geheim/ausguck.png', 'figuren/ausguck', 400),
+    ('jonte_c_neutral.png', 'figuren/jonte', 400),
+    ('welt/krabbe.png', 'figuren/krabbenbandit', 300, (0.12, 0.62)),
+]
+for src, out, hgt, *por_opt in SPRITES:
+    webp(freistellen(SRC / src, hgt), OUT / f'{out}.webp', 88)
+    # Portraet: oberes Drittel, quadratisch
+    sp = freistellen(SRC / src, hgt)
+    y0f, sf = por_opt[0] if por_opt else (0.0, 0.36)
+    side = min(sp.width, int(sp.height * sf))
+    y0 = int(sp.height * y0f)
+    top = sp.getchannel('A').crop((0, y0 + int(sp.height * 0.04), sp.width, y0 + int(sp.height * 0.2))).getbbox()
+    cx = (top[0] + top[2]) // 2 if top else sp.width // 2
+    cx = max(side // 2, min(sp.width - side // 2, cx))
+    por = Image.new('RGBA', (side, side), (0, 0, 0, 0))
+    por.alpha_composite(sp.crop((cx - side // 2, y0, cx - side // 2 + side, y0 + side)))
+    webp(por.resize((128, 128), Image.LANCZOS), OUT / f'{out}_portrait.webp', 86)
+
+bg = Image.open(SRC / 'kampf/kampf_nebel.png').convert('RGB')
+bg.thumbnail((1200, 1200), Image.LANCZOS)
+webp(bg, OUT / 'kampf/nebel.webp', 80)
+for k, f in [(2, 'seekarte_kap2_nebelriff.png'), (3, 'seekarte_kap3_glutinseln.png')]:
+    m = Image.open(SRC / f'welt/{f}').convert('RGB')
+    webp(m, OUT / f'seekarte_kap{k}.webp', 84)
+print('kapitel ok')

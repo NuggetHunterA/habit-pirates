@@ -30,7 +30,20 @@ export type AbilityId =
   | 'eintopf'
   | 'adlerauge'
   | 'sturzflug'
-export type Look = 'jonte' | 'kanonier' | 'navigatorin' | 'smutje' | 'ausguck' | 'krabbenbandit' | 'krabbenmatrose'
+export type Look =
+  | 'jonte'
+  | 'kanonier'
+  | 'navigatorin'
+  | 'smutje'
+  | 'ausguck'
+  | 'krabbenbandit'
+  | 'krabbenmatrose'
+  | 'moewenpirat'
+  | 'nebelqualle'
+  | 'geisterpirat'
+  | 'irrlicht'
+  | 'schalbart'
+  | 'grauhand'
 
 export interface Ability {
   id: AbilityId
@@ -67,12 +80,37 @@ export const ABILITIES: Record<AbilityId, Ability> = {
   sturzflug: { id: 'sturzflug', name: 'Sturzflug', text: '150 % Schaden an zwei zufälligen Gegnern.' },
 }
 
-export type Trait = 'ankerschild' | 'scherenwirbel' | 'flink'
+export type Trait =
+  | 'ankerschild'
+  | 'scherenwirbel'
+  | 'flink'
+  | 'sturzflieger'
+  | 'gift'
+  | 'geisterhaft'
+  | 'irrlicht'
+  | 'festung'
+  | 'nebelkapitaen'
 
 export const TRAIT_TEXT: Record<Trait, string> = {
   ankerschild: 'Ankerschild: nimmt 35 % weniger Schaden von Einzelangriffen. Flächenschaden trifft voll.',
-  scherenwirbel: 'Scherenwirbel: holt alle paar Züge zu einem Großangriff gegen die ganze Crew aus.',
+  scherenwirbel: 'Scherenwirbel: holt alle paar Züge zu einem Großangriff gegen die ganze Crew aus. Sturmklinge unterbricht ihn.',
   flink: 'Flink: handelt oft, hält aber wenig aus.',
+  sturzflieger: 'Sturzflieger: greift am liebsten die hintere Reihe an.',
+  gift: 'Gift: Treffer vergiften für 3 Züge.',
+  geisterhaft: 'Geisterhaft: Der erste Treffer geht einfach durch ihn hindurch.',
+  irrlicht: 'Irrlicht: heilt seine Verbündeten. Am besten zuerst ausschalten.',
+  festung: 'Boss mit drei Phasen. Großangriffe lassen sich mit der Sturmklinge unterbrechen.',
+  nebelkapitaen: 'Boss mit drei Phasen. Großangriffe lassen sich mit der Sturmklinge unterbrechen.',
+}
+
+/** Angekuendigter Grossangriff gegen die ganze Crew */
+export interface BigAttack {
+  name: string
+  /** jede n-te eigene Aktion wird ausgeholt */
+  every: number
+  mult: number
+  /** erst unter diesem Lebensanteil */
+  below?: number
 }
 
 export interface FighterDef {
@@ -86,6 +124,9 @@ export interface FighterDef {
   stats: FighterStats
   ability?: AbilityId
   traits?: Trait[]
+  big?: BigAttack
+  /** Verstaerkung, die ein Boss ruft */
+  adds?: FighterDef[]
 }
 
 export interface Fighter extends FighterDef {
@@ -102,6 +143,11 @@ export interface Fighter extends FighterDef {
   markiert: boolean
   /** Zuege mit +40 % Ausweichen */
   flink: number
+  gift: number
+  /** Geisterhaft: naechster Treffer geht durch */
+  schleier: boolean
+  /** Boss-Phase 1..3 */
+  phase: number
 }
 
 export type FightEvent =
@@ -111,11 +157,14 @@ export type FightEvent =
   | { t: 'verfehlt'; who: string; target: string }
   | { t: 'faehigkeit'; who: string; ability: AbilityId; targets: string[] }
   | { t: 'heilung'; target: string; amount: number }
-  | { t: 'brand'; target: string; dmg: number }
+  | { t: 'brand'; target: string; dmg: number; gift?: boolean }
+  | { t: 'durch'; who: string; target: string }
+  | { t: 'phase'; who: string; text: string }
+  | { t: 'verstaerkung'; who: string; adds: string[] }
   | { t: 'zurueck'; target: string }
-  | { t: 'holtAus'; who: string }
+  | { t: 'holtAus'; who: string; name: string }
   | { t: 'unterbrochen'; who: string }
-  | { t: 'wirbel'; who: string; targets: string[] }
+  | { t: 'wirbel'; who: string; name: string; targets: string[] }
   | { t: 'besiegt'; who: string }
   | { t: 'ende'; sieg: boolean }
 
@@ -146,8 +195,14 @@ export function createBattle(defs: FighterDef[], seed = (Math.random() * 2 ** 31
     over: false,
     sieg: false,
     round: 0,
-    fighters: defs.map((d, i) => ({
+    fighters: defs.map((d, i) => spawn(d, i)),
+  }
+}
+
+function spawn(d: FighterDef, i: number): Fighter {
+  return {
       ...d,
+      stats: { ...d.stats },
       hp: d.stats.leben,
       // leicht versetzter Start, damit nicht alle gleichzeitig handeln
       gauge: (i * 7) % 20,
@@ -159,7 +214,9 @@ export function createBattle(defs: FighterDef[], seed = (Math.random() * 2 ** 31
       actions: 0,
       markiert: false,
       flink: 0,
-    })),
+      gift: 0,
+      schleier: !!d.traits?.includes('geisterhaft'),
+      phase: 1,
   }
 }
 
@@ -185,6 +242,8 @@ function pickTarget(b: Battle, me: Fighter): Fighter {
     if (me.ranged) return [...foes].sort((a, c) => a.hp - c.hp)[0]
     return (front.length ? front : foes).sort((a, c) => a.hp - c.hp)[0]
   }
+  const back0 = foes.filter((f) => f.row === 'hinten')
+  if (me.traits?.includes('sturzflieger') && back0.length && rnd(b) < 0.7) return back0[Math.floor(rnd(b) * back0.length)]
   // Gegner: vorne wird oefter getroffen
   if (front.length && (front.length === foes.length || rnd(b) < 0.72)) return front[Math.floor(rnd(b) * front.length)]
   const back = foes.filter((f) => f.row === 'hinten')
@@ -200,12 +259,25 @@ function attackPower(me: Fighter): number {
 }
 
 function armor(t: Fighter) {
-  return t.ruestungHalb ? t.stats.ruestung / 2 : t.stats.ruestung
+  let r = t.stats.ruestung
+  if (t.traits?.includes('festung') && t.phase === 1) r += 14
+  return t.ruestungHalb ? r / 2 : r
+}
+
+function dodge(t: Fighter) {
+  let d = t.stats.ausweichen + (t.flink > 0 ? 40 : 0)
+  if (t.traits?.includes('nebelkapitaen') && t.phase === 1) d += 30
+  return d
 }
 
 /** Schaden mit Ruestung, Krit und Ausweichen */
 function strike(b: Battle, me: Fighter, t: Fighter, mult: number, ev: FightEvent[], opts: { area?: boolean; noDodge?: boolean } = {}) {
-  if (!opts.noDodge && rnd(b) * 100 < t.stats.ausweichen + (t.flink > 0 ? 40 : 0)) {
+  if (t.schleier) {
+    t.schleier = false
+    ev.push({ t: 'durch', who: me.id, target: t.id })
+    return
+  }
+  if (!opts.noDodge && rnd(b) * 100 < dodge(t)) {
     ev.push({ t: 'verfehlt', who: me.id, target: t.id })
     return
   }
@@ -220,6 +292,40 @@ function strike(b: Battle, me: Fighter, t: Fighter, mult: number, ev: FightEvent
   if (t.ability) t.energy = Math.min(100, t.energy + ENERGY_PER_HIT)
   ev.push({ t: 'treffer', who: me.id, target: t.id, dmg: d, krit, geblockt })
   if (t.hp === 0) ev.push({ t: 'besiegt', who: t.id })
+  else {
+    if (me.traits?.includes('gift') && !opts.area) t.gift = 3
+    bossPhase(b, t, ev)
+  }
+}
+
+/** Phasenwechsel der Bosse, ausgeloest durch Schaden */
+function bossPhase(b: Battle, t: Fighter, ev: FightEvent[]) {
+  const f = t.hp / t.stats.leben
+  if (t.traits?.includes('festung')) {
+    if (t.phase === 1 && f < 0.6) {
+      t.phase = 2
+      t.stats.tempo = Math.round(t.stats.tempo * 1.4)
+      ev.push({ t: 'phase', who: t.id, text: 'Das Schneckenhaus bekommt Risse!' })
+    }
+    if (t.phase === 2 && f < 0.25) {
+      t.phase = 3
+      ev.push({ t: 'phase', who: t.id, text: 'Fürst Schalbart wird wütend!' })
+    }
+  }
+  if (t.traits?.includes('nebelkapitaen')) {
+    if (t.phase === 1 && f < 0.55) {
+      t.phase = 2
+      ev.push({ t: 'phase', who: t.id, text: 'Der Nebel lichtet sich. Grauhand ruft seine Crew!' })
+      const adds = (t.adds ?? []).map((d, i) => spawn({ ...d, id: `${d.id}-${b.round}-${i}` }, i))
+      for (const a of adds) a.gauge = 30
+      b.fighters.push(...adds)
+      if (adds.length) ev.push({ t: 'verstaerkung', who: t.id, adds: adds.map((a) => a.id) })
+    }
+    if (t.phase === 2 && f < 0.3) {
+      t.phase = 3
+      ev.push({ t: 'phase', who: t.id, text: 'Die Totenglocke beginnt zu läuten …' })
+    }
+  }
 }
 
 function castAbility(b: Battle, me: Fighter, ev: FightEvent[]) {
@@ -360,21 +466,70 @@ export function step(b: Battle, wants: Set<string>): FightEvent[] {
       return ev
     }
   }
-  if (me.ruf > 0) me.ruf--
-  if (me.flink > 0) me.flink--
-
-  if (me.side === 'feind' && me.traits?.includes('scherenwirbel')) {
-    if (me.holtAus) {
-      me.holtAus = false
-      const crew = alive(b, 'crew')
-      ev.push({ t: 'wirbel', who: me.id, targets: crew.map((f) => f.id) })
-      for (const t of crew) strike(b, me, t, 2.2, ev, { area: true, noDodge: true })
+  if (me.gift > 0) {
+    me.gift--
+    const d = Math.max(1, Math.round(me.stats.leben * 0.04))
+    me.hp = Math.max(0, me.hp - d)
+    ev.push({ t: 'brand', target: me.id, dmg: d, gift: true })
+    if (me.hp === 0) {
+      ev.push({ t: 'besiegt', who: me.id })
       checkEnd(b, ev)
       return ev
     }
-    if (me.actions % 4 === 3) {
+  }
+  if (me.ruf > 0) me.ruf--
+  if (me.flink > 0) me.flink--
+
+  // Angekuendigter Grossangriff
+  const big = me.big
+  const bigActive = big && (!big.below || me.hp / me.stats.leben < big.below)
+  if (me.side === 'feind' && big && (me.holtAus || bigActive)) {
+    if (me.holtAus) {
+      me.holtAus = false
+      const crew = alive(b, 'crew')
+      ev.push({ t: 'wirbel', who: me.id, name: big.name, targets: crew.map((f) => f.id) })
+      for (const t of crew) strike(b, me, t, big.mult, ev, { area: true, noDodge: true })
+      checkEnd(b, ev)
+      return ev
+    }
+    if (me.actions % big.every === big.every - 1) {
       me.holtAus = true
-      ev.push({ t: 'holtAus', who: me.id })
+      ev.push({ t: 'holtAus', who: me.id, name: big.name })
+      return ev
+    }
+  }
+
+  // Irrlicht heilt jeden zweiten Zug den am staerksten verletzten Verbuendeten
+  if (me.traits?.includes('irrlicht') && me.actions % 2 === 0) {
+    const hurt = alive(b, me.side)
+      .filter((f) => f.hp < f.stats.leben)
+      .sort((a, c) => a.hp / a.stats.leben - c.hp / c.stats.leben)[0]
+    if (hurt) {
+      const heal = Math.round(hurt.stats.leben * 0.15)
+      hurt.hp = Math.min(hurt.stats.leben, hurt.hp + heal)
+      ev.push({ t: 'heilung', target: hurt.id, amount: heal })
+      return ev
+    }
+  }
+
+  // Fuerst Schalbart: Festungskanone (Phase 1) und Ankerschwung (ab Phase 2)
+  if (me.traits?.includes('festung')) {
+    if (me.phase === 1 && me.actions % 3 === 0) {
+      const crew = alive(b, 'crew')
+      const back = crew.filter((f) => f.row === 'hinten')
+      const t = (back.length ? back : crew)[Math.floor(rnd(b) * (back.length || crew.length))]
+      ev.push({ t: 'angriff', who: me.id, target: t.id, ranged: true })
+      strike(b, me, t, 1.6, ev)
+      checkEnd(b, ev)
+      return ev
+    }
+    if (me.phase >= 2) {
+      const crew = alive(b, 'crew')
+      const front = crew.filter((f) => f.row === 'vorne')
+      const ts = front.length ? front : crew.slice(0, 1)
+      ev.push({ t: 'angriff', who: me.id, target: ts[0].id, ranged: false })
+      for (const t of ts) strike(b, me, t, 1.0, ev)
+      checkEnd(b, ev)
       return ev
     }
   }
@@ -401,7 +556,7 @@ export function simulate(defs: FighterDef[], seed: number, smart = false): { sie
     for (const f of alive(b, 'crew')) {
       if (!abilityReady(f)) continue
       // "smart": Sturmklinge fuer den Grossangriff aufheben
-      if (smart && f.ability === 'sturmklinge' && !alive(b, 'feind').some((x) => x.holtAus) && alive(b, 'feind').some((x) => x.traits?.includes('scherenwirbel'))) continue
+      if (smart && f.ability === 'sturmklinge' && !alive(b, 'feind').some((x) => x.holtAus) && alive(b, 'feind').some((x) => x.big)) continue
       wants.add(f.id)
     }
     step(b, wants)

@@ -3,7 +3,14 @@ import { StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import '../styles.css'
 import FightScene, { type FightResult } from './FightScene'
-import { FULL_CREW, KRABBENBANDE, START_CREW } from '../game/foes'
+import { ENCOUNTERS, FULL_CREW, KRABBENBANDE, START_CREW } from '../game/foes'
+import { setSpoilerFree } from './art'
+
+const params = new URLSearchParams(location.search)
+// Fuer Tests: ?e=<encounter-id>&lvl=<stufe>&spoiler=0
+setSpoilerFree(params.get('spoiler') !== '0')
+const ENC = ENCOUNTERS[params.get('e') ?? ''] ?? KRABBENBANDE
+const LVL = Number(params.get('lvl') ?? 1)
 
 function Preview() {
   const [n, setN] = useState(0)
@@ -25,7 +32,8 @@ function Preview() {
       <main className="main" style={{ display: 'flex', flexDirection: 'column' }}>
         <FightScene
           key={n}
-          encounter={KRABBENBANDE}
+          encounter={ENC}
+          level={LVL}
           crew={full ? FULL_CREW : START_CREW}
           onExit={(r) => {
             setLast(r)

@@ -3,7 +3,7 @@
  * und Schadenszahlen in ein Canvas. Alle Animationen laufen in Spielzeit (Tempo 1x/2x).
  */
 import type { Look, Side } from '../game/combat'
-import { FIGHT_ART } from './art'
+import { FIGHT_ART, isSpoilerFree, spriteFor } from './art'
 
 export const STAGE_W = 960
 export const STAGE_H = 536
@@ -124,6 +124,12 @@ const LOOK = {
   ausguck: { cx: 0, fy: 0, scale: 0.6, h: 170 },
   krabbenbandit: { cx: 200, fy: 300, scale: 0.68, h: 155 },
   krabbenmatrose: { cx: 200, fy: 300, scale: 0.47, h: 102 },
+  moewenpirat: { cx: 0, fy: 0, scale: 1, h: 110 },
+  nebelqualle: { cx: 0, fy: 0, scale: 1, h: 135 },
+  geisterpirat: { cx: 0, fy: 0, scale: 1, h: 185 },
+  irrlicht: { cx: 0, fy: 0, scale: 1, h: 105 },
+  schalbart: { cx: 0, fy: 0, scale: 1, h: 265 },
+  grauhand: { cx: 0, fy: 0, scale: 1, h: 290 },
 } as const
 
 export class Stage {
@@ -137,6 +143,8 @@ export class Stage {
   private timers: Timer[] = []
   private rings: Ring[] = []
   private dim = 0
+  /** Kampfhintergrund */
+  bg: keyof typeof FIGHT_ART.backgrounds = 'strand'
   /** Schrift und Balken auf kleinen Bildschirmen groesser zeichnen */
   private uiK = 1
   private dimTarget = 0
@@ -154,8 +162,8 @@ export class Stage {
   constructor(cv: HTMLCanvasElement) {
     this.cv = cv
     this.ctx = cv.getContext('2d')!
-    this.load(FIGHT_ART.strand)
-    for (const src of Object.values(FIGHT_ART.silhouettes)) this.load(src)
+    for (const src of Object.values(FIGHT_ART.backgrounds)) this.load(src)
+    for (const src of FIGHT_ART.allSprites) this.load(src)
     for (const { parts } of Object.values(FIGHT_ART.rigs)) for (const src of Object.values(parts)) this.load(src)
     this.ro = new ResizeObserver(() => this.resize())
     this.ro.observe(cv)
@@ -259,7 +267,8 @@ export class Stage {
   /** Muendung der Kanone (Silhouette, nach rechts gespiegelt) */
   muzzle(id: string) {
     const a = this.actors.get(id)!
-    return { x: a.x + a.dx + 58, y: a.y + a.dy - 52 }
+    const dir = a.side === 'crew' ? 1 : -1
+    return { x: a.x + a.dx + dir * 50, y: a.y + a.dy - a.h * 0.42 }
   }
 
   float(id: string, text: string, color: string, size = 30) {
@@ -388,7 +397,7 @@ export class Stage {
     const oy = cv.height - STAGE_H * s + jy
     const V = new DOMMatrix().translate(ox, oy).scale(s)
     // Hintergrund fuellt die ganze Flaeche
-    const bg = this.img(FIGHT_ART.strand)
+    const bg = this.img(FIGHT_ART.backgrounds[this.bg])
     if (bg) {
       const bs = Math.max(cv.width / 890, cv.height / STAGE_H, s)
       const bw = STAGE_W * bs
@@ -478,7 +487,7 @@ export class Stage {
     if (a.alpha <= 0) return
     ctx.setTransform(V)
     const lift = Math.min(0.6, Math.max(0, -a.dy) / 120)
-    const w = (a.look === 'krabbenbandit' ? 95 : a.look === 'krabbenmatrose' ? 62 : 58) * (1 - lift)
+    const w = (a.look === 'schalbart' || a.look === 'grauhand' ? 120 : a.look === 'krabbenbandit' ? 95 : a.look === 'krabbenmatrose' ? 62 : 58) * (1 - lift)
     ctx.globalAlpha = 0.3 * a.alpha
     ctx.fillStyle = '#3b2414'
     ctx.beginPath()
@@ -491,7 +500,7 @@ export class Stage {
     const { ctx } = this
     if (!a.alive && a.alpha < 0.6) return
     const k = this.uiK
-    const w = (a.look === 'krabbenbandit' ? 104 : 80) * Math.min(k, 1.25)
+    const w = (a.look === 'schalbart' || a.look === 'grauhand' ? 140 : a.look === 'krabbenbandit' ? 104 : 80) * Math.min(k, 1.25)
     const x = a.x - w / 2
     const y = a.y - a.h - 20 * k
     ctx.globalAlpha = Math.max(0, a.alpha)
@@ -588,7 +597,7 @@ export class Stage {
     const { ctx } = this
     if (a.alpha <= 0.01) return
     ctx.globalAlpha = Math.max(0, a.alpha)
-    if (FIGHT_ART.silhouettes[a.look]) this.drawSilhouette(a, V)
+    if (spriteFor(a.look)) this.drawSprite(a, V)
     else this.drawRig(a, V)
     ctx.globalAlpha = 1
     ctx.filter = 'none'
@@ -603,41 +612,63 @@ export class Stage {
     return f.length ? f.join(' ') : 'none'
   }
 
-  private drawSilhouette(a: Actor, V: DOMMatrix) {
+  private drawSprite(a: Actor, V: DOMMatrix) {
     const { ctx } = this
-    const im = this.img(FIGHT_ART.silhouettes[a.look])
+    const im = this.img(spriteFor(a.look)!)
     if (!im) return
     const t = a.at
+    const dir = a.side === 'crew' ? 1 : -1
+    const floats = ['nebelqualle', 'geisterpirat', 'irrlicht', 'grauhand', 'moewenpirat'].includes(a.look)
+    const silhouette = isSpoilerFree() && a.side === 'crew'
     let dx = a.dx
-    let rot = 0
-    let sy = 1 + Math.sin(this.time * 2.1) * 0.012
-    if (a.anim === 'attack' || a.anim === 'cast') {
-      const k = a.anim === 'cast' ? 1.6 : 1
-      dx += kf(t, [[0, 0], [0.12, -14 * k, 'out'], [0.45, 0]])
-      rot = kf(t, [[0, 0], [0.12, -0.06 * k, 'out'], [0.45, 0]])
-    } else if (a.anim === 'hit') {
-      dx += kf(t, [[0, 0], [0.08, -12, 'out'], [0.35, 0]])
-      rot = kf(t, [[0, 0], [0.08, -0.1, 'out'], [0.35, 0]])
-    } else if (a.anim === 'down') {
-      rot = kf(t, [[0, 0], [0.6, -1.4, 'in']])
-      sy = 1
-    } else if (a.anim === 'cheer') {
-      dx += 0
-      sy = kf(t, [[0, 1], [0.2, 0.9], [0.5, 1.1], [1, 1]])
+    let dy = a.dy + (floats ? -10 + Math.sin(this.time * 2.4 + a.x) * 6 : 0)
+    let rot = Math.sin(this.time * 1.7 + a.x) * (floats ? 0.03 : 0.01)
+    let sy = 1 + Math.sin(this.time * 2.1 + a.x) * 0.014
+    let sx = 1
+    switch (a.anim) {
+      case 'attack':
+      case 'cast': {
+        const k = a.anim === 'cast' ? 1.6 : 1
+        rot += dir * kf(t, [[0, 0], [0.15, -0.08 * k, 'out'], [0.26, 0.14 * k, 'in'], [0.5, 0]])
+        sy *= kf(t, [[0, 1], [0.15, 0.92, 'out'], [0.26, 1.06, 'in'], [0.5, 1]])
+        break
+      }
+      case 'hit':
+        dx += -dir * kf(t, [[0, 0], [0.08, 12, 'out'], [0.35, 0]])
+        rot += -dir * kf(t, [[0, 0], [0.08, 0.1, 'out'], [0.35, 0]])
+        sx = kf(t, [[0, 1], [0.06, 1.08, 'out'], [0.3, 1]])
+        sy *= kf(t, [[0, 1], [0.06, 0.92, 'out'], [0.3, 1]])
+        break
+      case 'dodge':
+        dx += -dir * kf(t, [[0, 0], [0.12, 40, 'out'], [0.4, 0]])
+        break
+      case 'down':
+        rot = -dir * kf(t, [[0, 0], [0.6, 1.4, 'in']])
+        if (floats) dy += kf(t, [[0, 0], [0.8, 40, 'in']])
+        break
+      case 'cheer':
+        dy += kf(t, [[0, 0], [0.2, 0], [0.5, -30, 'out'], [0.85, 0, 'in']])
+        sy *= kf(t, [[0, 1], [0.2, 0.9], [0.5, 1.08], [1, 1]])
+        break
+      case 'spin':
+        rot = -Math.PI * 2 * kf(t, [[0, 0], [0.8, 1, 'inout']])
+        break
     }
     const h = a.h
     const w = (im.width / im.height) * h
-    ctx.setTransform(V.translate(a.x + dx, a.y + a.dy).rotate(rot * 57.3).scale(-1, sy))
-    ctx.filter = `drop-shadow(0 0 3px rgba(150,240,255,0.9)) ${this.filterFor(a)}`.replace(' none', '')
+    const flip = a.side === 'crew' ? -1 : 1
+    ctx.setTransform(V.translate(a.x + dx, a.y + dy).translate(0, -h / 2).rotate(rot * 57.3).translate(0, h / 2).scale(flip * sx, sy))
+    ctx.filter = silhouette ? `drop-shadow(0 0 3px rgba(150,240,255,0.9)) ${this.filterFor(a)}`.replace(' none', '') : this.filterFor(a)
     ctx.drawImage(im, -w / 2, -h, w, h)
     ctx.filter = 'none'
     ctx.setTransform(V)
-    // Fragezeichen: zweiter Pirat bleibt eine Ueberraschung
-    ctx.globalAlpha *= 0.85
-    ctx.font = '900 54px Nunito, system-ui, sans-serif'
-    ctx.textAlign = 'center'
-    ctx.fillStyle = 'rgba(180,240,255,0.55)'
-    ctx.fillText('?', a.x + dx, a.y + a.dy - h * 0.45)
+    if (silhouette) {
+      ctx.globalAlpha *= 0.85
+      ctx.font = '900 54px Nunito, system-ui, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillStyle = 'rgba(180,240,255,0.55)'
+      ctx.fillText('?', a.x + dx, a.y + dy - h * 0.45)
+    }
   }
 
   private drawRig(a: Actor, V: DOMMatrix) {
