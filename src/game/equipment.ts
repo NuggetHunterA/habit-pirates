@@ -105,10 +105,15 @@ export function withFound(g: GameState, items: Pick<Item, 'key'>[]): string[] {
 /** Exemplare desselben Items im Laderaum */
 export const copiesOf = (g: GameState, key: string) => g.inventory.filter((x) => x.key === key)
 
-/** Exemplar, das verkauft werden darf: nur bei Doppelten und nur eines, das niemand traegt */
-export function sellableCopy(g: GameState, key: string): Item | null {
+/**
+ * Exemplar, das verkauft oder in der Werft verbraucht werden darf: nur bei Doppelten,
+ * nur eines, das niemand traegt, das mit den wenigsten Sternen. keep bleibt in jedem Fall.
+ */
+export function sellableCopy(g: GameState, key: string, keep?: string): Item | null {
   const copies = copiesOf(g, key)
   if (copies.length < 2) return null
   const worn = wornUids(g)
-  return copies.find((c) => !worn.has(c.uid)) ?? null
+  const best = keep ?? [...copies].sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0))[0].uid
+  const free = copies.filter((c) => !worn.has(c.uid) && c.uid !== best).sort((a, b) => (a.stars ?? 0) - (b.stars ?? 0))
+  return free[0] ?? null
 }

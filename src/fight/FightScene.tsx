@@ -412,7 +412,7 @@ function BattleView({ encounter, setup, level, bonus, extras, chapter, onEnd }: 
       const crewMods = defs.filter((d) => d.side === 'crew').map((d) => d.mods ?? {})
       const goldBonus = Math.max(0, ...crewMods.map((m) => m.goldBonus ?? 0))
       const extraItem = Math.max(0, ...crewMods.map((m) => m.extraItem ?? 0))
-      const items = win && Math.random() < encounter.reward.itemChance ? [rollItem(encounter.boss ? 'selten' : 'gewoehnlich', chapter)] : []
+      const items = win && Math.random() < encounter.reward.itemChance ? [rollItem(encounter.reward.min ?? (encounter.boss ? 'selten' : 'gewoehnlich'), chapter)] : []
       if (win && extraItem && Math.random() < extraItem) items.push(rollItem('gewoehnlich', chapter))
       const gold = win ? Math.round((g0 + Math.floor(Math.random() * (g1 - g0 + 1))) * (1 + goldBonus)) : 0
       onEnd({ sieg: win, xp: win ? encounter.reward.xp : 0, gold, items })

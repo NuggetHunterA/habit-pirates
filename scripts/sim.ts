@@ -6,12 +6,15 @@ import { crewStats } from '../src/game/progress.ts'
 
 const N = 600
 
-type Gear = { name: string; jonte: Record<string, number>; ship: Record<string, number> }
+type Gear = { name: string; jonte: Record<string, number>; ship: Record<string, number>; all?: boolean }
 const GEAR: Record<string, Gear> = {
   ohne: { name: 'ohne', jonte: {}, ship: {} },
   einfach: { name: 'einfach', jonte: { angriff: 4, ruestung: 5, ausweichen: 2 }, ship: { tempo: 1 } },
   selten: { name: 'selten', jonte: { angriff: 11, ruestung: 10, tempo: 4, leben: 8, krit: 4 }, ship: { angriff: 3 } },
   episch: { name: 'episch', jonte: { angriff: 14, ruestung: 10, tempo: 4, leben: 8, krit: 12 }, ship: { leben: 20, ruestung: 4 } },
+  // Passende Ausruestung fuer alle Piraten (Phase 3): Kapitel 1 gewoehnlich, Kapitel 2 seltene Teile aus Kapitel 1
+  k1: { name: 'k1 alle', jonte: { angriff: 4, ruestung: 3, leben: 8, krit: 3 }, ship: { tempo: 1 }, all: true },
+  k2: { name: 'k2 alle', jonte: { angriff: 7, krit: 5, ruestung: 10, tempo: 4, leben: 28, ausweichen: 4 }, ship: { angriff: 4, krit: 3 }, all: true },
 }
 
 function setups(crew: CrewId[]): [string, CrewSetup][] {
@@ -35,7 +38,7 @@ function run(encId: string, crew: CrewId[], level: number, gear: Gear) {
   const kh = Number(process.env.SIM_HP ?? 1)
   const ka = Number(process.env.SIM_ATK ?? 1)
   const enc = { ...base, foes: base.foes.map((f) => ({ ...f, stats: { ...f.stats, leben: Math.round(f.stats.leben * kh), angriff: f.stats.angriff * ka } })) }
-  const stats = crewStats(level, { jonte: gear.jonte }, gear.ship)
+  const stats = crewStats(level, gear.all ? Object.fromEntries(crew.map((c) => [c, gear.jonte])) : { jonte: gear.jonte }, gear.ship)
   const res: { name: string; auto: number; smart: number; hp: number }[] = []
   for (const [name, s] of setups(crew)) {
     let a = 0
@@ -82,4 +85,34 @@ const plan: [string, CrewId[], number, string][] = [
   ['grauhand', C2, 10, 'selten'],
   ['grauhand', C2, 10, 'episch'],
 ]
-for (const [e, c, l, g] of plan) if (!only || e === only) run(e, c, l, GEAR[g])
+// Normale Kaempfe mit passender Ausruestung fuer alle: Ziel etwa 75 % (mittlere Faehigkeitswahl)
+const normal: [string, CrewId[], number, string][] = [
+  ['moewen', C1, 1, 'k1'],
+  ['moewen', C1, 2, 'k1'],
+  ['krabbenbande', C1, 2, 'k1'],
+  ['krabbenbande', C1, 3, 'k1'],
+  ['quallen', C1b, 5, 'k2'],
+  ['quallen', C1b, 6, 'k2'],
+  ['geistertrupp', C1b, 6, 'k2'],
+  ['geistertrupp', C1b, 7, 'k2'],
+  ['geisterschiff', C2, 7, 'k2'],
+  ['geisterschiff', C2, 8, 'k2'],
+]
+// Bosse und Beutezug-Stufen mit Ausruestung fuer alle (SIM_BOSS=1)
+const boss: [string, CrewId[], number, string][] = [
+  ['schalbart', C1b, 3, 'k1'],
+  ['schalbart', C1b, 5, 'k1'],
+  ['schalbart', C1b, 5, 'k2'],
+  ['grauhand', C2, 8, 'k2'],
+  ['grauhand', C2, 10, 'k2'],
+]
+// Beutezug am Boss-Feld auf Hoechststufe (SIM_FARM=1, Stufe per SIM_HP/SIM_ATK)
+const farm: [string, CrewId[], number, string][] = [
+  ['moewen', C1b, 5, 'k1'],
+  ['krabbenbande', C1b, 5, 'k1'],
+  ['quallen', C2, 10, 'k2'],
+  ['geistertrupp', C2, 10, 'k2'],
+  ['geisterschiff', C2, 10, 'k2'],
+]
+const list = process.env.SIM_NORMAL ? normal : process.env.SIM_BOSS ? boss : process.env.SIM_FARM ? farm : plan
+for (const [e, c, l, g] of list) if (!only || e === only) run(e, c, l, GEAR[g])

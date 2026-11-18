@@ -3,11 +3,13 @@ import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import type { Game } from '../game/store'
 import { blocked, bossTriesLeft, doneFields, BOSS_TRIES } from '../game/store'
 import { CHAPTERS, FIELD_TEXT, chapterOf } from '../game/map'
-import { ENCOUNTERS } from '../game/foes'
+import { ENCOUNTERS, FARM_TIERS, type FarmTier } from '../game/foes'
 import { levelProgress } from '../game/progress'
 import { RULES, windAvailable } from '../game/rules'
 import { portraitFor } from '../fight/art'
 import SeaMap from './SeaMap'
+import Sheet from './Sheet'
+import { CHEST_LABEL, chestAt } from '../game/loot'
 import './MapPanel.css'
 
 export interface FightRequest {
@@ -16,6 +18,10 @@ export interface FightRequest {
   field: number | null
   boss: boolean
   farm: boolean
+  /** Beutezug-Stufe am Boss-Feld */
+  tier?: FarmTier
+  /** Waechter einer verfluchten Truhe */
+  guard?: boolean
 }
 
 interface Props {
@@ -88,9 +94,15 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
     game.sail()
   }
 
-  const farm = () => {
+  /** Menue am Boss-Feld: Boss angreifen oder Beutezug in drei Stufen */
+  const [menu, setMenu] = useState(false)
+  const farm = () => setMenu(true)
+  const startFarm = (tier: FarmTier) => {
     if (wind < RULES.windPerField) return say(`Ein Beutezug braucht ${RULES.windPerField} Wind. Hake Habits ab!`)
-    onFight({ enc: pick(chapter.farm), field: null, boss: false, farm: true })
+    setMenu(false)
+    // Schwer: ohne den groessten Kampf des Kapitels, der waere mit 60 % mehr kaum zu schaffen
+    const pool = tier === 'schwer' && chapter.farm.length > 2 ? chapter.farm.slice(0, -1) : chapter.farm
+    onFight({ enc: pick(pool), field: null, boss: false, farm: true, tier })
   }
 
   const attackBoss = () => {
@@ -104,7 +116,7 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
       window.setTimeout(() => onStory(f.story!), 450)
       return
     }
-    if (f.kind === 'truhe') say('Truhe in Sicht!')
+    if (f.kind === 'truhe') say(chestAt(save.profile, chapter.n, i) === 'verflucht' ? 'Eine verfluchte Truhe! Sie wird bewacht.' : `${CHEST_LABEL[chestAt(save.profile, chapter.n, i)]} in Sicht!`)
     else if (f.kind === 'hafen') say(`${f.name} erreicht. Der Hafenladen hat geöffnet!`)
     else if (f.enc) say(`${ENCOUNTERS[f.enc].name} voraus!`)
   }
@@ -124,7 +136,7 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
   } else if (atChest) {
     kicker = 'Du bist hier'
     title = here.name
-    text = 'Öffne sie und sieh, was drin ist.'
+    text = chestAt(save.profile, chapter.n, ship) === 'verflucht' ? 'Eine verfluchte Truhe. Ein Wächter bewacht sie.' : `${CHEST_LABEL[chestAt(save.profile, chapter.n, ship)]}: Öffne sie und sieh, was drin ist.`
   } else if (fightHere) {
     kicker = 'Kampf'
     title = fightHere.name
@@ -158,7 +170,7 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
     <Pulse small onClick={() => onFight({ enc: here.enc!, field: ship, boss: false, farm: false })}>Kämpfen!</Pulse>
   ) : boss ? (
     !bossBeaten ? (
-      <button type="button" className={`btn-gold map-card__btn ${triesLeft > 0 ? '' : 'btn-gold--off'}`} onClick={attackBoss}>
+      <button type="button" className="btn-gold map-card__btn" onClick={farm}>
         Boss
       </button>
     ) : outroPending ? (
@@ -168,8 +180,8 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
         Weiter
       </button>
     ) : (
-      <button type="button" className={`btn-sea map-card__btn ${wind >= RULES.windPerField ? '' : 'btn-sea--off'}`} onClick={farm}>
-        Beutezug · {RULES.windPerField}
+      <button type="button" className="btn-sea map-card__btn" onClick={farm}>
+        Beutezug
       </button>
     )
   ) : (
@@ -273,8 +285,8 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
                 Weiter: Kapitel {nextChapter.n}
               </button>
             )}
-            <button type="button" className={`btn-sea ${wind >= RULES.windPerField ? '' : 'btn-sea--off'}`} onClick={farm}>
-              Beutezug · {RULES.windPerField} Wind
+            <button type="button" className="btn-sea" onClick={farm}>
+              Beutezug
             </button>
           </div>
         ) : (
@@ -291,6 +303,58 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
           </div>
         ))}
       </motion.div>
+      <AnimatePresence>
+        {menu && (
+          <Sheet onClose={() => setMenu(false)} label="Boss-Feld">
+            <div className="farm">
+              <div className="kicker">{here.name}</div>
+              {!bossBeaten && boss && (
+                <div className="farm__boss card">
+                  <img src={portraitFor(boss.foes[0].look)} alt="" className="farm__portrait" />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="display" style={{ fontSize: 20 }}>
+                      {boss.name}
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>
+                      Heute noch {triesLeft} von {BOSS_TRIES} Versuchen
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className={`btn-gold ${triesLeft > 0 ? '' : 'btn-gold--off'}`}
+                    onClick={() => {
+                      setMenu(false)
+                      attackBoss()
+                    }}
+                  >
+                    Angreifen
+                  </button>
+                </div>
+              )}
+              <div className="farm__head">
+                <span className="display" style={{ fontSize: 22 }}>
+                  Beutezug
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 800 }}>je {RULES.windPerField} Wind · {Math.max(0, wind)} an Bord</span>
+              </div>
+              {(Object.keys(FARM_TIERS) as FarmTier[]).map((t) => (
+                <button key={t} type="button" className={`farm__tier farm__tier--${t} ${wind >= RULES.windPerField ? '' : 'farm__tier--off'}`} onClick={() => startFarm(t)}>
+                  <span style={{ flex: 1, textAlign: 'left' }}>
+                    <span className="display" style={{ fontSize: 19, display: 'block' }}>
+                      {FARM_TIERS[t].name}
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 700 }}>{FARM_TIERS[t].text}</span>
+                  </span>
+                  <span className="farm__cost">≋ {RULES.windPerField}</span>
+                </button>
+              ))}
+              <p className="muted" style={{ fontSize: 12.5, margin: 0 }}>
+                Der Wind wird beim Start bezahlt. Bei einer Niederlage ist er weg, die Crew bekommt die halbe Erfahrung.
+              </p>
+            </div>
+          </Sheet>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

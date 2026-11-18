@@ -1,4 +1,5 @@
 import type { AbilityId, FighterDef, FighterStats, Row } from './combat'
+import type { Rarity } from './types'
 import { applyExtra, type Extra } from './extra.ts'
 
 export type CrewId = 'jonte' | 'kanonier' | 'navigatorin' | 'smutje' | 'ausguck'
@@ -139,7 +140,7 @@ export interface Encounter {
   bg: 'strand' | 'nebel'
   boss?: boolean
   foes: FighterDef[]
-  reward: { xp: number; gold: [number, number]; itemChance: number }
+  reward: { xp: number; gold: [number, number]; itemChance: number; min?: Rarity }
   /** Text nach dem Sieg */
   outro: string
 }
@@ -204,7 +205,7 @@ export const MOEWEN: Encounter = {
   name: 'Möwenpiraten',
   intro: 'Kreischend stürzen sich Möwenpiraten aus dem Wrack auf euer Deck!',
   bg: 'strand',
-  foes: [foe('moewe', 'moewe1', 'vorne', [1.6, 1.6]), foe('moewe', 'moewe2', 'vorne', [1.6, 1.6]), foe('moewe', 'moewe3', 'hinten', [1.6, 1.6])],
+  foes: [foe('moewe', 'moewe1', 'vorne', [2.4, 2.4]), foe('moewe', 'moewe2', 'vorne', [2.4, 2.4]), foe('moewe', 'moewe3', 'hinten', [2.4, 2.4])],
   reward: { xp: 30, gold: [10, 18], itemChance: 0.3 },
   outro: 'Die Möwen flattern davon und lassen ein paar glänzende Münzen fallen.',
 }
@@ -249,7 +250,7 @@ export const QUALLEN: Encounter = {
   name: 'Nebelquallen',
   intro: 'Aus dem Nebel schweben leuchtende Quallen heran.',
   bg: 'nebel',
-  foes: [foe('qualle', 'qualle1', 'vorne', [3, 2.8]), foe('qualle', 'qualle2', 'vorne', [3, 2.8]), foe('qualle', 'qualle3', 'hinten', [3, 2.8])],
+  foes: [foe('qualle', 'qualle1', 'vorne', [4.8, 4.5]), foe('qualle', 'qualle2', 'vorne', [4.8, 4.5]), foe('qualle', 'qualle3', 'hinten', [4.8, 4.5])],
   reward: { xp: 60, gold: [24, 36], itemChance: 0.35 },
   outro: 'Die Quallen sinken leuchtend in die Tiefe.',
 }
@@ -259,7 +260,7 @@ export const GEISTERTRUPP: Encounter = {
   name: 'Geistertrupp',
   intro: 'Zwei Geisterpiraten und ein Irrlicht versperren den Weg zum Leuchtturm.',
   bg: 'nebel',
-  foes: [foe('geist', 'geist1', 'vorne', [2.4, 2.2]), foe('geist', 'geist2', 'vorne', [2.4, 2.2]), foe('irrlicht', 'irrlicht1', 'hinten', [2.4, 2.2])],
+  foes: [foe('geist', 'geist1', 'vorne', [3.85, 3.5]), foe('geist', 'geist2', 'vorne', [3.85, 3.5]), foe('irrlicht', 'irrlicht1', 'hinten', [3.85, 3.5])],
   reward: { xp: 75, gold: [30, 44], itemChance: 0.4 },
   outro: 'Die Geister lösen sich im Nebel auf. Nur das Irrlicht kichert noch eine Weile.',
 }
@@ -269,7 +270,7 @@ export const GEISTERSCHIFF: Encounter = {
   name: 'Geisterschiff',
   intro: 'Die Crew des Geisterschiffs entert euch!',
   bg: 'nebel',
-  foes: [foe('geist', 'geist1', 'vorne', [2.9, 2.7]), foe('qualle', 'qualle1', 'vorne', [2.9, 2.7]), foe('irrlicht', 'irrlicht1', 'hinten', [2.9, 2.7]), foe('geist', 'geist2', 'hinten', [2.9, 2.7])],
+  foes: [foe('geist', 'geist1', 'vorne', [4.65, 4.3]), foe('qualle', 'qualle1', 'vorne', [4.65, 4.3]), foe('irrlicht', 'irrlicht1', 'hinten', [4.65, 4.3]), foe('geist', 'geist2', 'hinten', [4.65, 4.3])],
   reward: { xp: 90, gold: [36, 50], itemChance: 0.45 },
   outro: 'Das Geisterschiff verschwindet lautlos im Nebel.',
 }
@@ -287,12 +288,12 @@ export const GRAUHAND: Encounter = {
       look: 'grauhand',
       side: 'feind',
       row: 'vorne',
-      stats: { leben: 2160, angriff: 42, ruestung: 7, tempo: 10, krit: 8, ausweichen: 5 },
+      stats: { leben: 3020, angriff: 59, ruestung: 7, tempo: 10, krit: 8, ausweichen: 5 },
       traits: ['nebelkapitaen'],
       big: { name: 'Totenglocke', every: 3, mult: 2.5, below: 0.3 },
       adds: [foe('geist', 'geist', 'vorne', [2.4, 2.4]), foe('geist', 'geist', 'hinten', [2.4, 2.4])],
     },
-    foe('irrlicht', 'irrlicht1', 'hinten', [2.4, 2.4]),
+    foe('irrlicht', 'irrlicht1', 'hinten', [3.35, 3.35]),
   ],
   reward: { xp: 200, gold: [140, 200], itemChance: 1 },
   outro: 'Grauhands Laterne erlischt. Der Nebel hebt sich, und am Horizont glüht es rot.',
@@ -307,3 +308,46 @@ export const FARM: Record<number, Encounter[]> = {
 export const ENCOUNTERS: Record<string, Encounter> = Object.fromEntries(
   [MOEWEN, KRABBENBANDE, SCHALBART, QUALLEN, GEISTERTRUPP, GEISTERSCHIFF, GRAUHAND].map((e) => [e.id, e]),
 )
+
+/** Gegner staerker machen (Leben und Angriff mal k), z. B. fuer schwere Beutezuege und Truhenwaechter */
+export function strengthen(enc: Encounter, k: number): Encounter {
+  if (k === 1) return enc
+  return {
+    ...enc,
+    foes: enc.foes.map((f) => ({ ...f, stats: { ...f.stats, leben: Math.round(f.stats.leben * k), angriff: Math.round(f.stats.angriff * k * 10) / 10 } })),
+  }
+}
+
+/** Stufen des Beutezugs am Boss-Feld */
+export type FarmTier = 'leicht' | 'mittel' | 'schwer'
+export const FARM_TIERS: Record<FarmTier, { name: string; k: number; gold: number; itemChance: number; min: Rarity; text: string }> = {
+  leicht: { name: 'Leicht', k: 1, gold: 1, itemChance: 0.6, min: 'gewoehnlich', text: 'Normale Gegner · 60 % Chance auf ein Item' },
+  mittel: { name: 'Mittel', k: 1.25, gold: 1.5, itemChance: 0.6, min: 'selten', text: '25 % stärker · Item mindestens selten · 1,5× Gold' },
+  schwer: { name: 'Schwer', k: 1.6, gold: 2, itemChance: 0.5, min: 'episch', text: '60 % stärker · Item mindestens episch · 2× Gold' },
+}
+
+/** Kampf fuer einen Beutezug in dieser Stufe */
+export function farmEncounter(id: string, tier: FarmTier): Encounter {
+  const base = ENCOUNTERS[id]
+  const t = FARM_TIERS[tier]
+  const g = base.reward.gold
+  return {
+    ...strengthen(base, t.k),
+    name: `${base.name} · ${t.name}`,
+    reward: { xp: Math.round(base.reward.xp * t.k), gold: [Math.round(g[0] * t.gold), Math.round(g[1] * t.gold)], itemChance: t.itemChance, min: t.min },
+  }
+}
+
+/** Waechter einer verfluchten Truhe: der staerkste normale Kampf des Kapitels, 10 % staerker. Beute gibt die Truhe. */
+export function guardianEncounter(chapter: number): Encounter {
+  const list = FARM[chapter] ?? FARM[1]
+  const base = list[list.length - 1]
+  return {
+    ...strengthen(base, 1.1),
+    id: 'waechter',
+    name: 'Truhenwächter',
+    intro: 'Kaum berührt ihr die Truhe, steigen ihre Wächter aus dem Wasser!',
+    reward: { xp: base.reward.xp, gold: [0, 0], itemChance: 0 },
+    outro: 'Die Wächter sind besiegt. Die Truhe gehört euch!',
+  }
+}

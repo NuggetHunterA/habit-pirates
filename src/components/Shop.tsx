@@ -1,7 +1,9 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useMemo, useState } from 'react'
 import type { Game } from '../game/store'
-import { PRICE, itemBonus, shopOffer } from '../game/items'
+import { PRICE, itemBonus, shopOffer, traderOpen } from '../game/items'
+import Werft from './Werft'
+import Trader from './Trader'
 import { diffIfEquipped } from '../game/equipment'
 import { RARITY_LABEL, SLOT_LABEL } from '../game/loot'
 import ItemIcon, { RARITY_COLOR } from './ItemIcon'
@@ -9,8 +11,29 @@ import ItemExtras from './ItemExtras'
 import { StatLines } from './ItemSheet'
 import './Gear.css'
 
-/** Laden des Haendlers: vier Tagesangebote, neu ab Mitternacht */
+type View = 'laden' | 'werft' | 'haendler'
+const VIEW_LABEL: Record<View, string> = { laden: 'Laden', werft: 'Werft', haendler: 'Händler' }
+
+/** Laden-Tab: Hafenladen, Werft und Spezialhaendler */
 export default function Shop({ game, say, onGear }: { game: Game; say: (m: string) => void; onGear: () => void }) {
+  const [view, setView] = useState<View>('laden')
+  return (
+    <div className="gear">
+      <div className="seg seg--dark gear__views" role="group" aria-label="Ansicht">
+        {(Object.keys(VIEW_LABEL) as View[]).map((v) => (
+          <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}>
+            {VIEW_LABEL[v]}
+            {v === 'haendler' && traderOpen(new Date()) && <span className="seg__dot" aria-label="geöffnet" />}
+          </button>
+        ))}
+      </div>
+      {view === 'laden' ? <Harbor game={game} say={say} onGear={onGear} /> : view === 'werft' ? <Werft game={game} say={say} /> : <Trader game={game} say={say} />}
+    </div>
+  )
+}
+
+/** Hafenladen: vier Tagesangebote, neu ab Mitternacht */
+function Harbor({ game, say, onGear }: { game: Game; say: (m: string) => void; onGear: () => void }) {
   const save = game.save!
   const offer = useMemo(() => shopOffer(save.profile, game.today, save.game.chapter), [save.profile, game.today, save.game.chapter])
   const bought = save.game.shop.day === game.today ? save.game.shop.bought : []
@@ -91,7 +114,7 @@ export default function Shop({ game, say, onGear }: { game: Game; say: (m: strin
       </div>
 
       <div className="shop__foot">
-        <p>Du willst etwas loswerden? Im Laderaum kannst du jedes Item für ein Drittel des Preises verkaufen.</p>
+        <p>Du willst etwas loswerden? Doppelte Items kannst du im Laderaum für ein Drittel des Preises verkaufen oder in der Werft zum Verstärken nutzen.</p>
         <button type="button" className="btn-wood" onClick={onGear}>
           Zum Laderaum
         </button>

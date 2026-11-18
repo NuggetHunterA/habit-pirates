@@ -67,7 +67,8 @@ function Outfit({ game, say, onShop, who, setWho }: { game: Game; say: (m: strin
   const stacks = useMemo(() => {
     const by = new Map<string, Item[]>()
     for (const it of g.inventory) if (filter === 'alle' || it.slot === filter) by.set(it.key, [...(by.get(it.key) ?? []), it])
-    return Array.from(by.values()).sort(
+    // Im Stapel liegt das Exemplar mit den meisten Sternen vorne (wird angezeigt und angelegt)
+    return Array.from(by.values(), (list) => [...list].sort((x, y) => (y.stars ?? 0) - (x.stars ?? 0))).sort(
       (a, b) => ORDER.indexOf(a[0].rarity) - ORDER.indexOf(b[0].rarity) || SLOTS.indexOf(a[0].slot) - SLOTS.indexOf(b[0].slot) || a[0].name.localeCompare(b[0].name),
     )
   }, [g.inventory, filter])
@@ -90,7 +91,7 @@ function Outfit({ game, say, onShop, who, setWho }: { game: Game; say: (m: strin
         onClick={() => (it ? setOpen(it) : setFilter(s))}
         aria-label={it ? `${SLOT_LABEL[s]}: ${it.name}` : `${SLOT_LABEL[s]}: leer`}
       >
-        <ItemIcon itemKey={it?.key} slot={s} rarity={it?.rarity} size={62} />
+        <ItemIcon itemKey={it?.key} slot={s} rarity={it?.rarity} size={62} stars={it?.stars} />
         <span className="gear-slot__label">{SLOT_LABEL[s]}</span>
       </button>
     )
@@ -237,7 +238,7 @@ function Outfit({ game, say, onShop, who, setWho }: { game: Game; say: (m: strin
                     exit={{ opacity: 0, scale: 0.6 }}
                     onClick={() => setOpen(it)}
                   >
-                    <ItemIcon itemKey={it.key} slot={it.slot} rarity={it.rarity} size={68} />
+                    <ItemIcon itemKey={it.key} slot={it.slot} rarity={it.rarity} size={68} stars={it.stars} />
                     {items.length > 1 && <span className="gear__count">×{items.length}</span>}
                     {badge && <span className={`gear__worn ${badge.mine ? '' : 'gear__worn--other'}`}>{badge.text}</span>}
                     <span className="gear__tile-name">{it.name}</span>

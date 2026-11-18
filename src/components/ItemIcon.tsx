@@ -34,10 +34,12 @@ interface Props {
   size?: number
   /** Kein Rahmen, nur das Bild */
   bare?: boolean
+  /** Sterne aus der Werft, als kleines Schild oben */
+  stars?: number
 }
 
 /** Item-Bild im Anime-Stil C mit Seltenheits-Rahmen. Ohne itemKey: leerer Slot. */
-export default function ItemIcon({ itemKey, slot, rarity = 'gewoehnlich', size = 52, bare = false }: Props) {
+export default function ItemIcon({ itemKey, slot, rarity = 'gewoehnlich', size = 52, bare = false, stars = 0 }: Props) {
   const src = itemKey ? itemArt(itemKey) : undefined
   const c = RARITY_COLOR[rarity]
   if (bare && src) return <img src={src} alt="" width={size} height={size} draggable={false} style={{ flex: 'none', objectFit: 'contain' }} />
@@ -48,6 +50,11 @@ export default function ItemIcon({ itemKey, slot, rarity = 'gewoehnlich', size =
       aria-hidden="true"
     >
       {src ? <img src={src} alt="" draggable={false} /> : <SlotGlyph slot={slot} />}
+      {src && stars > 0 && (
+        <span className="item-icon__stars" style={{ fontSize: Math.max(9, size * 0.17) }}>
+          {'★'.repeat(stars)}
+        </span>
+      )}
     </span>
   )
 }

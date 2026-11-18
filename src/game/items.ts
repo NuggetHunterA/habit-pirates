@@ -184,9 +184,24 @@ export function bonusText(b: Partial<Stats>): string {
     .join(', ')
 }
 
-export function itemBonus(it: Pick<Item, 'key'>): Partial<Stats> {
-  return BY_KEY[it.key]?.bonus ?? {}
+/** Werte eines Items, mit Sternen aus der Werft (+5 % je Stern, aufgerundet) */
+export function itemBonus(it: Pick<Item, 'key'> & { stars?: number }): Partial<Stats> {
+  const b = BY_KEY[it.key]?.bonus ?? {}
+  const s = it.stars ?? 0
+  if (!s) return b
+  const out: Partial<Stats> = {}
+  for (const [k, v] of Object.entries(b) as [keyof Stats, number][]) out[k] = Math.ceil(v * (1 + 0.05 * s) - 1e-9)
+  return out
 }
+
+/** Hoechste Sternzahl je Seltenheit */
+export const MAX_STARS: Record<Rarity, number> = { gewoehnlich: 2, selten: 3, episch: 4, legendaer: 5 }
+
+/** Gold fuer Stern n: n mal der halbe Ladenpreis */
+export const starGold = (r: Rarity, n: number) => n * Math.round(PRICE[r] / 2)
+
+/** Ab Stern 3 braucht es Gold und ein Duplikat, davor Gold oder ein Duplikat */
+export const starNeedsBoth = (n: number) => n >= 3
 
 let n = 0
 export function makeItem(def: ItemDef): Item {
@@ -210,7 +225,7 @@ function seeded(seed: string) {
   }
 }
 
-/** Tagesangebot des Händlers: 2 gewöhnlich, 1 selten, 1 selten oder episch, nur bis zum aktuellen Kapitel. Legendäres gibt es nur als Beute. */
+/** Tagesangebot des Hafenladens: 2 gewöhnlich und 2 selten, nur bis zum aktuellen Kapitel. Episches gibt es beim Spezialhändler. */
 export function shopOffer(profile: string, day: string, chapter = 1): ItemDef[] {
   const rnd = seeded(`${profile}|${day}`)
   const pick = (r: Rarity[], taken: ItemDef[]) => {
@@ -221,6 +236,42 @@ export function shopOffer(profile: string, day: string, chapter = 1): ItemDef[] 
   out.push(pick(['gewoehnlich'], out))
   out.push(pick(['gewoehnlich'], out))
   out.push(pick(['selten'], out))
-  out.push(pick(rnd() < 0.35 ? ['episch'] : ['selten'], out))
-  return out
+  out.push(pick(['selten'], out))
+  return out.filter(Boolean)
 }
+
+/** Spezialhaendler: Preis, Tag und Uhrzeit (Donnerstag 10 bis 22 Uhr) */
+export const TRADER_PRICE = 300
+export const TRADER_DAY = 4
+export const TRADER_FROM = 10
+export const TRADER_TO = 22
+
+export function traderOpen(now: Date): boolean {
+  const h = now.getHours()
+  return now.getDay() === TRADER_DAY && h >= TRADER_FROM && h < TRADER_TO
+}
+
+/** Naechster Besuch des Haendlers (Beginn) oder, waehrend er da ist, wann er ablegt */
+export function traderTimes(now: Date): { opens: Date; closes: Date } {
+  const d = new Date(now)
+  d.setHours(TRADER_FROM, 0, 0, 0)
+  let add = (TRADER_DAY - d.getDay() + 7) % 7
+  if (add === 0 && now.getHours() >= TRADER_TO) add = 7
+  d.setDate(d.getDate() + add)
+  const closes = new Date(d)
+  closes.setHours(TRADER_TO)
+  return { opens: d, closes }
+}
+
+/** 3 epische Items aus dem aktuellen Kapitel, bevorzugt noch nicht gefundene. Gleich fuer die ganze Woche. */
+export function traderOffer(profile: string, week: string, chapter: number, found: string[]): ItemDef[] {
+  const rnd = seeded(`${profile}|haendler|${week}|${chapter}`)
+  const pool = CATALOG.filter((d) => d.rarity === 'episch' && d.chapter === chapter)
+  const mix = (a: ItemDef[]) => a.map((d) => [rnd(), d] as const).sort((x, y) => x[0] - y[0]).map((x) => x[1])
+  const fresh = mix(pool.filter((d) => !found.includes(d.key)))
+  const known = mix(pool.filter((d) => found.includes(d.key)))
+  return [...fresh, ...known].slice(0, 3)
+}
+
+/** Fester Zufallswert 0..1 fuer einen Schluessel (z. B. verfluchte Truhen) */
+export const seededRoll = (key: string) => seeded(key)()

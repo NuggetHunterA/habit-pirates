@@ -69,7 +69,7 @@ export default function CrewOverview({ game, onOutfit }: { game: Game; onOutfit:
                 const it = eq[s]
                 return (
                   <span key={s} title={it ? it.name : `${SLOT_LABEL[s]}: leer`}>
-                    <ItemIcon itemKey={it?.key} slot={s} rarity={it?.rarity} size={44} />
+                    <ItemIcon itemKey={it?.key} slot={s} rarity={it?.rarity} size={44} stars={it?.stars} />
                   </span>
                 )
               })}

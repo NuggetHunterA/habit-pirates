@@ -331,7 +331,8 @@
 }
 
 /* Auf hellen Sheets war der Holz-Knopf (z. B. "Bei Jonte ablegen") weiss auf weiss */
-.sheet .btn-wood {
+.sheet .btn-wood,
+.card .btn-wood {
   background: #e7ebfa;
   color: var(--ink);
   box-shadow: inset 0 0 0 2px #c9d3f5, 0 4px 0 #b6c0e6;

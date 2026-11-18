@@ -4,7 +4,7 @@ import { copiesOf, migrateGear, sellableCopy, wearer, withFound, wornUids } from
 import { dateKey, weekStartOf } from './dates'
 import { RULES, emptyLog, windAvailable, previousWeek } from './rules'
 import { CHAPTERS, chapterOf } from './map'
-import { PRICE, itemDef, makeItem, sellPrice } from './items'
+import { MAX_STARS, PRICE, TRADER_PRICE, itemDef, makeItem, sellPrice, starGold, starNeedsBoth } from './items'
 import { START_CREW } from './foes'
 import { xpTotal } from './progress'
 import { STORIES } from './story'
@@ -317,10 +317,7 @@ export function useGame() {
           return { ...s, game: { ...s.game, field: s.game.field + 1, windSpent: s.game.windSpent + RULES.windPerField } }
         })
       },
-      /**
-       * Sieg in einem Kampf. field: Feld des Kampfs (null beim Beutezug).
-       * Beutezuege kosten Wind, aber erst beim Sieg.
-       */
+      /** Sieg in einem Kampf. field: Feld des Kampfs (null beim Beutezug). Der Wind fuer Beutezuege ist schon beim Start bezahlt. */
       winFight(opts: { field: number | null; boss: boolean; farm: boolean; xp: number; gold: number; items: Item[] }) {
         update((s) => {
           const g = s.game
@@ -335,10 +332,65 @@ export function useGame() {
               found: withFound(g, opts.items),
               cleared: opts.field != null && !g.cleared.includes(opts.field) ? [...g.cleared, opts.field] : g.cleared,
               bossBeaten: opts.boss && !g.bossBeaten.includes(g.chapter) ? [...g.bossBeaten, g.chapter] : g.bossBeaten,
-              windSpent: g.windSpent + (opts.farm ? RULES.windPerField : 0),
             },
           }
         })
+      },
+      /** Beutezug starten: kostet sofort Wind. false, wenn zu wenig da ist. */
+      startFarm(): boolean {
+        if (!save || windAvailable(save) < RULES.windPerField) return false
+        update((s) => ({ ...s, game: { ...s.game, windSpent: s.game.windSpent + RULES.windPerField } }))
+        return true
+      },
+      /** Niederlage beim Beutezug: der Wind ist weg, es gibt Erfahrung (halbe) */
+      gainXp(xp: number) {
+        update((s) => ({ ...s, game: { ...s.game, xp: Math.min(xpTotal(chapterOf(s.game.chapter).cap), s.game.xp + xp) } }))
+      },
+      /** Waechter einer verfluchten Truhe besiegt */
+      guardWin(field: number) {
+        update((s) => ((s.game.guardWon ?? []).includes(field) ? s : { ...s, game: { ...s.game, guardWon: [...(s.game.guardWon ?? []), field] } }))
+      },
+      /** Verfluchte Truhe liegen gelassen oder Waechter-Kampf verloren: die Truhe versinkt */
+      sinkChest(field: number) {
+        update((s) => (s.game.looted.includes(field) ? s : { ...s, game: { ...s.game, looted: [...s.game.looted, field] } }))
+      },
+      /**
+       * Item in der Werft um einen Stern verstaerken.
+       * pay: 'gold' oder 'dup' (Stern 1 und 2), ab Stern 3 immer beides.
+       */
+      upgradeStar(uid: string, pay: 'gold' | 'dup'): string | null {
+        if (!save) return 'Kein Spielstand.'
+        const g = save.game
+        const it = g.inventory.find((x) => x.uid === uid)
+        if (!it) return 'Item nicht gefunden.'
+        const n = (it.stars ?? 0) + 1
+        if (n > MAX_STARS[it.rarity]) return 'Schon voll verstärkt.'
+        const both = starNeedsBoth(n)
+        const gold = both || pay === 'gold' ? starGold(it.rarity, n) : 0
+        const dup = both || pay === 'dup' ? sellableCopy(g, it.key, it.uid) : null
+        if ((both || pay === 'dup') && !dup) return 'Dafür fehlt ein Duplikat.'
+        if (g.gold < gold) return `Dir fehlen ${gold - g.gold} Gold.`
+        update((s) => ({
+          ...s,
+          game: {
+            ...s.game,
+            gold: s.game.gold - gold,
+            inventory: s.game.inventory.filter((x) => x.uid !== dup?.uid).map((x) => (x.uid === uid ? { ...x, stars: n } : x)),
+          },
+        }))
+        return null
+      },
+      /** Kauf beim Spezialhaendler: ein Item pro Woche */
+      buyTrader(key: string): Item | null {
+        const def = itemDef(key)
+        const s = save
+        if (!def || !s || s.game.gold < TRADER_PRICE || s.game.trader?.week === week) return null
+        const it = makeItem(def)
+        update((x) => ({
+          ...x,
+          game: { ...x.game, gold: x.game.gold - TRADER_PRICE, inventory: [...x.game.inventory, it], found: withFound(x.game, [it]), trader: { week, bought: key } },
+        }))
+        return it
       },
       /** Zaehlt einen Boss-Versuch. Gibt false zurueck, wenn heute keiner mehr frei ist. */
       bossTry(): boolean {
@@ -375,7 +427,7 @@ export function useGame() {
         update((s) => {
           const g = s.game
           if (!g.bossBeaten.includes(g.chapter) || g.chapter >= CHAPTERS.length) return s
-          return { ...s, game: { ...g, chapter: g.chapter + 1, field: 0, looted: [], cleared: [] } }
+          return { ...s, game: { ...g, chapter: g.chapter + 1, field: 0, looted: [], cleared: [], guardWon: [] } }
         })
       },
       testXp() {

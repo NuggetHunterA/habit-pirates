@@ -27,6 +27,9 @@ const FIELD_COLOR: Record<FieldKind, string> = {
   boss: '#B3261E',
 }
 
+/** Truhenfelder in der Farbe ihrer Truhe */
+const CHEST_COLOR = { holz: '#C68B59', silber: '#DDE3EA', gold: '#FFD43B' }
+
 function FieldGlyph({ kind }: { kind: FieldKind }) {
   const s = { fill: 'none', stroke: '#3B2414', strokeWidth: 2.4, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
   switch (kind) {
@@ -394,7 +397,7 @@ export default function SeaMap({ chapter, field, done: doneFields, mini = false,
             return (
               <g key={i} transform={`translate(${f.x} ${f.y})`} opacity={passed ? 0.75 : 1}>
                 {next && <circle r={r + 10} className="seamap__pulse" />}
-                <circle r={r} fill={done ? '#C9B48A' : FIELD_COLOR[f.kind]} stroke="#3B2414" strokeWidth="3.5" />
+                <circle r={r} fill={done ? '#C9B48A' : f.kind === 'truhe' ? CHEST_COLOR[f.chest ?? 'holz'] : FIELD_COLOR[f.kind]} stroke="#3B2414" strokeWidth="3.5" />
                 <g transform={`scale(${(r / 15) * 0.95})`}>
                   <FieldGlyph kind={f.kind} />
                 </g>
