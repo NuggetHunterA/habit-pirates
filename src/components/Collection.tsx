@@ -17,8 +17,11 @@ const GROUP: Record<Slot, string> = { waffe: 'Waffen', hut: 'Hüte', kleidung: '
 export default function Collection({ game }: { game: Game }) {
   const g = game.save!.game
   const found = new Set(g.found ?? [])
-  const total = CATALOG.length
-  const have = CATALOG.filter((d) => found.has(d.key)).length
+  // Items spaeterer Kapitel bleiben verborgen, bis man dort ist (oder eines schon gefunden hat)
+  const visible = CATALOG.filter((d) => d.chapter <= g.chapter || found.has(d.key))
+  const later = CATALOG.length - visible.length
+  const total = visible.length
+  const have = visible.filter((d) => found.has(d.key)).length
   const [open, setOpen] = useState<ItemDef | null>(null)
   return (
     <div className="book">
@@ -34,7 +37,7 @@ export default function Collection({ game }: { game: Game }) {
         </div>
       </div>
       {SLOTS.map((slot) => {
-        const defs = CATALOG.filter((d) => d.slot === slot).sort((a, b) => ORDER.indexOf(a.rarity) - ORDER.indexOf(b.rarity))
+        const defs = visible.filter((d) => d.slot === slot).sort((a, b) => ORDER.indexOf(a.rarity) - ORDER.indexOf(b.rarity))
         const n = defs.filter((d) => found.has(d.key)).length
         return (
           <section key={slot} className="book__group">
@@ -64,6 +67,7 @@ export default function Collection({ game }: { game: Game }) {
           </section>
         )
       })}
+      {later > 0 && <p className="muted" style={{ textAlign: 'center', margin: '4px 0 12px' }}>Weitere {later} Items warten in späteren Kapiteln.</p>}
       <AnimatePresence>
         {open && (
           <Sheet onClose={() => setOpen(null)} label={open.name}>

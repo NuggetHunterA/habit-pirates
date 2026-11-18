@@ -11,6 +11,7 @@ import './StoryScene.css'
 
 interface Props {
   id: string
+  chapter?: number
   onDone: (gold: number, items: Item[]) => void
 }
 
@@ -19,16 +20,16 @@ const FACES_LEFT: string[] = ['kanonier', 'navigatorin', 'smutje', 'ausguck', 's
 
 type Step = { k: 'line'; i: number } | { k: 'choice' } | { k: 'outcome'; o: number } | { k: 'join' } | { k: 'reward' }
 
-function rewardOf(r: Reward | undefined): { gold: number; items: Item[] } {
-  return { gold: r?.gold ?? 0, items: r?.item ? [rollItem()] : [] }
+function rewardOf(r: Reward | undefined, chapter = 1): { gold: number; items: Item[] } {
+  return { gold: r?.gold ?? 0, items: r?.item ? [rollItem('gewoehnlich', chapter)] : [] }
 }
 
-export default function StoryScene({ id, onDone }: Props) {
+export default function StoryScene({ id, chapter = 1, onDone }: Props) {
   const st = STORIES[id]
   const [step, setStep] = useState<Step>({ k: 'line', i: 0 })
   const [choice, setChoice] = useState<number | null>(null)
   // Belohnung einmal auswuerfeln, sobald sie feststeht
-  const base = useMemo(() => rewardOf(st.reward), [st])
+  const base = useMemo(() => rewardOf(st.reward, chapter), [st, chapter])
   const [picked, setPicked] = useState<{ gold: number; items: Item[] } | null>(null)
   const total = { gold: base.gold + (picked?.gold ?? 0), items: [...base.items, ...(picked?.items ?? [])] }
 
@@ -112,7 +113,7 @@ export default function StoryScene({ id, onDone }: Props) {
                   className="btn-sea"
                   onClick={() => {
                     setChoice(i)
-                    setPicked(rewardOf(o.reward))
+                    setPicked(rewardOf(o.reward, chapter))
                     setStep({ k: 'outcome', o: i })
                   }}
                 >

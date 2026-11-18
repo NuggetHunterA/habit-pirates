@@ -50,6 +50,8 @@ interface Props {
   /** Erfahrung vor dem Kampf und Hoechststufe, fuer die Stufen-Anzeige */
   xp?: number
   cap?: number
+  /** Aktuelles Kapitel, bestimmt den Beute-Pool */
+  chapter?: number
   onExit: (r: FightResult | null) => void
 }
 
@@ -91,7 +93,7 @@ function place(defs: FighterDef[]) {
   })
 }
 
-export default function FightScene({ encounter, crew = START_CREW, level = 1, bonus, extras, initialSetup, onSetup, canStart, xp, cap, onExit }: Props) {
+export default function FightScene({ encounter, crew = START_CREW, level = 1, bonus, extras, initialSetup, onSetup, canStart, xp, cap, chapter = 1, onExit }: Props) {
   const [phase, setPhase] = useState<Phase>('vorbereitung')
   const [setup, setSetup] = useState<CrewSetup>(() => validSetup(initialSetup, crew) ?? defaultSetup(crew))
   const [result, setResult] = useState<FightResult | null>(null)
@@ -128,6 +130,7 @@ export default function FightScene({ encounter, crew = START_CREW, level = 1, bo
               level={level}
               bonus={bonus}
               extras={extras}
+              chapter={chapter}
               onEnd={(r) => {
                 setResult(r)
                 setPhase('ende')
@@ -336,7 +339,7 @@ interface Banner {
   tone: 'crew' | 'feind' | 'info'
 }
 
-function BattleView({ encounter, setup, level, bonus, extras, onEnd }: { encounter: Encounter; setup: CrewSetup; level: number; bonus?: Partial<Record<CrewId, FighterStats>>; extras?: (fighters: CrewId[]) => Partial<Record<CrewId, Extra>>; onEnd: (r: FightResult) => void }) {
+function BattleView({ encounter, setup, level, bonus, extras, chapter, onEnd }: { encounter: Encounter; setup: CrewSetup; level: number; bonus?: Partial<Record<CrewId, FighterStats>>; extras?: (fighters: CrewId[]) => Partial<Record<CrewId, Extra>>; chapter: number; onEnd: (r: FightResult) => void }) {
   const cvRef = useRef<HTMLCanvasElement>(null)
   const stageRef = useRef<Stage | null>(null)
   const battleRef = useRef<Battle | null>(null)
@@ -409,8 +412,8 @@ function BattleView({ encounter, setup, level, bonus, extras, onEnd }: { encount
       const crewMods = defs.filter((d) => d.side === 'crew').map((d) => d.mods ?? {})
       const goldBonus = Math.max(0, ...crewMods.map((m) => m.goldBonus ?? 0))
       const extraItem = Math.max(0, ...crewMods.map((m) => m.extraItem ?? 0))
-      const items = win && Math.random() < encounter.reward.itemChance ? [rollItem(encounter.boss ? 'selten' : 'gewoehnlich')] : []
-      if (win && extraItem && Math.random() < extraItem) items.push(rollItem())
+      const items = win && Math.random() < encounter.reward.itemChance ? [rollItem(encounter.boss ? 'selten' : 'gewoehnlich', chapter)] : []
+      if (win && extraItem && Math.random() < extraItem) items.push(rollItem('gewoehnlich', chapter))
       const gold = win ? Math.round((g0 + Math.floor(Math.random() * (g1 - g0 + 1))) * (1 + goldBonus)) : 0
       onEnd({ sieg: win, xp: win ? encounter.reward.xp : 0, gold, items })
     }

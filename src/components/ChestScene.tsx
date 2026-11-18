@@ -8,6 +8,8 @@ import './ChestScene.css'
 
 interface Props {
   title: string
+  /** Aktuelles Kapitel, bestimmt den Beute-Pool */
+  chapter?: number
   onCollect: (gold: number, items: Item[]) => void
 }
 
@@ -110,9 +112,9 @@ function Coins({ n = 26 }: { n?: number }) {
   )
 }
 
-export default function ChestScene({ title, onCollect }: Props) {
+export default function ChestScene({ title, chapter = 1, onCollect }: Props) {
   const [phase, setPhase] = useState<Phase>('idle')
-  const [loot] = useState(rollChest)
+  const [loot] = useState(() => rollChest(chapter))
   const [cheer, setCheer] = useState({ kind: 'cheer' as const, n: 0 })
   const shake = useAnimationControls()
   const stage = useAnimationControls()
