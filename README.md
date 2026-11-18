@@ -25,6 +25,7 @@ npm run dev          # lokale Entwicklung
 npm run build        # Produktions-Build nach dist/
 npm run build:single # eine einzelne HTML-Datei mit allen Bildern (zum schnellen Testen)
 npm run fxcheck      # prüft alle Item-Effekte im Kampf-Simulator
+npm run sim          # Balancing-Simulator (SIM_NORMAL=1 normale Kämpfe, SIM_BOSS=1 Bosse, SIM_FARM=1 Beutezüge)
 npm run assets       # Grafiken aus dem Design-Ordner neu aufbereiten (braucht Python + Pillow)
 ```
 

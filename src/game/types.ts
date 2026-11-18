@@ -54,6 +54,8 @@ export interface Item {
   rarity: Rarity
   /** Anzeige-Text der Werte (aeltere Spielstaende) */
   stats: string
+  /** Sterne aus der Werft: je +5 % auf die Werte des Items */
+  stars?: number
 }
 
 export interface GameState {
@@ -91,6 +93,10 @@ export interface GameState {
   bossTries: { day: string; n: number }
   /** Kapitel, deren Boss besiegt ist */
   bossBeaten: number[]
+  /** Truhenfelder im aktuellen Kapitel, deren Waechter besiegt ist (verfluchte Truhe) */
+  guardWon?: number[]
+  /** Spezialhaendler: Woche (Montag) und dort gekauftes Item */
+  trader?: { week: string; bought: string }
 }
 
 export interface Save {

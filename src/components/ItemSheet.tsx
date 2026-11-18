@@ -41,7 +41,7 @@ export default function ItemSheet({ game, item, who, onClose, say }: { game: Gam
   const wornByMe = mine?.key === item.key
   const copies = copiesOf(g, item.key)
   const worn = wornUids(g)
-  const free = copies.filter((c) => !worn.has(c.uid))
+  const free = copies.filter((c) => !worn.has(c.uid)).sort((a, b) => (b.stars ?? 0) - (a.stars ?? 0))
   const others = Array.from(new Set(copies.map((c) => wearer(g, c.uid)).filter((w): w is CrewId => !!w && w !== 'schiff' && w !== who)))
   const sellable = sellableCopy(g, item.key)
   const def = itemDef(item.key)
@@ -51,7 +51,7 @@ export default function ItemSheet({ game, item, who, onClose, say }: { game: Gam
   return (
     <Sheet onClose={onClose} label={item.name}>
       <div className="itemsheet__head">
-        <ItemIcon itemKey={item.key} slot={item.slot} rarity={item.rarity} size={96} />
+        <ItemIcon itemKey={item.key} slot={item.slot} rarity={item.rarity} size={96} stars={item.stars} />
         <div style={{ minWidth: 0 }}>
           <span className="rarity-tag" style={{ background: c.tagBg, color: c.tagFg }}>
             {RARITY_LABEL[item.rarity]}

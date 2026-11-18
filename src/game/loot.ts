@@ -1,5 +1,6 @@
 import type { Item, Rarity, Slot } from './types'
-import { CATALOG, makeItem, type ItemDef } from './items'
+import { CATALOG, makeItem, seededRoll, type ItemDef } from './items'
+import { chapterOf } from './map'
 
 export const RARITY_LABEL: Record<Rarity, string> = {
   gewoehnlich: 'Gewöhnlich',
@@ -28,6 +29,8 @@ function rollRarity(): Rarity {
   return 'gewoehnlich'
 }
 
+const RARITY_ORDER: Rarity[] = ['gewoehnlich', 'selten', 'episch', 'legendaer']
+
 /**
  * Beute-Pool nach Kapitel: Items aus dem aktuellen und frueheren Kapiteln,
  * die des aktuellen Kapitels doppelt so wahrscheinlich. Fehlt die Seltenheit, gilt die naechstniedrigere.
@@ -50,17 +53,64 @@ export interface ChestLoot {
   items: Item[]
 }
 
-export function rollChest(chapter = 1): ChestLoot {
+export type ChestKind = 'holz' | 'silber' | 'gold' | 'verflucht'
+
+/** Chance je Truhenfeld, verflucht zu sein (hoechstens eine pro Kapitel) */
+export const CURSE_CHANCE = 0.08
+
+/** Welches Truhenfeld im Kapitel verflucht ist (fest je Profil und Kapitel), oder null */
+export function cursedField(profile: string, chapter: number): number | null {
+  const fields = chapterOf(chapter).fields
+  for (let i = 0; i < fields.length; i++) {
+    if (fields[i].kind === 'truhe' && seededRoll(`${profile}|fluch|${chapter}|${i}`) < CURSE_CHANCE) return i
+  }
+  return null
+}
+
+/** Art der Truhe auf einem Feld */
+export function chestAt(profile: string, chapter: number, field: number): ChestKind {
+  if (cursedField(profile, chapter) === field) return 'verflucht'
+  return chapterOf(chapter).fields[field]?.chest ?? 'holz'
+}
+
+export const CHEST_LABEL: Record<ChestKind, string> = { holz: 'Holztruhe', silber: 'Silbertruhe', gold: 'Goldtruhe', verflucht: 'Verfluchte Truhe' }
+
+/** Truhenarten: Gold, Anzahl Items und Chancen je Item (gewoehnlich, selten, episch, legendaer) */
+export const CHESTS: Record<Exclude<ChestKind, 'verflucht'>, { gold: [number, number]; items: number; odds: [number, number, number, number] }> = {
+  holz: { gold: [20, 35], items: 1, odds: [0.8, 0.19, 0.01, 0] },
+  silber: { gold: [40, 60], items: 2, odds: [0.56, 0.36, 0.07, 0.01] },
+  gold: { gold: [80, 120], items: 2, odds: [0, 0.78, 0.19, 0.03] },
+}
+
+function rollOdds(odds: [number, number, number, number]): Rarity {
+  let r = Math.random()
+  for (let i = 0; i < 4; i++) if ((r -= odds[i]) < 0) return RARITY_ORDER[i]
+  return 'gewoehnlich'
+}
+
+const between = ([a, b]: [number, number]) => a + Math.floor(Math.random() * (b - a + 1))
+
+/**
+ * Truhe oeffnen. goldBonus: Goldene-Moewe-Set (+25 % Gold aus Truhen).
+ * Verflucht: 100 bis 150 Gold, 2 Items, eines mindestens episch mit 20 % Chance auf legendaer.
+ */
+export function rollChest(kind: ChestKind = 'holz', chapter = 1, goldBonus = 0): ChestLoot {
   const items: Item[] = []
-  for (let i = 0; i < 2; i++) {
-    items.push(makeItem(pickDef(rollRarity(), chapter, items.map((x) => x.key))))
+  const add = (r: Rarity) => items.push(makeItem(pickDef(r, chapter, items.map((x) => x.key))))
+  let gold: number
+  if (kind === 'verflucht') {
+    gold = between([100, 150])
+    add(Math.random() < 0.2 ? 'legendaer' : 'episch')
+    add(rollOdds(CHESTS.gold.odds))
+  } else {
+    const c = CHESTS[kind]
+    gold = between(c.gold)
+    for (let i = 0; i < c.items; i++) add(rollOdds(c.odds))
   }
   const order: Rarity[] = ['gewoehnlich', 'selten', 'episch', 'legendaer']
   items.sort((a, b) => order.indexOf(a.rarity) - order.indexOf(b.rarity))
-  return { gold: 25 + Math.floor(Math.random() * 16), items }
+  return { gold: Math.round(gold * (1 + goldBonus)), items }
 }
-
-const RARITY_ORDER: Rarity[] = ['gewoehnlich', 'selten', 'episch', 'legendaer']
 
 /** Ein einzelnes Item (Kampfbeute, Story). min hebt die Seltenheit an, z. B. beim Boss. */
 export function rollItem(min: Rarity = 'gewoehnlich', chapter = 1): Item {

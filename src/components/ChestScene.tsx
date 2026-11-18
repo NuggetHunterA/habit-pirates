@@ -1,94 +1,37 @@
 import { AnimatePresence, motion, useAnimationControls } from 'motion/react'
 import { useState } from 'react'
-import { rollChest, RARITY_LABEL, SLOT_LABEL } from '../game/loot'
+import { CHEST_LABEL, rollChest, RARITY_LABEL, SLOT_LABEL, type ChestKind } from '../game/loot'
+import { sellPrice } from '../game/items'
 import type { Item } from '../game/types'
 import ItemIcon, { RARITY_COLOR } from './ItemIcon'
+import ItemExtras from './ItemExtras'
+import holz from '../assets/truhen/truhe_holz.webp'
+import silber from '../assets/truhen/truhe_silber.webp'
+import gold from '../assets/truhen/truhe_gold.webp'
+import verflucht from '../assets/truhen/truhe_verflucht.webp'
 import Jonte from './Jonte'
 import './ChestScene.css'
 
+const CHEST_ART: Record<ChestKind, string> = { holz, silber, gold, verflucht }
+
 interface Props {
   title: string
+  kind?: ChestKind
   /** Aktuelles Kapitel, bestimmt den Beute-Pool */
   chapter?: number
+  /** Mehr Gold aus Truhen (Goldene-Moewe-Set) */
+  goldBonus?: number
+  /** Schon gefundene Items, um Neues und Duplikate zu zeigen */
+  found?: string[]
+  /** Verfluchte Truhe: Waechter schon besiegt */
+  guardWon?: boolean
+  /** Verfluchte Truhe: Waechter-Kampf starten oder liegen lassen */
+  onGuardian?: () => void
+  onLeave?: () => void
   onCollect: (gold: number, items: Item[]) => void
 }
 
 type Phase = 'idle' | 'shake' | 'open'
-
-function Chest({ open }: { open: boolean }) {
-  return (
-    <svg viewBox="0 0 240 200" width="240" height="200" style={{ overflow: 'visible' }} aria-hidden="true">
-      <defs>
-        <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#A9653A" />
-          <stop offset="1" stopColor="#6B3A1A" />
-        </linearGradient>
-        <linearGradient id="woodLid" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#C27A45" />
-          <stop offset="1" stopColor="#7A4220" />
-        </linearGradient>
-        <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#FFE9A8" />
-          <stop offset="0.5" stopColor="#E2A73A" />
-          <stop offset="1" stopColor="#9C6A1C" />
-        </linearGradient>
-        <radialGradient id="inner" cx="0.5" cy="1" r="0.9">
-          <stop offset="0" stopColor="#FFF6C8" />
-          <stop offset="0.5" stopColor="#FFD978" />
-          <stop offset="1" stopColor="#B36B1E" />
-        </radialGradient>
-      </defs>
-      {/* Schatten */}
-      <ellipse cx="120" cy="188" rx="100" ry="12" fill="rgba(0,0,0,0.35)" />
-      {/* Korpus */}
-      <rect x="24" y="92" width="192" height="90" rx="10" fill="url(#wood)" stroke="#3B2414" strokeWidth="5" />
-      {[52, 86, 120, 154, 188].map((x) => (
-        <path key={x} d={`M${x} 98v78`} stroke="#5A2E12" strokeWidth="2" opacity="0.45" />
-      ))}
-      <rect x="24" y="118" width="192" height="12" fill="url(#brass)" stroke="#3B2414" strokeWidth="3" />
-      <rect x="40" y="92" width="16" height="90" fill="url(#brass)" stroke="#3B2414" strokeWidth="3" />
-      <rect x="184" y="92" width="16" height="90" fill="url(#brass)" stroke="#3B2414" strokeWidth="3" />
-      {/* Schloss */}
-      <g>
-        <rect x="104" y="108" width="32" height="38" rx="7" fill="url(#brass)" stroke="#3B2414" strokeWidth="4" />
-        <circle cx="120" cy="123" r="4.5" fill="#3B2414" />
-        <path d="M120 126v9" stroke="#3B2414" strokeWidth="4" strokeLinecap="round" />
-      </g>
-      {/* Offener Deckel: Innenseite steht hinter dem Rand */}
-      <motion.g
-        initial={false}
-        animate={open ? { scaleY: 1, opacity: 1 } : { scaleY: 0, opacity: 0 }}
-        transition={open ? { type: 'spring', stiffness: 320, damping: 12, delay: 0.08 } : { duration: 0.1 }}
-        style={{ originX: 0.5, originY: 1 }}
-      >
-        <path d="M30 94 L44 22 Q120 6 196 22 L210 94 Z" fill="#4A2512" stroke="#3B2414" strokeWidth="5" strokeLinejoin="round" />
-        <path d="M44 86 L55 32 Q120 20 185 32 L196 86 Z" fill="#6B3A1A" />
-        <path d="M30 94 L44 22 Q120 6 196 22 L210 94" fill="none" stroke="url(#brass)" strokeWidth="7" strokeLinejoin="round" />
-      </motion.g>
-      {/* Schatz im Inneren */}
-      <motion.g initial={false} animate={{ opacity: open ? 1 : 0, y: open ? 0 : 10 }} transition={{ duration: 0.3, delay: open ? 0.1 : 0 }}>
-        <ellipse cx="120" cy="96" rx="94" ry="16" fill="url(#inner)" />
-        {[[70, 90], [92, 84], [114, 82], [136, 85], [158, 83], [178, 90], [104, 92], [148, 93], [124, 88]].map(([x, y], i) => (
-          <ellipse key={i} cx={x} cy={y} rx="9" ry="5" fill="#FFD978" stroke="#9C6A1C" strokeWidth="1.5" />
-        ))}
-        <path d="M150 80 l6 -14 l6 14 z" fill="#4DABF7" stroke="#1C7ED6" strokeWidth="1.5" />
-        <circle cx="88" cy="80" r="6" fill="#E64980" stroke="#A61E4D" strokeWidth="1.5" />
-      </motion.g>
-      {/* Geschlossener Deckel */}
-      <motion.g
-        initial={false}
-        animate={open ? { scaleY: 0, y: -8 } : { scaleY: 1, y: 0 }}
-        transition={{ duration: open ? 0.12 : 0.2, ease: 'easeIn' }}
-        style={{ originX: 0.5, originY: 1 }}
-      >
-        <path d="M20 96 C20 40 220 40 220 96 Z" fill="url(#woodLid)" stroke="#3B2414" strokeWidth="5" strokeLinejoin="round" />
-        <path d="M40 94 C40 58 56 50 56 50 L56 94Z M184 50 C184 50 200 58 200 94 L184 94Z" fill="url(#brass)" stroke="#3B2414" strokeWidth="3" />
-        <rect x="18" y="88" width="204" height="12" rx="4" fill="url(#brass)" stroke="#3B2414" strokeWidth="3.5" />
-        <path d="M70 62 C90 52 150 52 170 62" stroke="#FFF1C8" strokeWidth="4" strokeLinecap="round" opacity="0.5" fill="none" />
-      </motion.g>
-    </svg>
-  )
-}
 
 function Coins({ n = 26 }: { n?: number }) {
   const [coins] = useState(() =>
@@ -112,9 +55,10 @@ function Coins({ n = 26 }: { n?: number }) {
   )
 }
 
-export default function ChestScene({ title, chapter = 1, onCollect }: Props) {
+export default function ChestScene({ title, kind = 'holz', chapter = 1, goldBonus = 0, found = [], guardWon = false, onGuardian, onLeave, onCollect }: Props) {
   const [phase, setPhase] = useState<Phase>('idle')
-  const [loot] = useState(() => rollChest(chapter))
+  const [loot] = useState(() => rollChest(kind, chapter, goldBonus))
+  const [known] = useState(() => new Set(found))
   const [cheer, setCheer] = useState({ kind: 'cheer' as const, n: 0 })
   const shake = useAnimationControls()
   const stage = useAnimationControls()
@@ -142,6 +86,8 @@ export default function ChestScene({ title, chapter = 1, onCollect }: Props) {
 
   const isOpen = phase === 'open'
 
+  if (kind === 'verflucht' && !guardWon) return <Cursed title={title} onFight={onGuardian} onLeave={onLeave} />
+
   return (
     <motion.div className="chest" animate={stage}>
       <motion.div className="chest__rays" initial={false} animate={{ opacity: isOpen ? 1 : 0, scale: isOpen ? 1 : 0.4 }} transition={{ duration: 0.8 }} />
@@ -149,7 +95,7 @@ export default function ChestScene({ title, chapter = 1, onCollect }: Props) {
 
       <div className="chest__content">
         <div className="kicker" style={{ color: 'var(--gold-text)' }}>
-          Holztruhe · {title}
+          {CHEST_LABEL[kind]} · {title}
         </div>
         <motion.div className="display chest__title" key={isOpen ? 'o' : 'c'} initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
           {isOpen ? 'Beute!' : 'Eine Truhe!'}
@@ -167,7 +113,15 @@ export default function ChestScene({ title, chapter = 1, onCollect }: Props) {
             style={{ originY: 0.95 }}
           >
             <motion.div animate={phase === 'idle' ? { rotate: [0, -2, 2, 0], y: [0, -3, 0] } : {}} transition={{ repeat: Infinity, duration: 1.8, repeatDelay: 0.8 }}>
-              <Chest open={isOpen} />
+              <motion.img
+                src={CHEST_ART[kind]}
+                alt=""
+                className="chest__img"
+                draggable={false}
+                initial={false}
+                animate={isOpen ? { scale: [1, 1.18, 1.06], y: [0, -24, 0] } : { scale: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              />
             </motion.div>
           </motion.div>
           {isOpen && <Coins />}
@@ -207,14 +161,22 @@ export default function ChestScene({ title, chapter = 1, onCollect }: Props) {
                 >
                   <ItemIcon itemKey={it.key} slot={it.slot} rarity={it.rarity} size={60} />
                   <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 11, fontWeight: 900, padding: '2px 7px', borderRadius: 8, background: RARITY_COLOR[it.rarity].tagBg, color: RARITY_COLOR[it.rarity].tagFg }}>
+                        {RARITY_LABEL[it.rarity]}
+                      </span>
+                      {known.has(it.key) ? (
+                        <span className="chest__tag chest__tag--dup">Duplikat</span>
+                      ) : (
+                        <span className="chest__tag chest__tag--new">Neu</span>
+                      )}
+                    </div>
                     <div style={{ fontWeight: 900, fontSize: 16 }}>{it.name}</div>
                     <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
-                      {SLOT_LABEL[it.slot]} · {it.stats}
+                      {known.has(it.key) ? `Für einen Stern in der Werft oder für ${sellPrice(it.rarity)} Gold verkaufen` : `${SLOT_LABEL[it.slot]} · ${it.stats}`}
                     </div>
+                    {!known.has(it.key) && <ItemExtras itemKey={it.key} />}
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 900, padding: '3px 8px', borderRadius: 8, background: RARITY_COLOR[it.rarity].tagBg, color: RARITY_COLOR[it.rarity].tagFg }}>
-                    {RARITY_LABEL[it.rarity]}
-                  </span>
                 </motion.div>
               ) : null,
             )}
@@ -228,5 +190,45 @@ export default function ChestScene({ title, chapter = 1, onCollect }: Props) {
       </div>
 
     </motion.div>
+  )
+}
+
+/** Verfluchte Truhe: erst der Waechter, sonst versinkt sie */
+function Cursed({ title, onFight, onLeave }: { title: string; onFight?: () => void; onLeave?: () => void }) {
+  return (
+    <div className="chest chest--cursed">
+      <div className="chest__content">
+        <div className="kicker" style={{ color: '#d0bfff' }}>
+          Verfluchte Truhe · {title}
+        </div>
+        <div className="display chest__title">Eine verfluchte Truhe</div>
+        <motion.img
+          src={CHEST_ART.verflucht}
+          alt=""
+          className="chest__img"
+          style={{ marginTop: 18 }}
+          draggable={false}
+          animate={{ rotate: [0, -2, 2, 0], y: [0, -3, 0] }}
+          transition={{ repeat: Infinity, duration: 1.8, repeatDelay: 0.8 }}
+        />
+        <div className="chest__curse card">
+          <div style={{ fontWeight: 900, fontSize: 17 }}>Ein Wächter bewacht die Truhe</div>
+          <p>
+            Besiegst du ihn, gehört dir die Beute: <b>mindestens ein episches Item</b>, mit etwas Glück ein legendäres, dazu viel Gold.
+          </p>
+          <p>
+            <b>Verlierst du, versinkt die Truhe.</b> Ein zweiter Versuch ist nicht möglich.
+          </p>
+          <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+            <button type="button" className="btn-wood" style={{ flex: 1 }} onClick={onLeave}>
+              Liegen lassen
+            </button>
+            <button type="button" className="btn-gold" style={{ flex: 1 }} onClick={onFight}>
+              Kämpfen
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

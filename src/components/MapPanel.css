@@ -143,3 +143,63 @@
   padding: 0 14px;
   font-size: 16px;
 }
+
+.farm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.farm__boss {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+}
+.farm__portrait {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  object-fit: cover;
+  flex: none;
+}
+.farm__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 4px;
+}
+.farm__tier {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: 3px solid #3b2414;
+  border-radius: 16px;
+  padding: 10px 14px;
+  color: #3b2414;
+  background: #d8f5e3;
+  box-shadow: 0 4px 0 #3b2414;
+  cursor: pointer;
+}
+.farm__tier--mittel {
+  background: #d6ecfb;
+}
+.farm__tier--schwer {
+  background: #f0ddfb;
+}
+.farm__tier--off {
+  filter: grayscale(0.8);
+  opacity: 0.7;
+}
+.farm__tier:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #3b2414;
+}
+.farm__cost {
+  font-weight: 900;
+  font-size: 16px;
+  background: #fff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  flex: none;
+}

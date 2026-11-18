@@ -3,7 +3,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ART } from './assets'
 import { useGame } from './game/store'
 import { chapterOf } from './game/map'
-import { ENCOUNTERS, crewName, type CrewId, type CrewSetup } from './game/foes'
+import { ENCOUNTERS, crewName, farmEncounter, guardianEncounter, type CrewId, type CrewSetup } from './game/foes'
+import { chestAt } from './game/loot'
+import { fighters } from './game/crewinfo'
 import { STORIES } from './game/story'
 import { crewStats, levelFor } from './game/progress'
 import { gearBonus } from './game/equipment'
@@ -92,8 +94,36 @@ export default function App() {
     return crewStats(level, g.crew, g.ship)
   }
 
+  /** Kampf zur Anfrage: Beutezug-Stufe, Truhenwaechter oder fester Kampf */
+  const encounterFor = (req: FightRequest) =>
+    req.guard ? guardianEncounter(chapter.n) : req.tier ? farmEncounter(req.enc, req.tier) : ENCOUNTERS[req.enc]
+
+  /** Mehr Gold aus Truhen (Goldene-Moewe-Set) */
+  const chestGoldBonus = () => {
+    const ex = crewExtras(save!, fighters(save!))
+    return Math.max(0, ...Object.values(ex).map((e) => e?.mods.goldBonus ?? 0))
+  }
+
   const endFight = (req: FightRequest, r: { sieg: boolean; xp: number; gold: number; items: Item[] } | null) => {
     setScene(null)
+    if (req.guard && r) {
+      if (r.sieg) {
+        game.winFight({ field: null, boss: false, farm: false, xp: r.xp, gold: 0, items: [] })
+        game.guardWin(req.field!)
+        setRight('truhe')
+      } else {
+        game.sinkChest(req.field!)
+        say('Der Wächter war zu stark. Die Truhe ist versunken.')
+      }
+      return
+    }
+    // Beutezug verloren: der Wind ist weg, es gibt die halbe Erfahrung
+    if (req.tier && r && !r.sieg) {
+      const xp = Math.round(encounterFor(req).reward.xp / 2)
+      game.gainXp(xp)
+      say(`Verloren. Die Crew lernt trotzdem dazu: +${xp} Erfahrung.`)
+      return
+    }
     if (!r?.sieg) return
     game.winFight({ field: req.field, boss: req.boss, farm: req.farm, xp: r.xp, gold: r.gold, items: r.items })
     if (req.boss) window.setTimeout(() => setScene({ k: 'story', id: chapter.outro }), 250)
@@ -175,14 +205,20 @@ export default function App() {
               {rightTab === 'karte' && scene?.k === 'fight' ? (
                 <FightScene
                   key={scene.n}
-                  encounter={ENCOUNTERS[scene.req.enc]}
+                  encounter={encounterFor(scene.req)}
                   crew={crew}
                   level={level}
                   bonus={fightBonus()}
                   extras={(ids) => crewExtras(save!, ids)}
                   initialSetup={save!.game.setup as CrewSetup | undefined}
                   onSetup={(s) => game.saveSetup(s)}
-                  canStart={scene.req.boss ? () => (game.bossTry() ? null : 'Heute sind keine Boss-Versuche mehr übrig. Morgen geht es weiter!') : undefined}
+                  canStart={
+                    scene.req.boss
+                      ? () => (game.bossTry() ? null : 'Heute sind keine Boss-Versuche mehr übrig. Morgen geht es weiter!')
+                      : scene.req.tier
+                        ? () => (game.startFarm() ? null : `Ein Beutezug braucht ${RULES.windPerField} Wind. Hake Habits ab!`)
+                        : undefined
+                  }
                   xp={save!.game.xp}
                   cap={chapter.cap}
                   chapter={chapter.n}
@@ -196,9 +232,22 @@ export default function App() {
                 <Shop game={game} say={say} onGear={() => setTab('ausruestung')} />
               ) : rightShown === 'truhe' ? (
                 <ChestScene
-                  key={field}
+                  key={`${field}-${(save!.game.guardWon ?? []).includes(field)}`}
                   title={here.name}
+                  kind={chestAt(save!.profile, chapter.n, field)}
                   chapter={chapter.n}
+                  goldBonus={chestGoldBonus()}
+                  found={save!.game.found}
+                  guardWon={(save!.game.guardWon ?? []).includes(field)}
+                  onGuardian={() => {
+                    setRight('karte')
+                    setScene({ k: 'fight', req: { enc: 'waechter', field, boss: false, farm: false, guard: true }, n: Date.now() })
+                  }}
+                  onLeave={() => {
+                    game.sinkChest(field)
+                    setRight('karte')
+                    say('Ihr lasst die Truhe liegen. Sie versinkt langsam im Meer.')
+                  }}
                   onCollect={(gold, items) => {
                     game.collectChest(field, gold, items)
                     setRight('karte')
