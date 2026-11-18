@@ -4,28 +4,12 @@ import silhouette from '../assets/crew/silhouette.webp'
 import silNavigatorin from '../assets/crew/silhouette_navigatorin.webp'
 import silSmutje from '../assets/crew/silhouette_smutje.webp'
 import silAusguck from '../assets/crew/silhouette_ausguck.webp'
-import krabbeRig from '../assets/krabbe/rig.json'
-import { JONTE_PARTS, JONTE_RIG } from '../assets'
+import jonteGanz from '../assets/jonte/jonte_ganz.webp'
 import type { Look } from '../game/combat'
-
-export interface RigPart {
-  img: string
-  x: number
-  y: number
-  px: number
-  py: number
-  z: number
-  parent?: string
-  /** Ruhe-Drehung (Bogenmass) und Ruhe-Skalierung */
-  r?: number
-  s?: number
-}
-export type Rig = Record<string, RigPart>
 
 const glob = (g: Record<string, string>) =>
   Object.fromEntries(Object.entries(g).map(([k, v]) => [k.split('/').pop()!.replace('.webp', ''), v])) as Record<string, string>
 
-const KRABBE_PARTS = glob(import.meta.glob('../assets/krabbe/*.webp', { eager: true, import: 'default' }) as Record<string, string>)
 const FIG = glob(import.meta.glob('../assets/figuren/*.webp', { eager: true, import: 'default' }) as Record<string, string>)
 
 /**
@@ -38,12 +22,15 @@ export const isSpoilerFree = () => spoilerFree
 
 const SILHOUETTES: Partial<Record<Look, string>> = { kanonier: silhouette, navigatorin: silNavigatorin, smutje: silSmutje, ausguck: silAusguck }
 
-/** Figuren als ganzes Bild (mit Code-Animation). Jonte und die Krabben laufen als Einzelteil-Rig. */
-const SPRITE_LOOKS: Look[] = ['kanonier', 'navigatorin', 'smutje', 'ausguck', 'moewenpirat', 'nebelqualle', 'geisterpirat', 'irrlicht', 'schalbart', 'grauhand']
-
-export function spriteFor(look: Look): string | undefined {
-  if (spoilerFree && SILHOUETTES[look]) return SILHOUETTES[look]
-  return SPRITE_LOOKS.includes(look) ? FIG[look] : undefined
+/**
+ * Ganzes Bild einer Figur fuer die Kampfbuehne. Alle Figuren laufen als nahtloses Gitter (fight/mesh.ts).
+ * Im Vorschau-Modus bleibt Crew, die noch nicht an Bord ist, eine Silhouette.
+ */
+export function figureImage(look: Look): string {
+  if (spoilerFree && SILHOUETTES[look]) return SILHOUETTES[look]!
+  if (look === 'jonte') return jonteGanz
+  if (look === 'krabbenmatrose') return FIG.krabbenbandit
+  return FIG[look]
 }
 
 export function portraitFor(look: Look): string {
@@ -57,9 +44,5 @@ export const figure = (name: string) => FIG[name]
 
 export const FIGHT_ART = {
   backgrounds: { strand, nebel },
-  allSprites: [...Object.values(SILHOUETTES), ...SPRITE_LOOKS.map((l) => FIG[l])] as string[],
-  rigs: {
-    jonte: { rig: JONTE_RIG as Rig, parts: JONTE_PARTS },
-    krabbe: { rig: krabbeRig as Rig, parts: KRABBE_PARTS },
-  },
+  allFigures: [...Object.values(SILHOUETTES), jonteGanz, ...Object.entries(FIG).filter(([k]) => !k.endsWith('_portrait')).map(([, v]) => v)] as string[],
 }
