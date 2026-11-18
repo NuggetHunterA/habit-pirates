@@ -51,7 +51,7 @@ S = 0.5
 out_rig = {}
 for name, r in rig.items():
     p = Image.open(SRC / f"jonte_teile/{r['img']}.png").convert('RGBA')
-    p = p.resize((max(1, round(p.width * S)), max(1, round(p.height * S))), Image.LANCZOS)
+    # Bild in voller Aufloesung (schaerfer), Rig in halber Groesse: Jonte.tsx zeichnet mit Faktor 0,5
     webp(p, OUT / f"jonte/{r['img']}.webp", 90)
     out_rig[name] = {**r, 'x': r['x'] * S, 'y': r['y'] * S, 'px': r['px'] * S, 'py': r['py'] * S}
 (OUT / 'jonte/rig.json').write_text(json.dumps(out_rig, indent=1))

@@ -45,6 +45,66 @@ function kf(t: number, keys: Key[]) {
   return keys[keys.length - 1][1]
 }
 
+/**
+ * Gelenke weich machen: Glieder blenden am Drehpunkt sanft aus, damit sie in das Teil darunter
+ * uebergehen statt mit harter Kante darauf zu liegen. Werte in Rig-Einheiten (r0: unsichtbar bis, r1: voll ab).
+ */
+const FEATHER: Record<string, { r0: number; r1: number }> = {
+  oberarm_b: { r0: 4, r1: 22 },
+  oberarm_f: { r0: 4, r1: 22 },
+  unterarm_b: { r0: 2, r1: 14 },
+  unterarm_f: { r0: 2, r1: 12 },
+  unter_l: { r0: 3, r1: 16 },
+  unter_r: { r0: 3, r1: 16 },
+}
+/**
+ * Unverblendete Kopie eines Glieds unter dem Teil, an dem es haengt. So scheint an der weichen
+ * Kante nie der Hintergrund durch, sondern das Glied selbst.
+ */
+const BACK_Z: Record<string, number> = {
+  oberarm_b: 4.9,
+  oberarm_f: 4.95,
+  unterarm_b: 5.45,
+  unterarm_f: 5.9,
+  unter_l: 2.9,
+  unter_r: 2.9,
+}
+
+/** Torso: Hosenbund unten weich auslaufen lassen (Anteil der Bildhoehe) */
+const TORSO_FADE = { from: 0.95, to: 1.0 }
+
+function soften(name: string, img: HTMLImageElement, feather: boolean): HTMLImageElement {
+  const c = document.createElement('canvas')
+  c.width = img.naturalWidth
+  c.height = img.naturalHeight
+  const x = c.getContext('2d', { willReadFrequently: true })!
+  x.drawImage(img, 0, 0)
+  const d = x.getImageData(0, 0, c.width, c.height)
+  const a = d.data
+  const r = JONTE_RIG[name]
+  const f = feather ? FEATHER[name] : undefined
+  const W = c.width
+  for (let p = 0, i = 3; i < a.length; i += 4, p++) {
+    // Kanten haerten gegen helle Naehte
+    let al = Math.min(255, Math.max(0, (a[i] - 40) * 1.6))
+    if (f && al) {
+      const px = (p % W) / 2
+      const py = Math.floor(p / W) / 2
+      const dist = Math.hypot(px - r.px, py - r.py)
+      const t = Math.min(1, Math.max(0, (dist - f.r0) / (f.r1 - f.r0)))
+      al *= t * t * (3 - 2 * t)
+    }
+    if (name === 'torso' && al) {
+      const v = Math.floor(p / W) / c.height
+      const t = 1 - Math.min(1, Math.max(0, (v - TORSO_FADE.from) / (TORSO_FADE.to - TORSO_FADE.from)))
+      al *= t
+    }
+    a[i] = al
+  }
+  x.putImageData(d, 0, 0)
+  return c as unknown as HTMLImageElement
+}
+
 export default function Jonte({ trigger, className, label = 'Kapitän Jonte Rotrock' }: Props) {
   const ref = useRef<HTMLCanvasElement>(null)
   const actRef = useRef<{ kind: Action; t: number } | null>(null)
@@ -57,6 +117,7 @@ export default function Jonte({ trigger, className, label = 'Kapitän Jonte Rotr
     const cv = ref.current!
     const ctx = cv.getContext('2d')!
     const imgs: Record<string, HTMLImageElement> = {}
+    const raw: Record<string, HTMLImageElement> = {}
     let alive = true
     let loaded = 0
     const names = Object.keys(JONTE_RIG)
@@ -68,18 +129,12 @@ export default function Jonte({ trigger, className, label = 'Kapitän Jonte Rotr
       }
       i.src = JONTE_PARTS[JONTE_RIG[n].img]
       imgs[n] = i
-      i.decode?.().then(() => {
-        const c = document.createElement('canvas')
-        c.width = i.naturalWidth
-        c.height = i.naturalHeight
-        const x = c.getContext('2d')!
-        x.drawImage(i, 0, 0)
-        const d = x.getImageData(0, 0, c.width, c.height)
-        const a = d.data
-        for (let p = 3; p < a.length; p += 4) a[p] = Math.min(255, Math.max(0, (a[p] - 40) * 1.6))
-        x.putImageData(d, 0, 0)
-        imgs[n] = c as unknown as HTMLImageElement
-      }).catch(() => {})
+      i.decode?.()
+        .then(() => {
+          raw[n] = soften(n, i, false)
+          imgs[n] = soften(n, i, true)
+        })
+        .catch(() => {})
     }
     const P: Record<string, Pose> = {}
     for (const k of names) P[k] = { rot: 0, dx: 0, dy: 0, sx: 1, sy: 1 }
@@ -186,7 +241,9 @@ export default function Jonte({ trigger, className, label = 'Kapitän Jonte Rotr
       }
     }
 
-    const order = [...names].sort((a, b) => JONTE_RIG[a].z - JONTE_RIG[b].z)
+    const order = [...names.map((k) => ({ k, z: JONTE_RIG[k].z, back: false })), ...Object.entries(BACK_Z).map(([k, z]) => ({ k, z, back: true }))].sort(
+      (a, b) => a.z - b.z,
+    )
     const draw = () => {
       ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.clearRect(0, 0, cv.width, cv.height)
@@ -201,10 +258,12 @@ export default function Jonte({ trigger, className, label = 'Kapitän Jonte Rotr
       ctx.beginPath()
       ctx.ellipse(CX + root.dx, FY + 2, 75 * sh, 10 * sh, 0, 0, Math.PI * 2)
       ctx.fill()
-      for (const k of order) {
+      for (const { k, back } of order) {
         ctx.setTransform(V.multiply(mat(k)))
         const r = JONTE_RIG[k]
-        ctx.drawImage(imgs[k], r.x, r.y)
+        const im = back ? raw[k] ?? imgs[k] : imgs[k]
+        // Bilder liegen in doppelter Aufloesung vor, das Rig in halber
+        ctx.drawImage(im, r.x, r.y, im.width / 2, im.height / 2)
       }
       ctx.setTransform(V)
       for (const p of particles) {
