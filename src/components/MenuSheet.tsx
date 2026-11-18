@@ -33,7 +33,7 @@ function SyncLine({ sync, at }: { sync: SyncState; at: number | null }) {
   )
 }
 
-export default function MenuSheet({ game, onClose, say }: { game: Game; onClose: () => void; say: (m: string) => void }) {
+export default function MenuSheet({ game, onClose, say, onIntro }: { game: Game; onClose: () => void; say: (m: string) => void; onIntro: () => void }) {
   const [confirmReset, setConfirmReset] = useState(false)
   // Testmodus: in der Vorschau immer, sonst per 7-mal Tippen auf die Versionszeile
   const [testMode, setTestMode] = useState(() => __PREVIEW__ || testModeStored())
@@ -98,6 +98,17 @@ export default function MenuSheet({ game, onClose, say }: { game: Game; onClose:
           </button>
         </>
       )}
+      <button
+        type="button"
+        className="small-btn"
+        style={{ height: 48 }}
+        onClick={() => {
+          onIntro()
+          onClose()
+        }}
+      >
+        Einführung ansehen
+      </button>
       {confirmReset ? (
         <button
           type="button"

@@ -18,6 +18,7 @@ import { EVENT_AFTER_FARM, rollEvent, type RolledEvent } from './game/events'
 import type { FightRequest } from './components/MapPanel'
 import type { Item } from './game/types'
 import ProfilePick from './components/ProfilePick'
+import Intro from './components/Intro'
 import { freshBuildNotice, useUpdateCheck } from './game/update'
 import WeekStart from './components/WeekStart'
 import Today from './components/Today'
@@ -66,6 +67,8 @@ export default function App() {
   const [sheet, setSheet] = useState<null | 'add' | 'menu' | 'streak'>(null)
   /** Habit, der gerade bearbeitet wird */
   const [editId, setEditId] = useState<string | null>(null)
+  /** Einfuehrung aus dem Menue nochmal ansehen */
+  const [introReplay, setIntroReplay] = useState(false)
   const addCb = useRef<((id: string) => void) | null>(null)
   const toastT = useRef<number>(0)
   const [scene, setScene] = useState<Scene | null>(null)
@@ -252,6 +255,17 @@ export default function App() {
         </div>
       ) : !game.save ? (
         <ProfilePick onPick={game.chooseProfile} />
+      ) : game.save.introDone === false || introReplay ? (
+        <main className="main main--intro">
+          <Intro
+            replay={introReplay}
+            onDone={(habits) => {
+              if (introReplay) return setIntroReplay(false)
+              game.finishIntro(habits)
+              setTab('deck')
+            }}
+          />
+        </main>
       ) : (
         <main className="main">
           {showLeft && (
@@ -377,7 +391,7 @@ export default function App() {
         </main>
       )}
 
-      {game.save && (
+      {game.save && game.save.introDone !== false && !introReplay && (
         <TabBar
           tab={wide && tab === 'deck' ? 'karte' : tab}
           wide={wide}
@@ -424,7 +438,7 @@ export default function App() {
             }}
           />
         )}
-        {sheet === 'menu' && <MenuSheet game={game} say={say} onClose={() => setSheet(null)} />}
+        {sheet === 'menu' && <MenuSheet game={game} say={say} onClose={() => setSheet(null)} onIntro={() => setIntroReplay(true)} />}
         {sheet === 'streak' && <StreakSheet game={game} onClose={() => setSheet(null)} />}
       </AnimatePresence>
     </div>
