@@ -89,7 +89,7 @@ export default function App() {
             </div>
             <div className="pill" aria-label={`${game.save.game.gold} Gold`}>
               <span className="coin" />
-              <motion.span key={game.save.game.gold} initial={{ scale: 1.5, color: '#FFFFFF' }} animate={{ scale: 1, color: '#F4D58D' }}>
+              <motion.span key={game.save.game.gold} initial={{ scale: 1.5 }} animate={{ scale: 1 }}>
                 {game.save.game.gold}
               </motion.span>
             </div>

@@ -638,3 +638,15 @@ input:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+.minimap-label {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: rgba(42, 25, 13, 0.88);
+  color: var(--gold-text);
+  font-size: 12px;
+  font-weight: 800;
+}
