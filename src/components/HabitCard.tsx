@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Glass, Habit } from '../game/types'
 import { RULES } from '../game/rules'
 
@@ -11,6 +11,12 @@ interface Props {
   onToggle: () => void
   onAddGlass: (g: Glass) => void
   onPopGlass: () => void
+  /** Langes Druecken: Habit bearbeiten */
+  onEdit?: () => void
+  /** Rhythmus-Text, wenn nicht taeglich (z. B. "alle 2 Tage") */
+  rhythm?: string
+  /** Heute frei: Hinweis, wann er wieder faellig ist */
+  freeText?: string
 }
 
 function Check() {
@@ -75,8 +81,22 @@ function GlassIcon({ kind, index, filled }: { kind?: Glass; index: number; fille
   )
 }
 
-export default function HabitCard({ habit, done, focus, glasses, onToggle, onAddGlass, onPopGlass }: Props) {
+export default function HabitCard({ habit, done, focus, glasses, onToggle, onAddGlass, onPopGlass, onEdit, rhythm, freeText }: Props) {
   const [burst, setBurst] = useState(0)
+  // Langes Druecken (0,5 s) oeffnet das Bearbeiten-Blatt, der folgende Tipp zaehlt dann nicht
+  const pressT = useRef(0)
+  const longDone = useRef(false)
+  const startPress = (e: React.PointerEvent) => {
+    if (!onEdit || e.button > 0) return
+    longDone.current = false
+    clearTimeout(pressT.current)
+    pressT.current = window.setTimeout(() => {
+      longDone.current = true
+      navigator.vibrate?.(15)
+      onEdit()
+    }, 500)
+  }
+  const endPress = () => clearTimeout(pressT.current)
   const isDrink = habit.kind === 'drink'
   const isLassen = habit.kind === 'lassen'
   const water = glasses.filter((g) => g === 'w').length
@@ -86,7 +106,7 @@ export default function HabitCard({ habit, done, focus, glasses, onToggle, onAdd
     onToggle()
   }
 
-  const sub = isDrink
+  const base = isDrink
     ? `${Math.min(glasses.length, RULES.drinkGlasses)} von ${RULES.drinkGlasses} Gläsern · ${water} Wasser (mind. ${RULES.drinkMinWater})`
     : isLassen
       ? 'Lassen · abends bestätigen'
@@ -95,9 +115,25 @@ export default function HabitCard({ habit, done, focus, glasses, onToggle, onAdd
         : done
           ? 'Erledigt'
           : 'Abhaken'
+  const sub = freeText ? `${base} · ${freeText}` : rhythm && !isDrink ? `${base} · ${rhythm}` : base
 
   return (
-    <motion.div layout className={`card habit ${done ? 'habit--done' : ''} ${focus ? 'habit--focus' : ''}`}>
+    <motion.div
+      layout
+      className={`card habit ${done ? 'habit--done' : ''} ${focus ? 'habit--focus' : ''} ${freeText ? 'habit--free' : ''}`}
+      onPointerDown={startPress}
+      onPointerUp={endPress}
+      onPointerLeave={endPress}
+      onPointerCancel={endPress}
+      onContextMenu={(e) => onEdit && e.preventDefault()}
+      onClickCapture={(e) => {
+        if (longDone.current) {
+          longDone.current = false
+          e.stopPropagation()
+          e.preventDefault()
+        }
+      }}
+    >
       <div className="habit__row">
         {isLassen || isDrink ? (
           <span className={`coin-btn ${done ? 'coin-btn--done' : ''}`} style={{ cursor: 'default' }} aria-hidden="true">

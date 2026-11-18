@@ -23,7 +23,7 @@ import WeekStart from './components/WeekStart'
 import Today from './components/Today'
 import MapPanel from './components/MapPanel'
 import ChestScene from './components/ChestScene'
-import AddHabitSheet from './components/AddHabitSheet'
+import HabitSheet from './components/HabitSheet'
 import MenuSheet from './components/MenuSheet'
 import StreakSheet, { FlameIcon, RingIcon } from './components/StreakSheet'
 import { streakInfo, type PendingReward } from './game/motivation'
@@ -64,6 +64,8 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('deck')
   const [toast, setToast] = useState('')
   const [sheet, setSheet] = useState<null | 'add' | 'menu' | 'streak'>(null)
+  /** Habit, der gerade bearbeitet wird */
+  const [editId, setEditId] = useState<string | null>(null)
   const addCb = useRef<((id: string) => void) | null>(null)
   const toastT = useRef<number>(0)
   const [scene, setScene] = useState<Scene | null>(null)
@@ -79,7 +81,7 @@ export default function App() {
     const msg = freshBuildNotice()
     if (msg) setTimeout(() => say(msg), 600)
   }, [say])
-  useUpdateCheck(!!scene || !!sheet)
+  useUpdateCheck(!!scene || !!sheet || !!editId)
 
   const needsWeek = !!game.save && !game.plan
   const leftShown: Left = needsWeek ? 'woche' : left
@@ -93,6 +95,8 @@ export default function App() {
   const level = save ? levelFor(save.game.xp, chapter.cap) : 1
   const crew = (save?.game.crew ?? []) as CrewId[]
   const rightShown: Right = right === 'truhe' && chestAvailable ? 'truhe' : 'karte'
+
+  const editHabit = editId ? save?.habits.find((h) => h.id === editId && !h.removedAt) : undefined
 
   const openAdd = (cb?: (id: string) => void) => {
     addCb.current = cb ?? null
@@ -267,9 +271,9 @@ export default function App() {
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div key={leftShown + game.week} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} transition={{ duration: 0.18 }}>
                   {leftShown === 'woche' ? (
-                    <WeekStart game={game} say={say} onAddHabit={(cb) => openAdd(cb)} onDone={() => setLeft('tag')} />
+                    <WeekStart game={game} say={say} onAddHabit={(cb) => openAdd(cb)} onEditHabit={setEditId} onDone={() => setLeft('tag')} />
                   ) : (
-                    <Today game={game} wide={wide} onMap={goMap} onWeek={() => setLeft('woche')} onAddHabit={() => openAdd()} onReward={openReward} />
+                    <Today game={game} wide={wide} onMap={goMap} onWeek={() => setLeft('woche')} onAddHabit={() => openAdd()} onEditHabit={setEditId} onReward={openReward} />
                   )}
                 </motion.div>
               </AnimatePresence>
@@ -392,13 +396,31 @@ export default function App() {
 
       <AnimatePresence>
         {sheet === 'add' && (
-          <AddHabitSheet
+          <HabitSheet
             midWeek={!!game.plan}
+            today={game.today}
             onClose={() => setSheet(null)}
-            onAdd={(name, kind, always) => {
-              const id = game.addHabit(name, kind, always, { addToWeek: !addCb.current })
+            onSave={({ name, kind, always, rhythm }) => {
+              const id = game.addHabit(name, kind, always, { addToWeek: !addCb.current, rhythm })
               addCb.current?.(id)
               say(`${name.trim()} ist an Bord.`)
+            }}
+          />
+        )}
+        {editHabit && (
+          <HabitSheet
+            key={editHabit.id}
+            habit={editHabit}
+            midWeek={!!game.plan}
+            today={game.today}
+            onClose={() => setEditId(null)}
+            onSave={(v) => {
+              game.editHabit(editHabit.id, v)
+              say('Gespeichert.')
+            }}
+            onDelete={() => {
+              game.removeHabit(editHabit.id)
+              say(`${editHabit.name} ist von Bord.`)
             }}
           />
         )}

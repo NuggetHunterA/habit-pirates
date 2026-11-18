@@ -680,3 +680,61 @@ input:focus-visible {
   color: var(--gold-text);
   line-height: 1;
 }
+
+/* Habit-Blatt: Wochentage und Loeschen */
+.daypick {
+  display: flex;
+  gap: 4px;
+}
+.daypick button {
+  flex: 1;
+  min-height: 40px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: #eef1ff;
+  color: var(--ink-soft);
+  font-weight: 900;
+  font-size: 13px;
+  padding: 0;
+}
+.daypick button[aria-pressed='true'] {
+  background: var(--gold);
+  border-color: var(--gold-lo);
+  color: var(--ink);
+}
+.del-btn {
+  border: none;
+  background: transparent;
+  color: #c2255c;
+  font-weight: 900;
+  min-height: 44px;
+}
+.habit--free {
+  opacity: 0.78;
+}
+
+/* Heute frei (Habits mit Rhythmus) */
+.free-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 2px dashed var(--sea-line);
+  background: transparent;
+  color: var(--sea-muted);
+  font-weight: 800;
+  font-size: 15px;
+}
+
+/* Gestern nachtragen */
+.banner-catchup {
+  align-items: center;
+}
+.banner-catchup__btn {
+  min-height: 40px;
+  font-size: 15px;
+  padding: 0 14px;
+  flex: none;
+}

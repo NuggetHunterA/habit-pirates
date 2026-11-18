@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Glass, Habit, HabitKind, Item, Save, Slot, WeekPlan } from './types'
+import type { Glass, Habit, HabitKind, Item, Rhythm, Save, Slot, WeekPlan } from './types'
 import { copiesOf, migrateGear, sellableCopy, wearer, withFound, wornUids } from './equipment'
 import { dateKey, weekStartOf } from './dates'
 import { RULES, emptyLog, windAvailable, previousWeek } from './rules'
@@ -253,11 +253,12 @@ export function useGame() {
     if (!save) return { habitIds: [] as string[], focusIds: [] as string[] }
     const weeks = Object.keys(save.weeks).sort()
     const last = weeks.filter((w) => w < week).pop()
-    const always = save.habits.filter((h) => h.always).map((h) => h.id)
-    if (!last) return { habitIds: save.habits.map((h) => h.id), focusIds: [] }
+    const live = save.habits.filter((h) => !h.removedAt)
+    const always = live.filter((h) => h.always).map((h) => h.id)
+    if (!last) return { habitIds: live.map((h) => h.id), focusIds: [] }
     const prev = save.weeks[last]
     return {
-      habitIds: Array.from(new Set([...always, ...prev.habitIds])).filter((id) => save.habits.some((h) => h.id === id)),
+      habitIds: Array.from(new Set([...always, ...prev.habitIds])).filter((id) => live.some((h) => h.id === id)),
       focusIds: [],
     }
   }, [save, week])
@@ -273,8 +274,9 @@ export function useGame() {
           return { ...s, weeks: { ...s.weeks, [week]: { weekStart: week, habitIds, focusIds, activeFrom } } }
         })
       },
-      addHabit(name: string, kind: HabitKind, always: boolean, opts: { addToWeek: boolean }) {
+      addHabit(name: string, kind: HabitKind, always: boolean, opts: { addToWeek: boolean; rhythm?: Rhythm }) {
         const h: Habit = { id: uid(), name: name.trim(), kind, always }
+        if (opts.rhythm && opts.rhythm.kind !== 'daily') h.rhythms = [{ from: today, r: opts.rhythm }]
         update((s) => {
           const next = { ...s, habits: [...s.habits, h] }
           const p = s.weeks[week]
@@ -288,26 +290,47 @@ export function useGame() {
         })
         return h.id
       },
+      /** Habit bearbeiten. Der Rhythmus gilt ab heute, fruehere Tage bleiben, wie sie waren. */
+      editHabit(id: string, patch: { name: string; kind: HabitKind; always: boolean; rhythm: Rhythm }) {
+        update((s) => ({
+          ...s,
+          habits: s.habits.map((h) => {
+            if (h.id !== id) return h
+            const old = h.rhythms ?? []
+            const cur = old.at(-1)?.r ?? { kind: 'daily' }
+            const rhythms = JSON.stringify(cur) === JSON.stringify(patch.rhythm) ? old : [...old.filter((e) => e.from < today), { from: today, r: patch.rhythm }]
+            return {
+              ...h,
+              name: patch.name.trim() || h.name,
+              kind: h.kind === 'drink' ? 'drink' : patch.kind,
+              always: patch.always,
+              ...(rhythms.length ? { rhythms } : {}),
+            }
+          }),
+        }))
+      },
+      /** Habit loeschen: ab heute weg. Fruehere Tage zaehlen weiter, damit Wind und Serien bleiben. */
       removeHabit(id: string) {
-        update((s) => ({ ...s, habits: s.habits.filter((h) => h.id !== id) }))
+        update((s) => ({ ...s, habits: s.habits.map((h) => (h.id === id ? { ...h, removedAt: today } : h)) }))
       },
-      toggleDone(id: string) {
+      /** Haken setzen oder zuruecknehmen. day: heute oder (bis Mittag) gestern */
+      toggleDone(id: string, day = today) {
         update((s) => {
-          const log = s.logs[today] ?? emptyLog()
-          return { ...s, logs: { ...s.logs, [today]: { ...log, done: { ...log.done, [id]: !log.done[id] } } } }
+          const log = s.logs[day] ?? emptyLog()
+          return { ...s, logs: { ...s.logs, [day]: { ...log, done: { ...log.done, [id]: !log.done[id] } } } }
         })
       },
-      addGlass(g: Glass) {
+      addGlass(g: Glass, day = today) {
         update((s) => {
-          const log = s.logs[today] ?? emptyLog()
+          const log = s.logs[day] ?? emptyLog()
           if (log.glasses.length >= RULES.maxGlasses) return s
-          return { ...s, logs: { ...s.logs, [today]: { ...log, glasses: [...log.glasses, g] } } }
+          return { ...s, logs: { ...s.logs, [day]: { ...log, glasses: [...log.glasses, g] } } }
         })
       },
-      popGlass() {
+      popGlass(day = today) {
         update((s) => {
-          const log = s.logs[today] ?? emptyLog()
-          return { ...s, logs: { ...s.logs, [today]: { ...log, glasses: log.glasses.slice(0, -1) } } }
+          const log = s.logs[day] ?? emptyLog()
+          return { ...s, logs: { ...s.logs, [day]: { ...log, glasses: log.glasses.slice(0, -1) } } }
         })
       },
       sail() {

@@ -1,12 +1,23 @@
 export type HabitKind = 'tap' | 'lassen' | 'drink'
 export type Glass = 'w' | 'f'
 
+/**
+ * Rhythmus eines Habits.
+ * every: wieder faellig n Tage nach dem letzten Erledigen (verpasst: bleibt faellig).
+ * days: feste Wochentage, 0 = Montag bis 6 = Sonntag.
+ */
+export type Rhythm = { kind: 'daily' } | { kind: 'every'; n: number } | { kind: 'days'; days: number[] }
+
 export interface Habit {
   id: string
   name: string
   kind: HabitKind
   /** Dauer-Habit: ist jede Woche automatisch aktiv */
   always?: boolean
+  /** Rhythmus-Verlauf: jeder Eintrag gilt ab seinem Tag. Leer = taeglich. */
+  rhythms?: { from: string; r: Rhythm }[]
+  /** Geloescht ab diesem Tag. Fruehere Tage zaehlen weiter, damit Wind und Serien bleiben. */
+  removedAt?: string
 }
 
 export interface WeekPlan {
