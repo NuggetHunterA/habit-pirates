@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ART } from '../assets'
 import { CHAPTER_1, MAP_H, MAP_W, legPath, pointAt, routeSvgPath, type Field, type FieldKind } from '../game/map'
 import './SeaMap.css'
@@ -103,26 +103,165 @@ export default function SeaMap({ field, looted, mini = false, onArrive, onSailin
   const cb = useRef({ onArrive, onSailingChange })
   cb.current = { onArrive, onSailingChange }
 
+  /** Folgt die Kamera dem Schiff? Nach Verschieben/Zoomen durch dich nicht mehr, bis "Zum Schiff" oder Segeln. */
+  const follow = useRef(true)
+  const [free, setFree] = useState(false)
+  const shipPos = useRef({ x: fields[field].x, y: fields[field].y })
+
+  const limits = () => {
+    const { w, h } = size.current
+    const min = mini ? h / (MAP_H * 0.55) : Math.max(w / MAP_W, h / MAP_H)
+    return { min, max: mini ? min : min * 2 }
+  }
+
+  const applyCam = () => {
+    const { w, h } = size.current
+    const c = cam.current
+    const { min, max } = limits()
+    c.s = Math.min(max, Math.max(min, c.s || min))
+    c.x = Math.min(0, Math.max(w - MAP_W * c.s, c.x))
+    c.y = Math.min(0, Math.max(h - MAP_H * c.s, c.y))
+    if (innerRef.current) innerRef.current.style.transform = `translate(${c.x}px, ${c.y}px) scale(${c.s})`
+  }
+
   // Kamera und Schiff setzen (ohne React-Render, fuer fluessige 60 fps)
   const place = (x: number, y: number, dx: number, immediate: boolean) => {
     const { w, h } = size.current
     if (!w || !h) return
-    const s = mini ? h / (MAP_H * 0.55) : Math.max(w / MAP_W, h / MAP_H)
-    const tx = Math.min(0, Math.max(w - MAP_W * s, w / 2 - x * s))
-    const ty = Math.min(0, Math.max(h - MAP_H * s, h * (mini ? 0.62 : 0.5) - y * s))
+    shipPos.current = { x, y }
     const c = cam.current
-    if (immediate) Object.assign(c, { x: tx, y: ty, s })
-    else {
-      c.x += (tx - c.x) * 0.12
-      c.y += (ty - c.y) * 0.12
-      c.s = s
+    if (!c.s) c.s = limits().min
+    if (follow.current) {
+      // Beim Folgen zurueck zur Standard-Ansicht (ganz herausgezoomt)
+      const s = immediate ? limits().min : c.s + (limits().min - c.s) * 0.12
+      const tx = w / 2 - x * s
+      const ty = h * (mini ? 0.62 : 0.5) - y * s
+      if (immediate) Object.assign(c, { x: tx, y: ty, s })
+      else {
+        // Bildpunkt unter dem Mittelpunkt beim Zoomen festhalten, dann nachziehen
+        c.x = w / 2 - ((w / 2 - c.x) * s) / c.s
+        c.y = h / 2 - ((h / 2 - c.y) * s) / c.s
+        c.s = s
+        c.x += (tx - c.x) * 0.12
+        c.y += (ty - c.y) * 0.12
+      }
     }
-    if (innerRef.current) innerRef.current.style.transform = `translate(${c.x}px, ${c.y}px) scale(${c.s})`
+    applyCam()
     if (shipRef.current) {
       shipRef.current.style.transform = `translate(${x - shipW / 2}px, ${y - shipW * 0.82}px)`
       if (dx !== 0) shipRef.current.dataset.dir = dx < 0 ? 'left' : 'right'
     }
   }
+
+  /** Kamera sanft zum Schiff zurueck */
+  const recenter = () => {
+    follow.current = true
+    setFree(false)
+    let k = 0
+    const tick = () => {
+      if (!follow.current) return
+      place(shipPos.current.x, shipPos.current.y, 0, false)
+      if (++k < 45) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }
+
+  // Verschieben (ein Finger / Maus), Zoomen (zwei Finger / Mausrad), mit Schwung beim Loslassen
+  useEffect(() => {
+    if (mini) return
+    const box = boxRef.current!
+    const pts = new Map<number, { x: number; y: number }>()
+    let last: { x: number; y: number; d: number } | null = null
+    let vel = { x: 0, y: 0, t: 0 }
+    let fling = 0
+    const goFree = () => {
+      if (follow.current) {
+        follow.current = false
+        setFree(true)
+      }
+    }
+    const zoomAt = (px: number, py: number, factor: number) => {
+      const c = cam.current
+      const r = box.getBoundingClientRect()
+      const lx = px - r.left
+      const ly = py - r.top
+      const { min, max } = limits()
+      const ns = Math.min(max, Math.max(min, c.s * factor))
+      c.x = lx - ((lx - c.x) * ns) / c.s
+      c.y = ly - ((ly - c.y) * ns) / c.s
+      c.s = ns
+    }
+    const summary = () => {
+      const a = [...pts.values()]
+      const x = a.reduce((s, p) => s + p.x, 0) / a.length
+      const y = a.reduce((s, p) => s + p.y, 0) / a.length
+      const d = a.length > 1 ? Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) : 0
+      return { x, y, d }
+    }
+    const down = (e: PointerEvent) => {
+      if ((e.target as HTMLElement).closest('button')) return
+      cancelAnimationFrame(fling)
+      box.setPointerCapture(e.pointerId)
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      last = summary()
+      vel = { x: 0, y: 0, t: performance.now() }
+    }
+    const move = (e: PointerEvent) => {
+      if (!pts.has(e.pointerId) || !last) return
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      const now = summary()
+      const dx = now.x - last.x
+      const dy = now.y - last.y
+      if (follow.current && Math.hypot(dx, dy) < 2 && !(now.d && last.d)) return
+      goFree()
+      const c = cam.current
+      if (now.d && last.d) zoomAt(now.x, now.y, now.d / last.d)
+      c.x += dx
+      c.y += dy
+      const t = performance.now()
+      const dt = Math.max(1, t - vel.t)
+      vel = { x: 0.8 * (dx / dt) + 0.2 * vel.x, y: 0.8 * (dy / dt) + 0.2 * vel.y, t }
+      applyCam()
+      last = now
+    }
+    const up = (e: PointerEvent) => {
+      pts.delete(e.pointerId)
+      last = pts.size ? summary() : null
+      if (pts.size === 0 && !follow.current && performance.now() - vel.t < 80) {
+        let vx = vel.x * 16
+        let vy = vel.y * 16
+        const glide = () => {
+          vx *= 0.92
+          vy *= 0.92
+          cam.current.x += vx
+          cam.current.y += vy
+          applyCam()
+          if (Math.hypot(vx, vy) > 0.4) fling = requestAnimationFrame(glide)
+        }
+        fling = requestAnimationFrame(glide)
+      }
+    }
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault()
+      goFree()
+      zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0015))
+      applyCam()
+    }
+    box.addEventListener('pointerdown', down)
+    box.addEventListener('pointermove', move)
+    box.addEventListener('pointerup', up)
+    box.addEventListener('pointercancel', up)
+    box.addEventListener('wheel', wheel, { passive: false })
+    return () => {
+      cancelAnimationFrame(fling)
+      box.removeEventListener('pointerdown', down)
+      box.removeEventListener('pointermove', move)
+      box.removeEventListener('pointerup', up)
+      box.removeEventListener('pointercancel', up)
+      box.removeEventListener('wheel', wheel)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mini])
 
   const travelledLength = (upTo: number, partial = 0) => {
     let d = ''
@@ -141,7 +280,10 @@ export default function SeaMap({ field, looted, mini = false, onArrive, onSailin
       const r = box.getBoundingClientRect()
       size.current = { w: r.width, h: r.height }
       const f = fields[shownField.current]
-      if (!anim.current) place(f.x, f.y, 0, true)
+      if (!anim.current) {
+        if (follow.current) place(f.x, f.y, 0, true)
+        else applyCam()
+      }
     }
     measure()
     const ro = new ResizeObserver(measure)
@@ -161,6 +303,8 @@ export default function SeaMap({ field, looted, mini = false, onArrive, onSailin
       return
     }
     anim.current = { from: shownField.current, to: field, start: performance.now() }
+    follow.current = true
+    setFree(false)
     cb.current.onSailingChange?.(true)
     boxRef.current?.classList.add('seamap--sailing')
     let raf = 0
@@ -276,6 +420,16 @@ export default function SeaMap({ field, looted, mini = false, onArrive, onSailin
           </div>
         </div>
       </div>
+      {!mini && free && (
+        <button type="button" className="seamap__recenter" onClick={recenter}>
+          <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" strokeWidth="2.4" />
+            <circle cx="10" cy="10" r="2" fill="currentColor" />
+            <path d="M10 1v3M10 16v3M1 10h3M16 10h3" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+          </svg>
+          Zum Schiff
+        </button>
+      )}
     </div>
   )
 }
