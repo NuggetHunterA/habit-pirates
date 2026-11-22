@@ -2,14 +2,23 @@
 
 Gute Gewohnheiten als Piratenreise: Jeder erledigte Habit bringt Wind in die Segel, das Schiff segelt über die Seekarte und findet Truhen. Installierbare Web-App für das Galaxy Fold (zugeklappt eine Spalte, aufgeklappt zwei Spalten).
 
-## Stand: 0.2 (Phase 1 des Release-Plans)
+## Stand: 1.0.0 (Release)
 
-- Profil wählen (Adrian oder Ulrike, ohne Passwort)
-- Wochenstart mit Kapitän Jonte: Habits der Vorwoche vorausgewählt, bis zu 2 Fokus-Habits (doppelter Wind), neue Habits anlegen
-- Heute: Habits abhaken (Goldmünze), „Lassen“-Habits abends bestätigen, Trinken mit 6 Gläsern (Wasser oder Spaßgetränk, mind. 2 Wasser)
-- Wind: 1 pro Habit, 2 pro Fokus-Habit, +2 wenn alles erledigt ist; ein Feld (und ein Beutezug) kostet 4 Wind
-- Seekarte Kapitel 1 mit 12 Feldern, animiertes Segeln
-- Truhe öffnen mit Gold und Items (gewöhnlich, selten, selten episch)
+- Profil wählen (Adrian oder Ulrike, ohne Passwort), Einführung und erste Habits
+- Wochenplanung mit Fokus-Habits, Rhythmus, Habits bearbeiten, gestern bis 12 Uhr nachtragen
+- Wind nach der Wind-Formel; ein Feld und ein Beutezug kosten 4 Wind
+- Drei Kapitel mit 20, 26 und 30 Feldern, Story-Szenen, Zufallsereignissen und Boss
+- Kampfsystem mit Mesh-Animation, rund 120 Items, Schulen, Sets, Werft, Spezialhändler
+- Serien-Truhen, Rettungsring, Rückenwind, Fokus-Truhe
+- Offline vollständig nutzbar (Service Worker lädt alle Dateien vorab)
+
+Kapiteldauer laut Reise-Simulator (5 bis 6 Habits, 80 % volle Tage): Kapitel 1 etwa 9 bis 10 Tage, Kapitel 2 etwa 12 bis 14, Kapitel 3 etwa 16 bis 19, zusammen etwa 5,5 bis 6 Wochen.
+
+## Release-Check
+
+```bash
+npm run build && npm run check:release   # Fold zu/auf, Tages- und Wochenwechsel, Zeitumstellung, Hintergrund, offline, Ladezeit
+```
 
 ## Spielstand
 

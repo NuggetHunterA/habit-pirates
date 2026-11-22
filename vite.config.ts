@@ -21,6 +21,19 @@ function versionFile(): Plugin {
   }
 }
 
+/** Schreibt precache.json: alle Dateien des Builds, die der Service Worker vorab fuer offline laedt */
+function precacheList(): Plugin {
+  return {
+    name: 'precache-list',
+    apply: 'build',
+    generateBundle(_opts, bundle) {
+      const files = Object.keys(bundle).filter((f) => !f.endsWith('.map') && f !== 'precache.json' && f !== 'version.json')
+      const pub = ['manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'favicon.png']
+      this.emitFile({ type: 'asset', fileName: 'precache.json', source: JSON.stringify([...files, ...pub]) })
+    },
+  }
+}
+
 // `npm run build:kampf` baut die Kampf-Vorschau als einzelne HTML-Datei.
 // `npm run build:single` baut eine einzelne HTML-Datei (alle Bilder eingebettet) zum schnellen Testen.
 export default defineConfig(({ mode }) => ({
@@ -32,7 +45,7 @@ export default defineConfig(({ mode }) => ({
     // Testmodus sichtbar in der Vercel-Vorschau und lokal, nicht in der Live-Version
     __PREVIEW__: JSON.stringify(process.env.VERCEL_ENV !== 'production'),
   },
-  plugins: [react(), versionFile(), ...(mode === 'single' || mode === 'kampf' ? [viteSingleFile()] : [])],
+  plugins: [react(), versionFile(), precacheList(), ...(mode === 'single' || mode === 'kampf' ? [viteSingleFile()] : [])],
   build:
     mode === 'single'
       ? { outDir: 'dist-single', assetsInlineLimit: 100_000_000 }
