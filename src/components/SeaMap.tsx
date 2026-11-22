@@ -11,6 +11,8 @@ interface Props {
   mini?: boolean
   onArrive?: (field: number) => void
   onSailingChange?: (sailing: boolean) => void
+  /** Von Overlays verdeckte Raender (px): oben Kapitel/Stufe, unten das Feld-Panel. Die Karte haelt Felder davon frei. */
+  insets?: { top: number; bottom: number }
 }
 
 const SAIL_MS = 1900
@@ -92,7 +94,7 @@ function FieldGlyph({ kind }: { kind: FieldKind }) {
   }
 }
 
-export default function SeaMap({ chapter, field, done: doneFields, mini = false, onArrive, onSailingChange }: Props) {
+export default function SeaMap({ chapter, field, done: doneFields, mini = false, onArrive, onSailingChange, insets }: Props) {
   const fields = chapter.fields
   const boxRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLDivElement>(null)
@@ -113,19 +115,28 @@ export default function SeaMap({ chapter, field, done: doneFields, mini = false,
   const [free, setFree] = useState(false)
   const shipPos = useRef({ x: fields[field].x, y: fields[field].y })
 
+  const pad = useRef({ top: 0, bottom: 0 })
+  pad.current = mini ? { top: 0, bottom: 0 } : (insets ?? { top: 0, bottom: 0 })
+
+  /** Hoehe des freien Bereichs zwischen den Overlays */
+  const freeH = () => Math.max(120, size.current.h - pad.current.top - pad.current.bottom)
+
   const limits = () => {
     const { w, h } = size.current
-    const min = mini ? h / (MAP_H * 0.55) : Math.max(w / MAP_W, h / MAP_H)
-    return { min, max: mini ? min : min * 2 }
+    // Ganz herausgezoomt passt die Karte in der Hoehe genau zwischen die Overlays
+    const min = mini ? h / (MAP_H * 0.55) : Math.max(w / MAP_W, freeH() / MAP_H)
+    return { min, max: mini ? min : min * 2.5 }
   }
 
   const applyCam = () => {
-    const { w, h } = size.current
+    const { w } = size.current
     const c = cam.current
     const { min, max } = limits()
+    const { top } = pad.current
     c.s = Math.min(max, Math.max(min, c.s || min))
     c.x = Math.min(0, Math.max(w - MAP_W * c.s, c.x))
-    c.y = Math.min(0, Math.max(h - MAP_H * c.s, c.y))
+    // Senkrecht darf die Karte bis an die Overlays heran, nicht darunter
+    c.y = Math.min(top, Math.max(top + freeH() - MAP_H * c.s, c.y))
     if (innerRef.current) innerRef.current.style.transform = `translate(${c.x}px, ${c.y}px) scale(${c.s})`
   }
 
@@ -140,7 +151,7 @@ export default function SeaMap({ chapter, field, done: doneFields, mini = false,
       // Beim Folgen zurueck zur Standard-Ansicht (ganz herausgezoomt)
       const s = immediate ? limits().min : c.s + (limits().min - c.s) * 0.12
       const tx = w / 2 - x * s
-      const ty = h * (mini ? 0.62 : 0.5) - y * s
+      const ty = mini ? h * 0.62 - y * s : pad.current.top + freeH() * 0.5 - y * s
       if (immediate) Object.assign(c, { x: tx, y: ty, s })
       else {
         // Bildpunkt unter dem Mittelpunkt beim Zoomen festhalten, dann nachziehen
@@ -296,6 +307,22 @@ export default function SeaMap({ chapter, field, done: doneFields, mini = false,
     return () => ro.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Overlays geaendert (Panel auf/zu): Ansicht neu einpassen
+  const insetKey = mini ? '' : `${insets?.top ?? 0}/${insets?.bottom ?? 0}`
+  const firstInset = useRef(true)
+  useEffect(() => {
+    if (firstInset.current) {
+      firstInset.current = false
+      const f = fields[shownField.current]
+      if (follow.current && !anim.current) place(f.x, f.y, 0, true)
+      return
+    }
+    if (anim.current) return
+    if (follow.current) recenter()
+    else applyCam()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [insetKey])
 
   // Neues Feld: Schiff segelt den Weg entlang
   useEffect(() => {
