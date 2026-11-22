@@ -82,14 +82,25 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
   /** Hoehe des Panels als CSS-Variable, damit der Kompass-Knopf der Karte immer darueber sitzt */
   const wrap = useRef<HTMLDivElement>(null)
   const card = useRef<HTMLDivElement>(null)
+  const chips = useRef<HTMLDivElement>(null)
+  /** Von Kapitel-/Stufen-Anzeige und Feld-Panel verdeckte Raender, damit die Karte Felder davon freihaelt */
+  const [insets, setInsets] = useState({ top: 0, bottom: 0 })
   useLayoutEffect(() => {
     const c = card.current
     const w = wrap.current
-    if (!c || !w) return
-    const set = () => w.style.setProperty('--map-panel-h', `${c.offsetHeight}px`)
+    const t = chips.current
+    if (!c || !w || !t) return
+    const set = () => {
+      w.style.setProperty('--map-panel-h', `${c.offsetHeight}px`)
+      const top = Math.round(t.offsetTop + t.offsetHeight + 6)
+      const bottom = Math.round(w.clientHeight - c.offsetTop + 6)
+      setInsets((p) => (p.top === top && p.bottom === bottom ? p : { top, bottom }))
+    }
     set()
     const ro = new ResizeObserver(set)
     ro.observe(c)
+    ro.observe(t)
+    ro.observe(w)
     return () => ro.disconnect()
   }, [])
 
@@ -196,9 +207,9 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
 
   return (
     <div ref={wrap} style={{ position: 'absolute', inset: 0 }}>
-      <SeaMap key={chapter.n} chapter={chapter} field={ship} done={doneFields(save)} onArrive={arrive} onSailingChange={setSailing} />
+      <SeaMap key={chapter.n} chapter={chapter} field={ship} done={doneFields(save)} onArrive={arrive} onSailingChange={setSailing} insets={insets} />
 
-      <div style={{ position: 'absolute', left: 12, right: 12, top: 12, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, pointerEvents: 'none' }}>
+      <div ref={chips} style={{ position: 'absolute', left: 12, right: 12, top: 12, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, pointerEvents: 'none' }}>
         <div className="map-chip">
           <div className="display" style={{ fontSize: 20, lineHeight: 1 }}>
             Kapitel {chapter.n} <span style={{ fontSize: 15, opacity: 0.85 }}>von {CHAPTERS.length}</span>
