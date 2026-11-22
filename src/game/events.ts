@@ -2,6 +2,7 @@ import type { CrewId } from './foes'
 import type { Item, Rarity, Save } from './types'
 import { PRICE, makeItem, seededRng } from './items'
 import { pickDef } from './loot'
+import { RULES } from './rules'
 
 /**
  * Zufallsereignisse (Phase 4): auf Sturm-Feldern und mit 25 % Chance nach einem Beutezug.
@@ -13,7 +14,7 @@ export type EventId = 'flaschenpost' | 'haendler' | 'geisterschiff' | 'seeungehe
 /** Chance auf ein Ereignis nach einem Beutezug */
 export const EVENT_AFTER_FARM = 0.25
 /** Wind von den Delfinen (ein Feld) */
-export const DOLPHIN_WIND = 3
+export const DOLPHIN_WIND = RULES.windPerField
 
 interface EventDef {
   id: EventId

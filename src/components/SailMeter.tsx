@@ -7,7 +7,7 @@ interface Props {
   label?: string
 }
 
-/** Segel, das sich mit Wind fuellt. Voll bei 3 Wind (= ein Feld). */
+/** Segel, das sich mit Wind fuellt. Voll bei RULES.windPerField Wind (= ein Feld). */
 export default function SailMeter({ wind, onSail, label = 'Segeln!' }: Props) {
   const fields = Math.floor(Math.max(0, wind) / RULES.windPerField)
   const rest = Math.max(0, wind) % RULES.windPerField

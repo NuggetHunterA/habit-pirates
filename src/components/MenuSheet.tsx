@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { Game, SyncState } from '../game/store'
 import Sheet from './Sheet'
+import { RULES } from '../game/rules'
+import { CHANGELOG } from '../game/changelog'
 
 const TEST_KEY = 'hp.testmode'
 
@@ -35,6 +37,7 @@ function SyncLine({ sync, at }: { sync: SyncState; at: number | null }) {
 
 export default function MenuSheet({ game, onClose, say, onIntro }: { game: Game; onClose: () => void; say: (m: string) => void; onIntro: () => void }) {
   const [confirmReset, setConfirmReset] = useState(false)
+  const [news, setNews] = useState(false)
   // Testmodus: in der Vorschau immer, sonst per 7-mal Tippen auf die Versionszeile
   const [testMode, setTestMode] = useState(() => __PREVIEW__ || testModeStored())
   const [taps, setTaps] = useState(0)
@@ -69,10 +72,10 @@ export default function MenuSheet({ game, onClose, say, onIntro }: { game: Game;
             style={{ height: 48 }}
             onClick={() => {
               game.testWind()
-              say('Testmodus: +3 Wind')
+              say(`Testmodus: +${RULES.windPerField} Wind`)
             }}
           >
-            Testmodus: +3 Wind
+            Testmodus: +{RULES.windPerField} Wind
           </button>
           <button
             type="button"
@@ -137,6 +140,22 @@ export default function MenuSheet({ game, onClose, say, onIntro }: { game: Game;
       >
         Profil wechseln
       </button>
+      <button type="button" className="small-btn" style={{ height: 48 }} aria-expanded={news} onClick={() => setNews((v) => !v)}>
+        Was ist neu?
+      </button>
+      {news &&
+        CHANGELOG.map((c) => (
+          <div key={c.version} style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.45, padding: '4px 6px' }}>
+            <div style={{ fontWeight: 900, marginBottom: 4 }}>
+              Version {c.version} · {c.date}
+            </div>
+            <ul style={{ margin: 0, paddingLeft: 18 }}>
+              {c.items.map((it) => (
+                <li key={it}>{it}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
       <button
         type="button"
         onClick={tapVersion}

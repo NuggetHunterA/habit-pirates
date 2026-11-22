@@ -264,204 +264,249 @@ const foe = (key: keyof typeof T, id: string, row: Row, k: [number, number] = [1
   return { ...t, id, side: 'feind', row, stats: { ...t.stats, leben: Math.round(t.stats.leben * k[0]), angriff: Math.round(t.stats.angriff * k[1] * 10) / 10 } }
 }
 
-export const MOEWEN: Encounter = {
-  id: 'moewen',
-  name: 'Möwenpiraten',
-  intro: 'Kreischend stürzen sich Möwenpiraten aus dem Wrack auf euer Deck!',
-  bg: 'strand',
-  foes: [foe('moewe', 'moewe1', 'vorne', [2.4, 2.4]), foe('moewe', 'moewe2', 'vorne', [2.4, 2.4]), foe('moewe', 'moewe3', 'hinten', [2.4, 2.4])],
-  reward: { xp: 30, gold: [10, 18], itemChance: 0.3 },
-  outro: 'Die Möwen flattern davon und lassen ein paar glänzende Münzen fallen.',
-}
+export const MOEWEN: Encounter = strengthen(
+  {
+    id: 'moewen',
+    name: 'Möwenpiraten',
+    intro: 'Kreischend stürzen sich Möwenpiraten aus dem Wrack auf euer Deck!',
+    bg: 'strand',
+    foes: [foe('moewe', 'moewe1', 'vorne', [2.4, 2.4]), foe('moewe', 'moewe2', 'vorne', [2.4, 2.4]), foe('moewe', 'moewe3', 'hinten', [2.4, 2.4])],
+    reward: { xp: 75, gold: [10, 18], itemChance: 0.3 },
+    outro: 'Die Möwen flattern davon und lassen ein paar glänzende Münzen fallen.',
+  },
+  0.94,
+)
 
 /** Erster Kampf in Kapitel 1 */
-export const KRABBENBANDE: Encounter = {
-  id: 'krabbenbande',
-  name: 'Krabbenbande',
-  intro: 'Der Krabbenbandit und seine Matrosen versperren die Durchfahrt!',
-  bg: 'strand',
-  foes: [foe('bandit', 'bandit', 'vorne', [1.4, 1.4]), foe('matrose', 'matrose1', 'vorne', [1.4, 1.4]), foe('seeigel', 'seeigel1', 'hinten', [1.4, 1.4])],
-  reward: { xp: 45, gold: [18, 30], itemChance: 0.35 },
-  outro: 'Die Krabbenbande zieht sich ins Riff zurück. Der Weg ist frei.',
-}
+export const KRABBENBANDE: Encounter = strengthen(
+  {
+    id: 'krabbenbande',
+    name: 'Krabbenbande',
+    intro: 'Der Krabbenbandit und seine Matrosen versperren die Durchfahrt!',
+    bg: 'strand',
+    foes: [foe('bandit', 'bandit', 'vorne', [1.4, 1.4]), foe('matrose', 'matrose1', 'vorne', [1.4, 1.4]), foe('seeigel', 'seeigel1', 'hinten', [1.4, 1.4])],
+    reward: { xp: 110, gold: [18, 30], itemChance: 0.35 },
+    outro: 'Die Krabbenbande zieht sich ins Riff zurück. Der Weg ist frei.',
+  },
+  1.73,
+)
 
 /** Beutezug in Kapitel 1 */
-export const RIFFBANDE: Encounter = {
-  id: 'riffbande',
-  name: 'Riffbande',
-  intro: 'Zwischen den Riffen lauert eine Bande, die alles einsammelt, was glänzt.',
-  bg: 'strand',
-  foes: [foe('einsiedler', 'einsiedler1', 'vorne', [2.8, 2.6]), foe('seeigel', 'seeigel1', 'vorne', [2.8, 2.6]), foe('moewe', 'moewe1', 'hinten', [2.8, 2.6])],
-  reward: { xp: 40, gold: [16, 26], itemChance: 0.35 },
-  outro: 'Die Riffbande verkriecht sich zwischen den Felsen.',
-}
+export const RIFFBANDE: Encounter = strengthen(
+  {
+    id: 'riffbande',
+    name: 'Riffbande',
+    intro: 'Zwischen den Riffen lauert eine Bande, die alles einsammelt, was glänzt.',
+    bg: 'strand',
+    foes: [foe('einsiedler', 'einsiedler1', 'vorne', [2.8, 2.6]), foe('seeigel', 'seeigel1', 'vorne', [2.8, 2.6]), foe('moewe', 'moewe1', 'hinten', [2.8, 2.6])],
+    reward: { xp: 100, gold: [16, 26], itemChance: 0.35 },
+    outro: 'Die Riffbande verkriecht sich zwischen den Felsen.',
+  },
+  2.05,
+)
 
-export const SCHALBART: Encounter = {
-  id: 'schalbart',
-  name: 'Fürst Schalbart',
-  intro: 'Die Klippenfestung erhebt sich aus dem Wasser. Sie hat Beine.',
-  bg: 'strand',
-  boss: true,
-  foes: [
-    {
-      id: 'schalbart',
-      name: 'Fürst Schalbart',
-      look: 'schalbart',
-      side: 'feind',
-      row: 'vorne',
-      stats: { leben: 840, angriff: 21, ruestung: 8, tempo: 8, krit: 5, ausweichen: 0 },
-      traits: ['festung'],
-      big: { name: 'Ankerflut', every: 3, mult: 2.4, below: 0.25 },
-    },
-    foe('wache', 'wache1', 'vorne'),
-    foe('wache', 'wache2', 'hinten'),
-  ],
-  reward: { xp: 120, gold: [80, 120], itemChance: 1 },
-  outro: 'Fürst Schalbart zieht sich grummelnd in sein Haus zurück. Der Weg ins Nebelriff ist frei.',
-}
+export const SCHALBART: Encounter = strengthen(
+  {
+    id: 'schalbart',
+    name: 'Fürst Schalbart',
+    intro: 'Die Klippenfestung erhebt sich aus dem Wasser. Sie hat Beine.',
+    bg: 'strand',
+    boss: true,
+    foes: [
+      {
+        id: 'schalbart',
+        name: 'Fürst Schalbart',
+        look: 'schalbart',
+        side: 'feind',
+        row: 'vorne',
+        stats: { leben: 840, angriff: 21, ruestung: 8, tempo: 8, krit: 5, ausweichen: 0 },
+        traits: ['festung'],
+        big: { name: 'Ankerflut', every: 3, mult: 2.4, below: 0.25 },
+      },
+      foe('wache', 'wache1', 'vorne'),
+      foe('wache', 'wache2', 'hinten'),
+    ],
+    reward: { xp: 300, gold: [80, 120], itemChance: 1 },
+    outro: 'Fürst Schalbart zieht sich grummelnd in sein Haus zurück. Der Weg ins Nebelriff ist frei.',
+  },
+  1.77,
+)
 
-export const QUALLEN: Encounter = {
-  id: 'quallen',
-  name: 'Nebelquallen',
-  intro: 'Aus dem Nebel schweben leuchtende Quallen heran.',
-  bg: 'nebel',
-  foes: [foe('qualle', 'qualle1', 'vorne', [4.8, 4.5]), foe('qualle', 'qualle2', 'vorne', [4.8, 4.5]), foe('laterne', 'laterne1', 'hinten', [3.8, 3.4])],
-  reward: { xp: 60, gold: [24, 36], itemChance: 0.35 },
-  outro: 'Die Quallen sinken leuchtend in die Tiefe.',
-}
+export const QUALLEN: Encounter = strengthen(
+  {
+    id: 'quallen',
+    name: 'Nebelquallen',
+    intro: 'Aus dem Nebel schweben leuchtende Quallen heran.',
+    bg: 'nebel',
+    foes: [foe('qualle', 'qualle1', 'vorne', [4.8, 4.5]), foe('qualle', 'qualle2', 'vorne', [4.8, 4.5]), foe('laterne', 'laterne1', 'hinten', [3.8, 3.4])],
+    reward: { xp: 150, gold: [24, 36], itemChance: 0.35 },
+    outro: 'Die Quallen sinken leuchtend in die Tiefe.',
+  },
+  1.08,
+)
 
-export const GEISTERTRUPP: Encounter = {
-  id: 'geistertrupp',
-  name: 'Geistertrupp',
-  intro: 'Zwei Geisterpiraten und ein Irrlicht versperren den Weg zum Leuchtturm.',
-  bg: 'nebel',
-  foes: [foe('geist', 'geist1', 'vorne', [3.85, 3.5]), foe('aal', 'aal1', 'vorne', [3.85, 3.5]), foe('irrlicht', 'irrlicht1', 'hinten', [3.85, 3.5])],
-  reward: { xp: 75, gold: [30, 44], itemChance: 0.4 },
-  outro: 'Die Geister lösen sich im Nebel auf. Nur das Irrlicht kichert noch eine Weile.',
-}
+export const GEISTERTRUPP: Encounter = strengthen(
+  {
+    id: 'geistertrupp',
+    name: 'Geistertrupp',
+    intro: 'Zwei Geisterpiraten und ein Irrlicht versperren den Weg zum Leuchtturm.',
+    bg: 'nebel',
+    foes: [foe('geist', 'geist1', 'vorne', [3.85, 3.5]), foe('aal', 'aal1', 'vorne', [3.85, 3.5]), foe('irrlicht', 'irrlicht1', 'hinten', [3.85, 3.5])],
+    reward: { xp: 190, gold: [30, 44], itemChance: 0.4 },
+    outro: 'Die Geister lösen sich im Nebel auf. Nur das Irrlicht kichert noch eine Weile.',
+  },
+  1.2,
+)
 
 /** Beutezug in Kapitel 2 */
-export const TIEFSEETRUPP: Encounter = {
-  id: 'tiefseetrupp',
-  name: 'Tiefseetrupp',
-  intro: 'Unter dem Nebel leuchtet es. Etwas kommt aus der Tiefe herauf.',
-  bg: 'nebel',
-  foes: [foe('aal', 'aal1', 'vorne', [4.7, 4.3]), foe('qualle', 'qualle1', 'vorne', [4.7, 4.3]), foe('laterne', 'laterne1', 'hinten', [4.7, 4.3])],
-  reward: { xp: 70, gold: [28, 42], itemChance: 0.4 },
-  outro: 'Die Lichter sinken zurück in die Tiefe.',
-}
+export const TIEFSEETRUPP: Encounter = strengthen(
+  {
+    id: 'tiefseetrupp',
+    name: 'Tiefseetrupp',
+    intro: 'Unter dem Nebel leuchtet es. Etwas kommt aus der Tiefe herauf.',
+    bg: 'nebel',
+    foes: [foe('aal', 'aal1', 'vorne', [4.7, 4.3]), foe('qualle', 'qualle1', 'vorne', [4.7, 4.3]), foe('laterne', 'laterne1', 'hinten', [4.7, 4.3])],
+    reward: { xp: 175, gold: [28, 42], itemChance: 0.4 },
+    outro: 'Die Lichter sinken zurück in die Tiefe.',
+  },
+  1.65,
+)
 
-export const GEISTERSCHIFF: Encounter = {
-  id: 'geisterschiff',
-  name: 'Geisterschiff',
-  intro: 'Die Crew des Geisterschiffs entert euch!',
-  bg: 'nebel',
-  foes: [foe('geist', 'geist1', 'vorne', [4.65, 4.3]), foe('qualle', 'qualle1', 'vorne', [4.65, 4.3]), foe('irrlicht', 'irrlicht1', 'hinten', [4.65, 4.3]), foe('geist', 'geist2', 'hinten', [4.65, 4.3])],
-  reward: { xp: 90, gold: [36, 50], itemChance: 0.45 },
-  outro: 'Das Geisterschiff verschwindet lautlos im Nebel.',
-}
+export const GEISTERSCHIFF: Encounter = strengthen(
+  {
+    id: 'geisterschiff',
+    name: 'Geisterschiff',
+    intro: 'Die Crew des Geisterschiffs entert euch!',
+    bg: 'nebel',
+    foes: [foe('geist', 'geist1', 'vorne', [4.65, 4.3]), foe('qualle', 'qualle1', 'vorne', [4.65, 4.3]), foe('irrlicht', 'irrlicht1', 'hinten', [4.65, 4.3]), foe('geist', 'geist2', 'hinten', [4.65, 4.3])],
+    reward: { xp: 225, gold: [36, 50], itemChance: 0.45 },
+    outro: 'Das Geisterschiff verschwindet lautlos im Nebel.',
+  },
+  1.31,
+)
 
-export const GRAUHAND: Encounter = {
-  id: 'grauhand',
-  name: 'Kapitän Grauhand',
-  intro: 'Eine Laterne leuchtet in der Höhle auf. Kapitän Grauhand erwartet euch.',
-  bg: 'nebel',
-  boss: true,
-  foes: [
-    {
-      id: 'grauhand',
-      name: 'Kapitän Grauhand',
-      look: 'grauhand',
-      side: 'feind',
-      row: 'vorne',
-      stats: { leben: 3020, angriff: 59, ruestung: 7, tempo: 10, krit: 8, ausweichen: 5 },
-      traits: ['nebelkapitaen'],
-      big: { name: 'Totenglocke', every: 3, mult: 2.5, below: 0.3 },
-      adds: [foe('geist', 'geist', 'vorne', [2.4, 2.4]), foe('geist', 'geist', 'hinten', [2.4, 2.4])],
-    },
-    foe('irrlicht', 'irrlicht1', 'hinten', [3.35, 3.35]),
-  ],
-  reward: { xp: 200, gold: [140, 200], itemChance: 1 },
-  outro: 'Grauhands Laterne erlischt. Der Nebel hebt sich, und am Horizont glüht es rot.',
-}
+export const GRAUHAND: Encounter = strengthen(
+  {
+    id: 'grauhand',
+    name: 'Kapitän Grauhand',
+    intro: 'Eine Laterne leuchtet in der Höhle auf. Kapitän Grauhand erwartet euch.',
+    bg: 'nebel',
+    boss: true,
+    foes: [
+      {
+        id: 'grauhand',
+        name: 'Kapitän Grauhand',
+        look: 'grauhand',
+        side: 'feind',
+        row: 'vorne',
+        stats: { leben: 3020, angriff: 59, ruestung: 7, tempo: 10, krit: 8, ausweichen: 5 },
+        traits: ['nebelkapitaen'],
+        big: { name: 'Totenglocke', every: 3, mult: 2.5, below: 0.3 },
+        adds: [foe('geist', 'geist', 'vorne', [2.4, 2.4]), foe('geist', 'geist', 'hinten', [2.4, 2.4])],
+      },
+      foe('irrlicht', 'irrlicht1', 'hinten', [3.35, 3.35]),
+    ],
+    reward: { xp: 500, gold: [140, 200], itemChance: 1 },
+    outro: 'Grauhands Laterne erlischt. Der Nebel hebt sich, und am Horizont glüht es rot.',
+  },
+  2.03,
+)
 
 // ---------------- Kapitel 3: Die Glutinseln ----------------
 /** Staerke in Kapitel 3, je Kampf mit eigenem Faktor */
 const k3 = (f: number): [number, number] => [Math.round(7 * f * 100) / 100, Math.round(6.5 * f * 100) / 100]
 
-export const GLUTKRABBEN: Encounter = {
-  id: 'glutkrabben',
-  name: 'Glutkrabben',
-  intro: 'Der schwarze Strand bewegt sich. Das sind keine Steine, das sind Krabben!',
-  bg: 'glut',
-  foes: [foe('glutkrabbe', 'glut1', 'vorne', k3(1.35)), foe('glutkrabbe', 'glut2', 'vorne', k3(1.35)), foe('funkenvogel', 'funke1', 'hinten', k3(1.35))],
-  reward: { xp: 100, gold: [40, 58], itemChance: 0.4 },
-  outro: 'Die Glutkrabben graben sich zischend in den Sand.',
-}
+export const GLUTKRABBEN: Encounter = strengthen(
+  {
+    id: 'glutkrabben',
+    name: 'Glutkrabben',
+    intro: 'Der schwarze Strand bewegt sich. Das sind keine Steine, das sind Krabben!',
+    bg: 'glut',
+    foes: [foe('glutkrabbe', 'glut1', 'vorne', k3(1.35)), foe('glutkrabbe', 'glut2', 'vorne', k3(1.35)), foe('funkenvogel', 'funke1', 'hinten', k3(1.35))],
+    reward: { xp: 250, gold: [40, 58], itemChance: 0.4 },
+    outro: 'Die Glutkrabben graben sich zischend in den Sand.',
+  },
+  1.35,
+)
 
-export const FUNKENSCHWARM: Encounter = {
-  id: 'funkenschwarm',
-  name: 'Funkenschwarm',
-  intro: 'Ein Schwarm aus Funken stürzt vom Vulkan herab.',
-  bg: 'glut',
-  foes: [foe('funkenvogel', 'funke1', 'vorne', k3(1.2)), foe('funkenvogel', 'funke2', 'vorne', k3(1.2)), foe('glutkrabbe', 'glut1', 'vorne', k3(1.2)), foe('funkenvogel', 'funke3', 'hinten', k3(1.2))],
-  reward: { xp: 105, gold: [42, 60], itemChance: 0.4 },
-  outro: 'Die Funken verglühen über dem Meer.',
-}
+export const FUNKENSCHWARM: Encounter = strengthen(
+  {
+    id: 'funkenschwarm',
+    name: 'Funkenschwarm',
+    intro: 'Ein Schwarm aus Funken stürzt vom Vulkan herab.',
+    bg: 'glut',
+    foes: [foe('funkenvogel', 'funke1', 'vorne', k3(1.2)), foe('funkenvogel', 'funke2', 'vorne', k3(1.2)), foe('glutkrabbe', 'glut1', 'vorne', k3(1.2)), foe('funkenvogel', 'funke3', 'hinten', k3(1.2))],
+    reward: { xp: 260, gold: [42, 60], itemChance: 0.4 },
+    outro: 'Die Funken verglühen über dem Meer.',
+  },
+  1.3,
+)
 
-export const SCHNECKENFELD: Encounter = {
-  id: 'schneckenfeld',
-  name: 'Lavaschnecken',
-  intro: 'Langsam, aber unaufhaltsam kriechen glühende Schnecken heran.',
-  bg: 'glut',
-  foes: [foe('lavaschnecke', 'schnecke1', 'vorne', k3(1.6)), foe('lavaschnecke', 'schnecke2', 'vorne', k3(1.6)), foe('aschegeist', 'asche1', 'hinten', k3(1.6))],
-  reward: { xp: 110, gold: [44, 62], itemChance: 0.4 },
-  outro: 'Die Schnecken ziehen sich in ihre Häuser zurück. Das dauert.',
-}
+export const SCHNECKENFELD: Encounter = strengthen(
+  {
+    id: 'schneckenfeld',
+    name: 'Lavaschnecken',
+    intro: 'Langsam, aber unaufhaltsam kriechen glühende Schnecken heran.',
+    bg: 'glut',
+    foes: [foe('lavaschnecke', 'schnecke1', 'vorne', k3(1.6)), foe('lavaschnecke', 'schnecke2', 'vorne', k3(1.6)), foe('aschegeist', 'asche1', 'hinten', k3(1.6))],
+    reward: { xp: 275, gold: [44, 62], itemChance: 0.4 },
+    outro: 'Die Schnecken ziehen sich in ihre Häuser zurück. Das dauert.',
+  },
+  1.3,
+)
 
-export const ASCHETRUPP: Encounter = {
-  id: 'aschetrupp',
-  name: 'Aschetrupp',
-  intro: 'Aus dem Rauch formen sich Gestalten mit Säbeln aus Ruß.',
-  bg: 'glut',
-  foes: [foe('aschegeist', 'asche1', 'vorne', k3(1.5)), foe('aschegeist', 'asche2', 'vorne', k3(1.5)), foe('lavaschnecke', 'schnecke1', 'hinten', k3(1.5))],
-  reward: { xp: 115, gold: [46, 64], itemChance: 0.45 },
-  outro: 'Der Wind verweht die Asche.',
-}
+export const ASCHETRUPP: Encounter = strengthen(
+  {
+    id: 'aschetrupp',
+    name: 'Aschetrupp',
+    intro: 'Aus dem Rauch formen sich Gestalten mit Säbeln aus Ruß.',
+    bg: 'glut',
+    foes: [foe('aschegeist', 'asche1', 'vorne', k3(1.5)), foe('aschegeist', 'asche2', 'vorne', k3(1.5)), foe('lavaschnecke', 'schnecke1', 'hinten', k3(1.5))],
+    reward: { xp: 290, gold: [46, 64], itemChance: 0.45 },
+    outro: 'Der Wind verweht die Asche.',
+  },
+  1.2,
+)
 
-export const OBSIDIANWACHE: Encounter = {
-  id: 'obsidianwache',
-  name: 'Obsidianwache',
-  intro: 'Vor der Höhle steht ein Wächter aus schwarzem Glas. Er ist nicht allein.',
-  bg: 'glut',
-  foes: [foe('golem', 'golem1', 'vorne', k3(1.25)), foe('glutkrabbe', 'glut1', 'vorne', k3(1.25)), foe('aschegeist', 'asche1', 'hinten', k3(1.25)), foe('funkenvogel', 'funke1', 'hinten', k3(1.25))],
-  reward: { xp: 130, gold: [50, 70], itemChance: 0.45 },
-  outro: 'Der Golem sinkt in sich zusammen und wird wieder zu Fels.',
-}
+export const OBSIDIANWACHE: Encounter = strengthen(
+  {
+    id: 'obsidianwache',
+    name: 'Obsidianwache',
+    intro: 'Vor der Höhle steht ein Wächter aus schwarzem Glas. Er ist nicht allein.',
+    bg: 'glut',
+    foes: [foe('golem', 'golem1', 'vorne', k3(1.25)), foe('glutkrabbe', 'glut1', 'vorne', k3(1.25)), foe('aschegeist', 'asche1', 'hinten', k3(1.25)), foe('funkenvogel', 'funke1', 'hinten', k3(1.25))],
+    reward: { xp: 325, gold: [50, 70], itemChance: 0.45 },
+    outro: 'Der Golem sinkt in sich zusammen und wird wieder zu Fels.',
+  },
+  1.31,
+)
 
-export const ZUNDER: Encounter = {
-  id: 'zunder',
-  name: 'Zunder',
-  intro: 'In der glühenden Höhle hebt ein Feuersalamander seinen Speer.',
-  bg: 'glut',
-  boss: true,
-  foes: [
-    {
-      id: 'zunder',
-      name: 'Zunder',
-      look: 'zunder',
-      side: 'feind',
-      row: 'vorne',
-      stats: { leben: 4760, angriff: 82, ruestung: 9, tempo: 10, krit: 8, ausweichen: 5 },
-      traits: ['zunder', 'brandfest'],
-      big: { name: 'Feuerwalze', every: 3, mult: 1.6 },
-    },
-    foe('lavaschnecke', 'schnecke1', 'vorne', k3(1.3)),
-    foe('funkenvogel', 'funke1', 'hinten', k3(1.3)),
-  ],
-  reward: { xp: 300, gold: [200, 280], itemChance: 1 },
-  outro: 'Zunder senkt den Speer. Das Feuer in der Höhle wird ruhig.',
-}
+export const ZUNDER: Encounter = strengthen(
+  {
+    id: 'zunder',
+    name: 'Zunder',
+    intro: 'In der glühenden Höhle hebt ein Feuersalamander seinen Speer.',
+    bg: 'glut',
+    boss: true,
+    foes: [
+      {
+        id: 'zunder',
+        name: 'Zunder',
+        look: 'zunder',
+        side: 'feind',
+        row: 'vorne',
+        stats: { leben: 4760, angriff: 82, ruestung: 9, tempo: 10, krit: 8, ausweichen: 5 },
+        traits: ['zunder', 'brandfest'],
+        big: { name: 'Feuerwalze', every: 3, mult: 1.6 },
+      },
+      foe('lavaschnecke', 'schnecke1', 'vorne', k3(1.3)),
+      foe('funkenvogel', 'funke1', 'hinten', k3(1.3)),
+    ],
+    reward: { xp: 750, gold: [200, 280], itemChance: 1 },
+    outro: 'Zunder senkt den Speer. Das Feuer in der Höhle wird ruhig.',
+  },
+  1.26,
+)
 
 /** Zufallskaempfe beim Farmen vor dem Boss */
 export const FARM: Record<number, Encounter[]> = {
@@ -476,9 +521,9 @@ export const ENCOUNTERS: Record<string, Encounter> = Object.fromEntries(
 
 /** Seeungeheuer aus den Zufallsereignissen: staerker als ein schwerer Beutezug, je Kapitel */
 const UNGEHEUER: Record<number, { leben: number; angriff: number; ruestung: number; xp: number; gold: [number, number] }> = {
-  1: { leben: 2280, angriff: 32, ruestung: 6, xp: 90, gold: [60, 90] },
-  2: { leben: 9450, angriff: 105, ruestung: 7, xp: 170, gold: [120, 170] },
-  3: { leben: 13500, angriff: 160, ruestung: 9, xp: 260, gold: [200, 280] },
+  1: { leben: 2280, angriff: 32, ruestung: 6, xp: 225, gold: [60, 90] },
+  2: { leben: 9450, angriff: 105, ruestung: 7, xp: 425, gold: [120, 170] },
+  3: { leben: 13500, angriff: 160, ruestung: 9, xp: 650, gold: [200, 280] },
 }
 
 export function seaMonster(chapter: number): Encounter {

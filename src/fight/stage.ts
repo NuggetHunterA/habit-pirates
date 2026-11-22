@@ -5,6 +5,16 @@
 import type { Look, Side } from '../game/combat'
 import { FIGHT_ART, figureImage, isSpoilerFree } from './art'
 import { FIGURES, scaleSpec } from './figures'
+
+const LOW_FX = 'hp.lowfx'
+/** In dieser Sitzung schon als zu langsam erkannt: gleich ohne Mesh-Animation */
+function lowFx(): boolean {
+  try {
+    return sessionStorage.getItem(LOW_FX) === '1'
+  } catch {
+    return false
+  }
+}
 import { I, MeshRenderer, apply, around, mul, type BoneMats, type MeshSpec } from './mesh'
 
 export const STAGE_W = 960
@@ -174,7 +184,11 @@ export class Stage {
   private reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
 
   private cv: HTMLCanvasElement
-  private mesh = MeshRenderer.create()
+  /** Mesh-Animation (WebGL). Faellt weg, wenn das Geraet sie nicht fluessig schafft (siehe watchFrames). */
+  private mesh = lowFx() ? null : MeshRenderer.create()
+  /** Bildzeiten der ersten Sekunden, um ein zu langsames Geraet zu erkennen */
+  private frameTimes: number[] = []
+  private watchDone = false
   private springs = new Map<string, Record<string, Spring>>()
   private specs = new Map<string, MeshSpec>()
   /** Waffenspitze je Figur in Buehnen-Koordinaten (fuer Muendungsfeuer) */
@@ -346,6 +360,7 @@ export class Stage {
   // ---------- Schleife ----------
   private loop = (ts: number) => {
     if (!this.alive) return
+    if (this.last) this.watchFrames(ts - this.last)
     const real = Math.min(0.05, (ts - this.last) / 1000 || 0.016)
     this.last = ts
     let dt = real * this.speed
@@ -356,6 +371,30 @@ export class Stage {
     this.update(dt, real)
     this.draw()
     this.raf = requestAnimationFrame(this.loop)
+  }
+
+  /**
+   * Leistungs-Waechter (Phase 6): Schafft das Geraet die Mesh-Animation nicht fluessig
+   * (Median unter 30 Bildern pro Sekunde nach dem Laden), zeichnet der Kampf die Figuren
+   * als ganze Bilder weiter. Gilt bis zum naechsten App-Start.
+   */
+  private watchFrames(ms: number) {
+    if (!this.mesh || this.watchDone) return
+    this.frameTimes.push(ms)
+    // Die ersten Bilder (Laden, Aufbau) zaehlen nicht; dann 30 Bilder oder 2 Sekunden
+    const t = this.frameTimes.slice(6)
+    if (t.length < 30 && t.reduce((a, b) => a + b, 0) < 2000) return
+    t.sort((a, b) => a - b)
+    const slow = t[Math.floor(t.length / 2)] > 33
+    this.watchDone = true
+    if (!slow) return
+    this.mesh.destroy()
+    this.mesh = null
+    try {
+      sessionStorage.setItem(LOW_FX, '1')
+    } catch {
+      /* egal */
+    }
   }
 
   private update(dt: number, real: number) {
