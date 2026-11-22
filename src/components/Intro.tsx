@@ -7,6 +7,7 @@ import silber from '../assets/truhen/truhe_silber.webp'
 import gold from '../assets/truhen/truhe_gold.webp'
 import krabbe from '../assets/figuren/krabbenbandit.webp'
 import Jonte from './Jonte'
+import { RULES } from '../game/rules'
 
 /**
  * Einstieg fuer neue Spieler: vier kurze Karten mit Jonte, danach die Auswahl der ersten Habits.
@@ -60,7 +61,7 @@ const SLIDES: Slide[] = [
     ),
   },
   {
-    title: '3 Wind = 1 Feld',
+    title: `${RULES.windPerField} Wind = 1 Feld`,
     text: 'Mit Wind segelst du auf der Seekarte von Feld zu Feld: Inseln, Truhen, Gegner, Häfen und Stürme.',
     art: <img src={ART.seekarte} alt="" className="intro__map" />,
   },

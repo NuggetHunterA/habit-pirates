@@ -13,7 +13,8 @@
     "sim": "node --experimental-strip-types scripts/sim.ts",
     "fxcheck": "node --experimental-strip-types scripts/fx-check.ts",
     "motcheck": "node --experimental-strip-types scripts/motivation-check.ts",
-    "assets": "python3 scripts/prepare_assets.py"
+    "assets": "python3 scripts/prepare_assets.py",
+    "journey": "node --experimental-strip-types --import ./scripts/lib/loader.mjs scripts/journey.ts"
   },
   "dependencies": {
     "motion": "^14.14.0",

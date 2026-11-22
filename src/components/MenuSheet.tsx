@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Game, SyncState } from '../game/store'
 import Sheet from './Sheet'
+import { RULES } from '../game/rules'
 
 const TEST_KEY = 'hp.testmode'
 
@@ -69,10 +70,10 @@ export default function MenuSheet({ game, onClose, say, onIntro }: { game: Game;
             style={{ height: 48 }}
             onClick={() => {
               game.testWind()
-              say('Testmodus: +3 Wind')
+              say(`Testmodus: +${RULES.windPerField} Wind`)
             }}
           >
-            Testmodus: +3 Wind
+            Testmodus: +{RULES.windPerField} Wind
           </button>
           <button
             type="button"

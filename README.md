@@ -7,7 +7,7 @@ Gute Gewohnheiten als Piratenreise: Jeder erledigte Habit bringt Wind in die Seg
 - Profil wählen (Adrian oder Ulrike, ohne Passwort)
 - Wochenstart mit Kapitän Jonte: Habits der Vorwoche vorausgewählt, bis zu 2 Fokus-Habits (doppelter Wind), neue Habits anlegen
 - Heute: Habits abhaken (Goldmünze), „Lassen“-Habits abends bestätigen, Trinken mit 6 Gläsern (Wasser oder Spaßgetränk, mind. 2 Wasser)
-- Wind: 1 pro Habit, 2 pro Fokus-Habit, +2 wenn alles erledigt ist; ein Feld kostet 3 Wind
+- Wind: 1 pro Habit, 2 pro Fokus-Habit, +2 wenn alles erledigt ist; ein Feld (und ein Beutezug) kostet 4 Wind
 - Seekarte Kapitel 1 mit 12 Feldern, animiertes Segeln
 - Truhe öffnen mit Gold und Items (gewöhnlich, selten, selten episch)
 
@@ -26,7 +26,8 @@ npm run build        # Produktions-Build nach dist/
 npm run build:single # eine einzelne HTML-Datei mit allen Bildern (zum schnellen Testen)
 npm run fxcheck      # prüft alle Item-Effekte im Kampf-Simulator
 npm run motcheck     # prüft Wind-Formel, Serien, Rettungsring, Rückenwind und Fokus-Truhe
-npm run sim          # Balancing; SIM_NORMAL=1, SIM_BOSS=1, SIM_FARM=1 oder SIM_EVENT=1 (Seeungeheuer gegen schweren Beutezug)
+npm run journey      # Reise-Simulator: ganze Reise Tag für Tag mit echter Beute, Laden, Werft (RUNS, FULL, SMART, TUNE=1 schlägt Gegnerstärken vor)
+npm run sim          # Einzelkämpfe mit festen Ausrüstungs-Annahmen; SIM_NORMAL=1, SIM_BOSS=1, SIM_FARM=1 oder SIM_EVENT=1 (Seeungeheuer gegen schweren Beutezug)
 npm run assets       # Grafiken aus dem Design-Ordner neu aufbereiten (braucht Python + Pillow)
 ```
 

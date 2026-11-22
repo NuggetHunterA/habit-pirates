@@ -15,8 +15,9 @@ export const RULES = {
   backwindBonus: 3,
   /** Ein Tag zaehlt fuer die Serie ab so vielen erledigten Habits */
   streakMin: 2,
-  windPerField: 3,
-  startWind: 3,
+  /** Phase 6: 4 statt 3, damit ein Kapitel bei 5 bis 6 Habits etwa 1,5 bis 2,5 Wochen dauert */
+  windPerField: 4,
+  startWind: 4,
   drinkGlasses: 6,
   drinkMinWater: 2,
   maxFocus: 2,

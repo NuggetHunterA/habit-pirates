@@ -43,6 +43,7 @@ export const SPEAKERS: Record<string, string> = {
   moewenpirat: 'Möwenpirat',
   waerterin: 'Leuchtturmwärterin Oda',
   tante: 'Tante Glimma',
+  papagei: 'Papagei',
   zunder: 'Zunder',
 }
 
@@ -326,6 +327,90 @@ const S: Story[] = [
       { who: 'jonte', text: 'Dann holen wir sie uns zurück, Pip. Zusammen. Ohne Karte, wenn’s sein muss.' },
     ],
     reward: { gold: 120 },
+  },
+  // ---------------- Phase 6: kurze Szenen auf den verlaengerten Routen ----------------
+  {
+    id: 'k1_kokos',
+    title: 'Die Kokos-Kanone',
+    bg: 'strand',
+    cast: ['jonte', 'kanonier'],
+    lines: [
+      { who: 'erzaehler', text: 'Auf der kleinen Insel steht eine einzige Palme. Ganz oben hängen drei riesige Kokosnüsse.' },
+      { who: 'kanonier', text: 'Käpt’n, ich hab eine Idee. Sie hat mit der Kanone zu tun.' },
+      { who: 'jonte', text: 'Das sagst du jedes Mal. Und jedes Mal brennt danach etwas.' },
+      { who: 'erzaehler', text: 'Bumm. Die Palme wackelt. Zwei Kokosnüsse fallen ins Wasser, die dritte auf Jontes Hut.' },
+      { who: 'kanonier', text: 'Moment, da hing noch was im Wipfel. Ein Beutel! Den hat wohl eine Möwe versteckt.' },
+    ],
+    reward: { item: true },
+  },
+  {
+    id: 'k1_kurs',
+    title: 'Maras Kurs',
+    bg: 'strand',
+    cast: ['navigatorin', 'kanonier'],
+    lines: [
+      { who: 'erzaehler', text: 'In der Bucht dreht sich das Wasser im Kreis. Das Schiff dreht sich mit.' },
+      { who: 'jonte', text: 'Volle Kraft geradeaus!' },
+      { who: 'navigatorin', text: 'Geradeaus ist genau falsch. Zwei Striche Backbord, dann mit der Strömung raus. Vertrau mir.' },
+      { who: 'kanonier', text: 'Mir ist schlecht. Ich hab zweimal gefrühstückt, und beide Frühstücke drehen sich gerade mit.' },
+      { who: 'erzaehler', text: 'Maras Kurs passt. Am Rand des Strudels treibt ein Beutel mit Münzen, den sich das Wasser geholt hatte.' },
+    ],
+    reward: { gold: 35 },
+  },
+  {
+    id: 'k2_boje',
+    title: 'Die sprechende Boje',
+    bg: 'nebel',
+    cast: ['jonte', 'navigatorin'],
+    lines: [
+      { who: 'erzaehler', text: 'Aus dem Nebel taucht eine rostige Boje auf. Darauf sitzt ein grüner Papagei.' },
+      { who: 'papagei', text: 'Quallen voraus! Quallen voraus! Krah!' },
+      { who: 'kanonier', text: 'Hat der Vogel gerade mit uns geredet?' },
+      { who: 'navigatorin', text: 'Papageien plappern nach, was sie hören. Die Frage ist, von wem er das hat.' },
+      { who: 'erzaehler', text: 'Der Papagei flattert in den Nebel davon. An der Boje hängt ein Netz, und darin zappelt etwas Glänzendes.' },
+    ],
+    reward: { item: true },
+  },
+  {
+    id: 'k2_pfeffer',
+    title: 'Pfeffer gegen Geister',
+    bg: 'nebel',
+    cast: ['smutje', 'kanonier'],
+    lines: [
+      { who: 'erzaehler', text: 'Kaum ist Grummel an Bord, riecht das ganze Schiff nach Pfeffer und Zwiebeln.' },
+      { who: 'smutje', text: 'Geister hassen drei Dinge: Licht, Lärm und meinen Pfeffer. Darum streue ich ihn überall hin.' },
+      { who: 'kanonier', text: 'Auch in meine Kanone?' },
+      { who: 'smutje', text: 'Besonders in deine Kanone. Wenn die knallt, niest das ganze Riff.' },
+      { who: 'navigatorin', text: 'Solange wir dafür nicht mehr in den Nebel horchen müssen, ist mir alles recht.' },
+    ],
+    reward: { gold: 45 },
+  },
+  {
+    id: 'k3_quelle',
+    title: 'Die heiße Quelle',
+    bg: 'glut',
+    cast: ['smutje', 'kanonier'],
+    lines: [
+      { who: 'erzaehler', text: 'Zwischen den schwarzen Felsen dampft eine Quelle. Das Wasser blubbert wie ein Kochtopf.' },
+      { who: 'smutje', text: 'Ein Kochtopf, den die Natur gemacht hat! Pip, gib mir die Eier.' },
+      { who: 'ausguck', text: 'Welche Eier? Die hab ich vorhin gegessen. Alle zwölf. Roh.' },
+      { who: 'kanonier', text: 'Als Kinder haben wir hier Muscheln gekocht. Und Goldstücke gesucht, die der Berg ausspuckt.' },
+      { who: 'erzaehler', text: 'Am Grund der Quelle glitzert es tatsächlich. Grummel fischt die Münzen mit der Kelle heraus.' },
+    ],
+    reward: { gold: 60 },
+  },
+  {
+    id: 'k3_kueche',
+    title: 'Die Lavaküche',
+    bg: 'glut',
+    cast: ['smutje', 'kanonier'],
+    lines: [
+      { who: 'erzaehler', text: 'Auf einer flachen Insel fließt ein dünner Lavastrom direkt über einen Felsen. Grummel strahlt.' },
+      { who: 'smutje', text: 'Ein Herd, der nie ausgeht! Hier bleibe ich. Ihr könnt mich auf dem Rückweg abholen.' },
+      { who: 'kanonier', text: 'Und wer kocht dann für uns? Nein, nein. Du kommst mit. Ich trag dich notfalls.' },
+      { who: 'navigatorin', text: 'Bevor hier jemand getragen wird: Hinter dem Felsen liegt eine Kiste. Halb geschmolzen, aber zu.' },
+    ],
+    reward: { item: true },
   },
 ]
 
