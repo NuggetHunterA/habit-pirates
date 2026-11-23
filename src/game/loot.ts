@@ -58,11 +58,11 @@ export type ChestKind = 'holz' | 'silber' | 'gold' | 'verflucht'
 /** Chance je Truhenfeld, verflucht zu sein (hoechstens eine pro Kapitel) */
 export const CURSE_CHANCE = 0.08
 
-/** Welches Truhenfeld im Kapitel verflucht ist (fest je Profil und Kapitel), oder null */
+/** Welches Truhenfeld im Kapitel verflucht ist (fest je Profil und Kapitel), oder null. Bewachte Truhen werden nie verflucht. */
 export function cursedField(profile: string, chapter: number): number | null {
   const fields = chapterOf(chapter).fields
   for (let i = 0; i < fields.length; i++) {
-    if (fields[i].kind === 'truhe' && seededRoll(`${profile}|fluch|${chapter}|${i}`) < CURSE_CHANCE) return i
+    if (fields[i].kind === 'truhe' && !fields[i].enc && seededRoll(`${profile}|fluch|${chapter}|${i}`) < CURSE_CHANCE) return i
   }
   return null
 }

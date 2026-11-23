@@ -508,6 +508,86 @@ export const ZUNDER: Encounter = strengthen(
   1.26,
 )
 
+// ---------------- Bewachte Truhen ----------------
+/**
+ * Kampf um eine Truhe auf der Route: wenig Erfahrung (damit die Stufen wie vorher wachsen), die Beute ist die Truhe des Felds,
+ * die sich nach dem Sieg oeffnet.
+ * Nutzt nur Gegner, die es im Kapitel schon gibt. k stimmt die Staerke auf die Stelle der Route ab.
+ */
+function guarded(base: Encounter, id: string, name: string, intro: string, outro: string, xp: number, k: number, foes?: FighterDef[]): Encounter {
+  return strengthen({ ...base, id, name, intro, outro, foes: foes ?? base.foes, reward: { xp, gold: [0, 0], itemChance: 0 } }, k)
+}
+
+/** Kapitel 1, Muschelstrand: der erste, leichte Kampf */
+export const MOEWENSPAEHER = guarded(
+  MOEWEN,
+  'moewenspaeher',
+  'Möwenspäher',
+  'Zwei Möwenpiraten hocken auf einer Truhe und wollen sie nicht hergeben.',
+  'Die Späher flattern kreischend davon. Die Truhe gehört euch!',
+  25,
+  1.0,
+  MOEWEN.foes.slice(0, 2),
+)
+
+/** Kapitel 1, Felsenspalt */
+export const MOEWENNEST = guarded(
+  MOEWEN,
+  'moewennest',
+  'Möwennest',
+  'Im Felsenspalt nisten Möwenpiraten. Mitten im Nest glänzt eine Truhe.',
+  'Das Nest ist leer. Nur die Truhe ist noch da.',
+  40,
+  1.33,
+)
+
+/** Kapitel 2, Klippenspalt */
+export const QUALLENWACHT = guarded(
+  QUALLEN,
+  'quallenwacht',
+  'Quallenwacht',
+  'Um eine Truhe im Klippenspalt schweben leuchtende Quallen.',
+  'Die Quallen treiben davon. Die Truhe ist frei.',
+  70,
+  1.12,
+)
+
+/** Kapitel 2, Seegraswiese */
+export const GEISTERWACHT = guarded(
+  GEISTERTRUPP,
+  'geisterwacht',
+  'Geisterwacht',
+  'Im Seegras sitzen Geisterpiraten auf ihrer alten Beute.',
+  'Die Geister verblassen. Ihre Beute bleibt zurück.',
+  90,
+  1.15,
+)
+
+/** Kapitel 3, Funkenklippe */
+export const FUNKENNEST = guarded(
+  FUNKENSCHWARM,
+  'funkennest',
+  'Funkennest',
+  'Auf der Klippe brüten Funkenvögel. Zwischen ihren Nestern steht eine Truhe.',
+  'Die Funkenvögel suchen sich eine andere Klippe.',
+  110,
+  0.95,
+)
+
+/** Kapitel 3, Kraterrand */
+export const ASCHEWACHT = guarded(
+  ASCHETRUPP,
+  'aschewacht',
+  'Aschewacht',
+  'Am Kraterrand bewachen Aschegeister eine verrußte Truhe.',
+  'Die Asche weht in den Krater. Die Truhe bleibt stehen.',
+  130,
+  1.09,
+)
+
+/** Kaempfe der bewachten Truhen (nicht im Beutezug) */
+export const GUARDED: Encounter[] = [MOEWENSPAEHER, MOEWENNEST, QUALLENWACHT, GEISTERWACHT, FUNKENNEST, ASCHEWACHT]
+
 /** Zufallskaempfe beim Farmen vor dem Boss */
 export const FARM: Record<number, Encounter[]> = {
   1: [MOEWEN, RIFFBANDE, KRABBENBANDE],
@@ -516,7 +596,7 @@ export const FARM: Record<number, Encounter[]> = {
 }
 
 export const ENCOUNTERS: Record<string, Encounter> = Object.fromEntries(
-  [MOEWEN, RIFFBANDE, KRABBENBANDE, SCHALBART, QUALLEN, TIEFSEETRUPP, GEISTERTRUPP, GEISTERSCHIFF, GRAUHAND, GLUTKRABBEN, FUNKENSCHWARM, SCHNECKENFELD, ASCHETRUPP, OBSIDIANWACHE, ZUNDER].map((e) => [e.id, e]),
+  [MOEWEN, RIFFBANDE, KRABBENBANDE, SCHALBART, QUALLEN, TIEFSEETRUPP, GEISTERTRUPP, GEISTERSCHIFF, GRAUHAND, GLUTKRABBEN, FUNKENSCHWARM, SCHNECKENFELD, ASCHETRUPP, OBSIDIANWACHE, ZUNDER, ...GUARDED].map((e) => [e.id, e]),
 )
 
 /** Seeungeheuer aus den Zufallsereignissen: staerker als ein schwerer Beutezug, je Kapitel */
