@@ -79,6 +79,8 @@ function newSave(profile: string, touched = false): Save {
 /** Kampf auf dem aktuellen Feld, der noch nicht gewonnen ist: Weitersegeln geht erst nach dem Sieg */
 export function blocked(s: Save): boolean {
   const f = chapterOf(s.game.chapter).fields[s.game.field]
+  // Truhe schon vor Version 1.1 geoeffnet: kein Kampf mehr noetig
+  if (f.kind === 'truhe' && s.game.looted.includes(s.game.field)) return false
   return !!f.enc && !s.game.cleared.includes(s.game.field) && f.kind !== 'boss'
 }
 
@@ -603,8 +605,9 @@ export function doneFields(s: Save): number[] {
   return fields
     .map((f, i) => {
       if (f.kind === 'boss') return s.game.bossBeaten.includes(s.game.chapter)
-      if (f.enc) return s.game.cleared.includes(i)
+      // Bewachte Truhe: erledigt, wenn die Truhe geoeffnet ist
       if (f.kind === 'truhe') return s.game.looted.includes(i)
+      if (f.enc) return s.game.cleared.includes(i)
       if (f.story && f.kind !== 'start') return s.game.seen.includes(f.story)
       return false
     })

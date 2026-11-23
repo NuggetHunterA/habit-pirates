@@ -53,7 +53,7 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
   const atEnd = ship >= fields.length - 1
   const next = fields[Math.min(ship + 1, fields.length - 1)]
   const storyHere = here.story && !g.seen.includes(here.story) ? here.story : null
-  const atChest = here.kind === 'truhe' && !g.looted.includes(ship)
+  const atChest = here.kind === 'truhe' && !g.looted.includes(ship) && !blocked(save)
   const fightHere = blocked(save) && here.enc ? ENCOUNTERS[here.enc] : null
   const boss = atEnd && here.enc ? ENCOUNTERS[here.enc] : null
   const bossBeaten = g.bossBeaten.includes(chapter.n)
@@ -131,14 +131,15 @@ export default function MapPanel({ game, onChest, onShop, onFight, onStory, say 
       window.setTimeout(() => onStory(f.story!), 450)
       return
     }
-    if (f.kind === 'truhe') say(chestAt(save.profile, chapter.n, i) === 'verflucht' ? 'Eine verfluchte Truhe! Sie wird bewacht.' : `${CHEST_LABEL[chestAt(save.profile, chapter.n, i)]} in Sicht!`)
+    if (f.kind === 'truhe' && f.enc) say(`${ENCOUNTERS[f.enc].name}! Die ${CHEST_LABEL[chestAt(save.profile, chapter.n, i)]} wird bewacht.`)
+    else if (f.kind === 'truhe') say(chestAt(save.profile, chapter.n, i) === 'verflucht' ? 'Eine verfluchte Truhe! Sie wird bewacht.' : `${CHEST_LABEL[chestAt(save.profile, chapter.n, i)]} in Sicht!`)
     else if (f.kind === 'hafen') say(`${f.name} erreicht. Der Hafenladen hat geöffnet!`)
     else if (f.enc) say(`${ENCOUNTERS[f.enc].name} voraus!`)
   }
 
   let kicker = 'Nächstes Feld'
   let title = next.name
-  let text = FIELD_TEXT[next.kind]
+  let text = next.kind === 'truhe' && next.enc ? 'Eine bewachte Truhe! Erst kämpfen, dann öffnen.' : FIELD_TEXT[next.kind]
   let portrait: string | null = null
   if (sailing) {
     kicker = 'Unterwegs'

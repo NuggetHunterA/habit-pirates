@@ -7,7 +7,7 @@ export interface Field {
   y: number
   /** Zwischenpunkte auf dem Weg HIN zu diesem Feld (Kartenpixel 1200 x 896) */
   via?: [number, number][]
-  /** Kampf auf diesem Feld (Encounter-id aus game/foes) */
+  /** Kampf auf diesem Feld (Encounter-id aus game/foes). Auf Truhenfeldern: bewachte Truhe, sie oeffnet sich erst nach dem Sieg. */
   enc?: string
   /** Story-Szene (id aus game/story). Auf Sturm-Feldern: Schluessel des Zufallsereignisses (game/events). */
   story?: string
@@ -25,13 +25,13 @@ export const MAP_H = 896
 export const CHAPTER_1: Field[] = [
   { kind: 'start', name: 'Starthafen', x: 318, y: 686, story: 'k1_intro' },
   { kind: 'truhe', name: 'Strandtruhe', x: 330, y: 560, via: [[352, 625]], chest: 'holz' },
-  { kind: 'truhe', name: 'Muschelstrand', x: 271, y: 496, via: [[300, 529]], chest: 'holz' },
+  { kind: 'truhe', name: 'Muschelstrand', x: 271, y: 496, via: [[300, 529]], chest: 'holz', enc: 'moewenspaeher' },
   { kind: 'insel', name: 'Palmeninsel', x: 270, y: 413, via: [[259, 455]], story: 'k1_palmen' },
   { kind: 'sturm', name: 'Böenfeld', x: 362, y: 420, via: [[316, 415]], story: 'k1_boeen' },
   { kind: 'gegner', name: 'Möwenwrack', x: 448, y: 452, via: [[405, 435]], enc: 'moewen' },
   { kind: 'insel', name: 'Kokosinsel', x: 565, y: 402, via: [[507, 429]], story: 'k1_kokos' },
   { kind: 'truhe', name: 'Schatzinsel', x: 672, y: 333, via: [[619, 369]], chest: 'silber' },
-  { kind: 'truhe', name: 'Felsenspalt', x: 747, y: 373, via: [[710, 352]], chest: 'holz' },
+  { kind: 'truhe', name: 'Felsenspalt', x: 747, y: 373, via: [[710, 352]], chest: 'holz', enc: 'moewennest' },
   { kind: 'gabel', name: 'Weggabelung', x: 752, y: 450, via: [[764, 409]], story: 'k1_gabel' },
   { kind: 'truhe', name: 'Korallengarten', x: 691, y: 519, via: [[722, 485]], chest: 'silber' },
   { kind: 'insel', name: 'Riff', x: 625, y: 585, via: [[658, 552]], story: 'k1_mara' },
@@ -54,14 +54,14 @@ export const CHAPTER_2: Field[] = [
   { kind: 'gegner', name: 'Quallenbucht', x: 610, y: 800, enc: 'quallen' },
   { kind: 'truhe', name: 'Algenfeld', x: 745, y: 790, chest: 'holz' },
   { kind: 'insel', name: 'Leuchtturm', x: 880, y: 780, story: 'k2_leuchtturm' },
-  { kind: 'truhe', name: 'Klippenspalt', x: 995, y: 680, chest: 'silber' },
+  { kind: 'truhe', name: 'Klippenspalt', x: 995, y: 680, chest: 'silber', enc: 'quallenwacht' },
   { kind: 'hafen', name: 'Nebelhafen', x: 1110, y: 580 },
   { kind: 'truhe', name: 'Muschelbank', x: 1060, y: 450, chest: 'silber' },
   { kind: 'truhe', name: 'Nebelboje', x: 930, y: 475, chest: 'holz' },
   { kind: 'gegner', name: 'Geisterfelsen', x: 800, y: 500, enc: 'geistertrupp' },
   { kind: 'truhe', name: 'Versunkener Kahn', x: 700, y: 530, chest: 'holz' },
   { kind: 'sturm', name: 'Nebelwirbel', x: 600, y: 560, story: 'k2_wirbel' },
-  { kind: 'truhe', name: 'Seegraswiese', x: 465, y: 560, chest: 'silber' },
+  { kind: 'truhe', name: 'Seegraswiese', x: 465, y: 560, chest: 'silber', enc: 'geisterwacht' },
   { kind: 'insel', name: 'Rauchinsel', x: 330, y: 560, story: 'k2_grummel' },
   { kind: 'insel', name: 'Pfefferfelsen', x: 290, y: 490, story: 'k2_pfeffer' },
   { kind: 'truhe', name: 'Versunkene Truhe', x: 250, y: 420, chest: 'silber' },
@@ -87,7 +87,7 @@ export const CHAPTER_3: Field[] = [
   { kind: 'insel', name: 'Heiße Quelle', x: 263, y: 310, story: 'k3_quelle' },
   { kind: 'hafen', name: 'Feuerhafen', x: 300, y: 225 },
   { kind: 'truhe', name: 'Obsidiansplitter', x: 360, y: 287, chest: 'silber' },
-  { kind: 'truhe', name: 'Funkenklippe', x: 420, y: 348, chest: 'holz' },
+  { kind: 'truhe', name: 'Funkenklippe', x: 420, y: 348, chest: 'holz', enc: 'funkennest' },
   { kind: 'gabel', name: 'Glutgabelung', x: 480, y: 410, story: 'k3_gabel' },
   { kind: 'truhe', name: 'Lavaglas', x: 565, y: 440, chest: 'holz' },
   { kind: 'truhe', name: 'Glühender Fels', x: 650, y: 470, chest: 'silber' },
@@ -101,7 +101,7 @@ export const CHAPTER_3: Field[] = [
   { kind: 'gegner', name: 'Obsidianhöhle', x: 960, y: 470, enc: 'obsidianwache' },
   { kind: 'truhe', name: 'Glasstrand', x: 875, y: 415, chest: 'holz' },
   { kind: 'insel', name: 'Aschehang', x: 790, y: 360, story: 'k3_pip' },
-  { kind: 'truhe', name: 'Kraterrand', x: 705, y: 305, chest: 'holz' },
+  { kind: 'truhe', name: 'Kraterrand', x: 705, y: 305, chest: 'holz', enc: 'aschewacht' },
   { kind: 'truhe', name: 'Vulkanschatz', x: 620, y: 250, chest: 'gold' },
   { kind: 'gegner', name: 'Schneckenpfad', x: 730, y: 220, enc: 'schneckenfeld' },
   { kind: 'truhe', name: 'Rauchklippe', x: 840, y: 190, chest: 'silber' },

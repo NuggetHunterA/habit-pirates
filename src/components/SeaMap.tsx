@@ -428,6 +428,13 @@ export default function SeaMap({ chapter, field, done: doneFields, mini = false,
                 <g transform={`scale(${(r / 15) * 0.95})`}>
                   <FieldGlyph kind={f.kind} />
                 </g>
+                {/* Bewachte Truhe: kleine Saebel am Rand, bis die Truhe offen ist */}
+                {f.kind === 'truhe' && f.enc && !done && (
+                  <g transform={`translate(${r * 0.75} ${-r * 0.75}) scale(${(r / 15) * 0.5})`}>
+                    <circle r={13} fill={FIELD_COLOR.gegner} stroke="#3B2414" strokeWidth="3.5" />
+                    <FieldGlyph kind="gegner" />
+                  </g>
+                )}
               </g>
             )
           })}

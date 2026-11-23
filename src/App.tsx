@@ -93,7 +93,7 @@ export default function App() {
   const field = save?.game.field ?? 0
   const chapter = chapterOf(save?.game.chapter)
   const here = chapter.fields[field]
-  const chestAvailable = !!save && here.kind === 'truhe' && !save.game.looted.includes(field)
+  const chestAvailable = !!save && here.kind === 'truhe' && !save.game.looted.includes(field) && !blocked(save)
   const actionHere = !!save && ((here.story && !save.game.seen.includes(here.story)) || blocked(save))
   const level = save ? levelFor(save.game.xp, chapter.cap) : 1
   const crew = (save?.game.crew ?? []) as CrewId[]
@@ -189,6 +189,8 @@ export default function App() {
     if (!r?.sieg) return
     game.winFight({ field: req.field, boss: req.boss, farm: req.farm, xp: r.xp, gold: r.gold, items: r.items })
     if (req.boss) window.setTimeout(() => setScene({ k: 'story', id: chapter.outro }), 250)
+    // Bewachte Truhe: nach dem Sieg geht die Truhe auf
+    else if (req.field != null && chapter.fields[req.field]?.kind === 'truhe') setRight('truhe')
     else if (r.items.length) say(`${r.items[0].name} liegt jetzt im Laderaum!`)
     if (req.tier) maybeEvent()
   }

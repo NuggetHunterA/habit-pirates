@@ -1,6 +1,14 @@
 /** Aenderungsliste fuer das Menue ("Was ist neu"). Neueste Version zuerst, knapp und sachlich, ohne Story-Spoiler. */
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
   {
+    version: '1.1.0',
+    date: '23.11.2026',
+    items: [
+      'Bewachte Truhen: In jedem Kapitel werden zwei Truhen von Gegnern bewacht',
+      'Nach dem Sieg öffnet sich die Truhe, verlieren kostet nichts',
+    ],
+  },
+  {
     version: '1.0.0',
     date: '22.11.2026',
     items: [

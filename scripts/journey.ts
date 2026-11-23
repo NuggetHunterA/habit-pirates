@@ -256,8 +256,11 @@ function journey(maxDays = 140) {
         const enc = ENCOUNTERS[f.enc]
         if (!cur.routeFirst[s.game.field]) snap(enc.id, s)
         if (!cur.routeFirst[s.game.field]) cur.routeFirst[s.game.field] = [winRate(s, defaultSetup(fightersOf(s)), enc, 60), winRate(s, chooseSetup(s, enc), enc, 60), level(s)]
-        if (fight(s, enc, log)) s.game.cleared.push(s.game.field)
-        else if (++stuck >= 6) break
+        if (fight(s, enc, log)) {
+          s.game.cleared.push(s.game.field)
+          // Bewachte Truhe: nach dem Sieg geht die Truhe auf
+          if (f.kind === 'truhe') openChest(s, f.chest ?? 'holz')
+        } else if (++stuck >= 6) break
         continue
       }
       if (f.kind === 'boss') {
@@ -342,6 +345,12 @@ function eventLoot(s: Save) {
   else if (r < 0.8) s.game.gold += Math.round((30 + Math.random() * 40) * (1 + 0.6 * (s.game.chapter - 1)))
 }
 
+function openChest(s: Save, kind: ChestKind) {
+  const l = rollChest(kind, s.game.chapter)
+  s.game.gold += l.gold
+  addItems(s, l.items)
+}
+
 function resolveField(s: Save) {
   const ch = CHAPTERS[s.game.chapter - 1]
   const f = ch.fields[s.game.field]
@@ -353,15 +362,13 @@ function resolveField(s: Save) {
   if (story?.reward?.gold) s.game.gold += story.reward.gold
   if (story?.reward?.item) addItems(s, [rollItem('gewoehnlich', s.game.chapter)])
   if (story?.choice) addItems(s, [rollItem('gewoehnlich', s.game.chapter)])
-  if (f.kind === 'truhe') {
+  if (f.kind === 'truhe' && !f.enc) {
     let kind: ChestKind = f.chest ?? 'holz'
     if (Math.random() < CURSE_CHANCE) {
       const g = guardianEncounter(s.game.chapter)
       if (fight(s, g)) kind = 'verflucht'
     }
-    const l = rollChest(kind, s.game.chapter)
-    s.game.gold += l.gold
-    addItems(s, l.items)
+    openChest(s, kind)
   }
   if (f.kind === 'sturm' || f.kind === 'wrack') {
     if (f.kind === 'sturm' && Math.random() < 0.15) fight(s, seaMonster(s.game.chapter))
