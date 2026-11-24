@@ -274,7 +274,7 @@ export const MOEWEN: Encounter = strengthen(
     reward: { xp: 75, gold: [10, 18], itemChance: 0.3 },
     outro: 'Die Möwen flattern davon und lassen ein paar glänzende Münzen fallen.',
   },
-  0.94,
+  0.8,
 )
 
 /** Erster Kampf in Kapitel 1 */
@@ -288,7 +288,7 @@ export const KRABBENBANDE: Encounter = strengthen(
     reward: { xp: 110, gold: [18, 30], itemChance: 0.35 },
     outro: 'Die Krabbenbande zieht sich ins Riff zurück. Der Weg ist frei.',
   },
-  1.73,
+  1.45,
 )
 
 /** Beutezug in Kapitel 1 */
@@ -302,7 +302,7 @@ export const RIFFBANDE: Encounter = strengthen(
     reward: { xp: 100, gold: [16, 26], itemChance: 0.35 },
     outro: 'Die Riffbande verkriecht sich zwischen den Felsen.',
   },
-  2.05,
+  1.66,
 )
 
 export const SCHALBART: Encounter = strengthen(
@@ -526,7 +526,7 @@ export const MOEWENSPAEHER = guarded(
   'Zwei Möwenpiraten hocken auf einer Truhe und wollen sie nicht hergeben.',
   'Die Späher flattern kreischend davon. Die Truhe gehört euch!',
   25,
-  1.0,
+  1.18,
   MOEWEN.foes.slice(0, 2),
 )
 
@@ -538,7 +538,7 @@ export const MOEWENNEST = guarded(
   'Im Felsenspalt nisten Möwenpiraten. Mitten im Nest glänzt eine Truhe.',
   'Das Nest ist leer. Nur die Truhe ist noch da.',
   40,
-  1.33,
+  1.38,
 )
 
 /** Kapitel 2, Klippenspalt */
