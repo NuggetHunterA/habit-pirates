@@ -5,6 +5,7 @@
 // Kaempfe laufen im echten Kampfsystem mit Item-Effekten, Schulen und Sets.
 //
 // Umgebung: RUNS=40 (Durchlaeufe), FULL=0.8 (Anteil voller Tage), ABIL=best|first, SMART=1 (Faehigkeit selbst antippen)
+// SHOP=0: Spieler kauft nichts (kein Laden, kein Haendler, keine Werft), wie ein neuer Spieler am Anfang
 import { simulate, type AbilityId } from '../src/game/combat.ts'
 import { CREW, ENCOUNTERS, FARM, FARM_TIERS, crewDefs, defaultSetup, farmEncounter, guardianEncounter, seaMonster, strengthen, type CrewId, type CrewSetup, type Encounter, type FarmTier } from '../src/game/foes.ts'
 import { CHAPTERS } from '../src/game/map.ts'
@@ -21,6 +22,7 @@ const RUNS = Number(process.env.RUNS ?? 40)
 const FULL = Number(process.env.FULL ?? 0.8)
 const ABIL = process.env.ABIL ?? 'best'
 const SMART = !!process.env.SMART
+const SHOP = process.env.SHOP !== '0'
 const R_ORDER: Rarity[] = ['gewoehnlich', 'selten', 'episch', 'legendaer']
 // Zum Tunen: SCALE="moewen=0.9,schalbart=1.2" macht einzelne Kaempfe staerker oder schwaecher (Leben und Angriff)
 const SCALE: Record<string, number> = Object.fromEntries((process.env.SCALE ?? '').split(',').filter(Boolean).map((x) => { const [k, v] = x.split('='); return [k, Number(v)] }))
@@ -245,7 +247,7 @@ function journey(maxDays = 140) {
     else if (streak === 60) rewardChest(s, 'gold', 'legendaer')
     else if (streak >= 30 && streak % 30 === 0) rewardChest(s, 'gold', 'episch')
     if (day % 7 === 6) rewardChest(s, Math.random() < 0.5 ? 'gold' : 'silber')
-    shopDay(s, day)
+    if (SHOP) shopDay(s, day)
     let triesToday = 0
     const ch = CHAPTERS[s.game.chapter - 1]
     let stuck = 0
@@ -378,7 +380,7 @@ function resolveField(s: Save) {
 
 // ---------- Tuner ----------
 // TUNE=1: merkt sich den Spielstand beim ersten Treffen jedes Kampfes und sucht die Staerke,
-// bei der die Standard-Aufstellung das Ziel trifft (normale Kaempfe 75 %, Bosse 30 %).
+// bei der die Standard-Aufstellung das Ziel trifft (normale Kaempfe 75 %, Bosse 30 %). TUNE_Q siehe unten.
 const SNAPS = new Map<string, Save[]>()
 function snap(id: string, s: Save) {
   if (!process.env.TUNE) return
@@ -391,7 +393,12 @@ function tune() {
   for (const [id, saves] of SNAPS) {
     const base = ENCOUNTERS[id]
     const target = base.boss ? Number(process.env.BOSS_TARGET ?? 0.3) : Number(process.env.TARGET ?? 0.75)
-    const rate = (k: number) => avg(saves.map((s) => winRate(s, defaultSetup(fightersOf(s)), strengthen(base, k), 40)))
+    // TUNE_Q=0.25: statt des Durchschnitts zaehlt der Spielstand im unteren Viertel (wenig Gluck mit Beute)
+    const q = process.env.TUNE_Q ? Number(process.env.TUNE_Q) : null
+    const rate = (k: number) => {
+      const r = saves.map((s) => winRate(s, defaultSetup(fightersOf(s)), strengthen(base, k), 40))
+      return q == null ? avg(r) : r.sort((a, b) => a - b)[Math.floor(q * (r.length - 1))]
+    }
     let lo = 0.3
     let hi = 4
     for (let i = 0; i < 10; i++) {
@@ -410,7 +417,7 @@ const runs = Array.from({ length: RUNS }, () => journey())
 const pct = (x: number) => `${Math.round(x * 100)} %`
 const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length)
 const fmt = (x: number, d = 1) => x.toFixed(d).replace('.', ',')
-console.log(`Reise-Simulator: ${RUNS} Durchläufe, ${pct(FULL)} volle Tage, Fähigkeiten ${ABIL}${SMART ? ', selbst angetippt' : ', Automatik'}`)
+console.log(`Reise-Simulator: ${RUNS} Durchläufe, ${pct(FULL)} volle Tage, Fähigkeiten ${ABIL}${SMART ? ', selbst angetippt' : ', Automatik'}${SHOP ? '' : ', ohne Einkaufen'}`)
 let total = 0
 for (let c = 0; c < CHAPTERS.length; c++) {
   const L = runs.map((r) => r[c]).filter(Boolean)

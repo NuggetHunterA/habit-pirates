@@ -1,6 +1,14 @@
 /** Aenderungsliste fuer das Menue ("Was ist neu"). Neueste Version zuerst, knapp und sachlich, ohne Story-Spoiler. */
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
   {
+    version: '1.1.1',
+    date: '24.11.2026',
+    items: [
+      'Kapitel 1: Die Kämpfe auf der Route sind leichter, auch mit wenig Ausrüstung gut zu schaffen',
+      'Der erste Kampf gegen die Möwenpiraten ist kein Stolperstein mehr',
+    ],
+  },
+  {
     version: '1.1.0',
     date: '23.11.2026',
     items: [
