@@ -10,19 +10,30 @@ import ItemIcon, { RARITY_COLOR } from './ItemIcon'
 import ItemExtras from './ItemExtras'
 import { StatLines } from './ItemSheet'
 import './Gear.css'
+import strand from '../assets/kampf/strand.webp'
 
 type View = 'laden' | 'werft' | 'haendler'
 const VIEW_LABEL: Record<View, string> = { laden: 'Laden', werft: 'Werft', haendler: 'Händler' }
+const STAND_SUB: Record<View, (open: boolean) => string> = {
+  laden: () => 'Neue Ware täglich',
+  werft: () => 'Ausrüstung verbessern',
+  haendler: (open) => (open ? 'Heute da!' : 'Donnerstags'),
+}
 
 /** Laden-Tab: Hafenladen, Werft und Spezialhaendler */
 export default function Shop({ game, say, onGear }: { game: Game; say: (m: string) => void; onGear: () => void }) {
   const [view, setView] = useState<View>('laden')
   return (
-    <div className="gear">
-      <div className="seg seg--dark gear__views" role="group" aria-label="Ansicht">
+    <div className="gear hafen">
+      <div className="hafen__hero">
+        <img src={strand} alt="" />
+        <h1 className="place-title">Hafen</h1>
+      </div>
+      <div className="hafen__stands" role="group" aria-label="Stand wählen">
         {(Object.keys(VIEW_LABEL) as View[]).map((v) => (
-          <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}>
-            {VIEW_LABEL[v]}
+          <button key={v} type="button" className="hafen__stand" aria-pressed={view === v} onClick={() => setView(v)}>
+            <span className="hafen__stand-name">{VIEW_LABEL[v]}</span>
+            <span className="hafen__stand-sub">{STAND_SUB[v](traderOpen(new Date()))}</span>
             {v === 'haendler' && traderOpen(new Date()) && <span className="seg__dot" aria-label="geöffnet" />}
           </button>
         ))}

@@ -1,7 +1,8 @@
-import { AnimatePresence, motion } from 'motion/react'
-import { useRef, useState } from 'react'
+import { motion } from 'motion/react'
+import { useEffect, useRef, useState } from 'react'
 import type { Glass, Habit } from '../game/types'
 import { RULES } from '../game/rules'
+import { sendCoin } from './Celebrate'
 
 interface Props {
   habit: Habit
@@ -17,6 +18,8 @@ interface Props {
   rhythm?: string
   /** Heute frei: Hinweis, wann er wieder faellig ist */
   freeText?: string
+  /** Wind, den der Tag durch das letzte Abhaken dazubekommen hat */
+  gain?: number
 }
 
 function Check() {
@@ -27,21 +30,15 @@ function Check() {
   )
 }
 
-function Sparks() {
+/** Goldfunken, Lichtring und aufsteigender Wind beim Abhaken */
+function Burst({ gain }: { gain: number }) {
   return (
-    <span aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-      {Array.from({ length: 8 }).map((_, i) => {
-        const a = (i / 8) * Math.PI * 2
-        return (
-          <motion.span
-            key={i}
-            initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
-            animate={{ x: Math.cos(a) * 34, y: Math.sin(a) * 34, opacity: 0, scale: 0.4 }}
-            transition={{ duration: 0.55, ease: 'easeOut' }}
-            style={{ position: 'absolute', left: 21, top: 21, width: 6, height: 6, borderRadius: 3, background: i % 2 ? '#FFE9A8' : '#FFFFFF' }}
-          />
-        )
-      })}
+    <span className="burst" aria-hidden="true">
+      <span className="burst__ring" />
+      {Array.from({ length: 10 }).map((_, i) => (
+        <span key={i} className="burst__ray" style={{ ['--a' as string]: `${i * 36}deg`, animationDelay: `${160 + (i % 3) * 30}ms`, background: i % 2 ? '#ffe9a8' : '#e2a73a' }} />
+      ))}
+      <span className="burst__gain">{gain > 0 ? `+${gain} Wind` : 'Geschafft!'}</span>
     </span>
   )
 }
@@ -81,8 +78,27 @@ function GlassIcon({ kind, index, filled }: { kind?: Glass; index: number; fille
   )
 }
 
-export default function HabitCard({ habit, done, focus, glasses, onToggle, onAddGlass, onPopGlass, onEdit, rhythm, freeText }: Props) {
-  const [burst, setBurst] = useState(0)
+export default function HabitCard({ habit, done, focus, glasses, onToggle, onAddGlass, onPopGlass, onEdit, rhythm, freeText, gain = 0 }: Props) {
+  /** Belohnung: zaehlt hoch bei jedem Wechsel auf erledigt, merkt sich den Wind-Zuwachs */
+  const [burst, setBurst] = useState<{ n: number; gain: number } | null>(null)
+  const coinRef = useRef<HTMLElement | null>(null)
+  const wasDone = useRef(done)
+  useEffect(() => {
+    if (done && !wasDone.current) {
+      setBurst((b) => ({ n: (b?.n ?? 0) + 1, gain }))
+      try {
+        navigator.vibrate?.(18)
+      } catch {
+        /* egal */
+      }
+      sendCoin(coinRef.current)
+      const t = setTimeout(() => setBurst(null), 1400)
+      wasDone.current = done
+      return () => clearTimeout(t)
+    }
+    if (!done) setBurst(null)
+    wasDone.current = done
+  }, [done, gain])
   // Langes Druecken (0,5 s) oeffnet das Bearbeiten-Blatt, der folgende Tipp zaehlt dann nicht
   const pressT = useRef(0)
   const longDone = useRef(false)
@@ -101,10 +117,7 @@ export default function HabitCard({ habit, done, focus, glasses, onToggle, onAdd
   const isLassen = habit.kind === 'lassen'
   const water = glasses.filter((g) => g === 'w').length
 
-  const toggle = () => {
-    if (!done) setBurst((b) => b + 1)
-    onToggle()
-  }
+  const toggle = () => onToggle()
 
   const base = isDrink
     ? `${Math.min(glasses.length, RULES.drinkGlasses)} von ${RULES.drinkGlasses} Gläsern · ${water} Wasser (mind. ${RULES.drinkMinWater})`
@@ -120,7 +133,7 @@ export default function HabitCard({ habit, done, focus, glasses, onToggle, onAdd
   return (
     <motion.div
       layout
-      className={`card habit ${done ? 'habit--done' : ''} ${focus ? 'habit--focus' : ''} ${freeText ? 'habit--free' : ''}`}
+      className={`card habit ${burst ? 'habit--burst' : ''} ${done ? 'habit--done' : ''} ${focus ? 'habit--focus' : ''} ${freeText ? 'habit--free' : ''}`}
       onPointerDown={startPress}
       onPointerUp={endPress}
       onPointerLeave={endPress}
@@ -134,32 +147,12 @@ export default function HabitCard({ habit, done, focus, glasses, onToggle, onAdd
         }
       }}
     >
+      {burst && (
+        <span className="habit__shine" aria-hidden="true" key={burst.n}>
+          <span />
+        </span>
+      )}
       <div className="habit__row">
-        {isLassen || isDrink ? (
-          <span className={`coin-btn ${done ? 'coin-btn--done' : ''}`} style={{ cursor: 'default' }} aria-hidden="true">
-            <AnimatePresence>
-              {done && (
-                <motion.span key="c" initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0 }}>
-                  <Check />
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </span>
-        ) : (
-          <motion.button
-            type="button"
-            className={`coin-btn ${done ? 'coin-btn--done' : ''}`}
-            onClick={toggle}
-            aria-pressed={done}
-            aria-label={(done ? 'Zurücknehmen: ' : 'Erledigt: ') + habit.name}
-            whileTap={{ scale: 0.85 }}
-            animate={done ? { rotateY: [0, 180, 360], scale: [1, 1.18, 1] } : { rotateY: 0, scale: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            {done && <Check />}
-            {burst > 0 && done && <Sparks key={burst} />}
-          </motion.button>
-        )}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <span className="habit__name">
             {habit.name}
@@ -173,25 +166,34 @@ export default function HabitCard({ habit, done, focus, glasses, onToggle, onAdd
           </span>
           <span className="habit__sub">{sub}</span>
         </div>
-        {focus && <span className="tag-focus">FOKUS</span>}
+        {focus && (
+          <span className="tag-focus" title="Fokus · zählt doppelt">
+            ×2
+          </span>
+        )}
         {isLassen && (
           <button type="button" className={`small-btn ${done ? 'small-btn--gold' : ''}`} onClick={toggle} aria-pressed={done}>
             {done ? 'Bestätigt' : 'Bestätigen'}
           </button>
         )}
-        <AnimatePresence>
-          {burst > 0 && done && (
-            <motion.span
-              key={burst}
-              initial={{ opacity: 0, y: 0 }}
-              animate={{ opacity: [0, 1, 1, 0], y: -34 }}
-              transition={{ duration: 1.1 }}
-              style={{ position: 'absolute', right: 18, color: '#1F6F8B', fontWeight: 900, fontSize: 18, pointerEvents: 'none' }}
+        <span className="coin-wrap" ref={coinRef}>
+          {burst && <Burst key={burst.n} gain={burst.gain} />}
+          {isLassen || isDrink ? (
+            <span className={`coin-btn ${done ? 'coin-btn--done' : ''} ${burst ? 'coin-btn--stamp' : ''}`} style={{ cursor: 'default' }} aria-hidden="true">
+              {done && <Check />}
+            </span>
+          ) : (
+            <button
+              type="button"
+              className={`coin-btn ${done ? 'coin-btn--done' : ''} ${burst ? 'coin-btn--stamp' : ''}`}
+              onClick={toggle}
+              aria-pressed={done}
+              aria-label={(done ? 'Zurücknehmen: ' : 'Erledigt: ') + habit.name}
             >
-              Wind!
-            </motion.span>
+              {done && <Check />}
+            </button>
           )}
-        </AnimatePresence>
+        </span>
       </div>
       {isDrink && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingLeft: 2 }}>

@@ -3,7 +3,6 @@ import { daysOfWeek, weekStartOf } from '../game/dates'
 import { streakDay, RULES } from '../game/rules'
 import { MILESTONES, milestoneChest, nextMilestone, streakInfo } from '../game/motivation'
 import { CHEST_LABEL } from '../game/loot'
-import Sheet from './Sheet'
 import silber from '../assets/truhen/truhe_silber.webp'
 import gold from '../assets/truhen/truhe_gold.webp'
 
@@ -26,8 +25,8 @@ export function FlameIcon({ size = 18 }: { size?: number }) {
   )
 }
 
-/** Serie: Stand, naechste Truhe, Rettungsring und die laufende Woche */
-export default function StreakSheet({ game, onClose }: { game: Game; onClose: () => void }) {
+/** Serie: Stand, naechste Truhe, Rettungsring und die laufende Woche (im Logbuch) */
+export function StreakPanel({ game }: { game: Game }) {
   const save = game.save!
   const info = streakInfo(save, game.today)
   const next = nextMilestone(info.days)
@@ -47,8 +46,7 @@ export default function StreakSheet({ game, onClose }: { game: Game; onClose: ()
   const rescued = new Set(info.rescued)
 
   return (
-    <Sheet onClose={onClose} label="Deine Serie">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="streak-panel">
         <div style={{ textAlign: 'center' }}>
           <div className="kicker" style={{ color: '#e8590c' }}>
             Deine Serie
@@ -112,11 +110,6 @@ export default function StreakSheet({ game, onClose }: { game: Game; onClose: ()
             })}
           </div>
         </div>
-
-        <button type="button" className="btn-gold" onClick={onClose}>
-          Weiter
-        </button>
       </div>
-    </Sheet>
   )
 }

@@ -1,47 +1,18 @@
 import { motion } from 'motion/react'
 
-export type Tab = 'deck' | 'karte' | 'ausruestung' | 'laden'
+/** Die fuenf Orte der App */
+export type Tab = 'deck' | 'karte' | 'crew' | 'hafen' | 'logbuch'
 
-const LABEL: Record<Tab, string> = { deck: 'Deck', karte: 'Karte', ausruestung: 'Ausrüstung', laden: 'Laden' }
+const LABEL: Record<Tab, string> = { deck: 'Deck', karte: 'Seekarte', crew: 'Mannschaft', hafen: 'Hafen', logbuch: 'Logbuch' }
 
-function TabIcon({ tab }: { tab: Tab }) {
-  const st = { fill: 'none', stroke: 'currentColor', strokeWidth: 2.2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
-  return (
-    <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
-      {tab === 'deck' && (
-        // Steuerrad
-        <g {...st}>
-          <circle cx="14" cy="14" r="7" />
-          <circle cx="14" cy="14" r="2.2" fill="currentColor" />
-          {Array.from({ length: 8 }).map((_, i) => {
-            const a = (i / 8) * Math.PI * 2
-            return <path key={i} d={`M${14 + Math.cos(a) * 2.2} ${14 + Math.sin(a) * 2.2}L${14 + Math.cos(a) * 12} ${14 + Math.sin(a) * 12}`} />
-          })}
-        </g>
-      )}
-      {tab === 'karte' && (
-        <g {...st}>
-          <path d="M3 6l7-2.5 8 2.5 7-2.5v18l-7 2.5-8-2.5-7 2.5z" />
-          <path d="M10 3.5v18M18 6v18" opacity="0.5" />
-          <path d="M12 12l3 3M15 12l-3 3" strokeWidth="2.6" />
-        </g>
-      )}
-      {tab === 'ausruestung' && (
-        <g {...st}>
-          <path d="M6 22L19 7h3v3L7 23z" />
-          <path d="M4 19l5 5M3 24l2-2" />
-          <path d="M16 20c4-1 7-4 8-8" opacity="0.6" />
-        </g>
-      )}
-      {tab === 'laden' && (
-        <g {...st}>
-          <path d="M9 9c-3 3-5 7-4 11 1 3 4 4 9 4s8-1 9-4c1-4-1-8-4-11z" />
-          <path d="M9 9l-1-4c2 1 4 1 6 0s4-1 6 0l-1 4z" />
-          <path d="M14 13v7M11.5 15c0-1 1-1.6 2.5-1.6s2.5.6 2.5 1.6-1 1.4-2.5 1.6-2.5.6-2.5 1.6 1 1.6 2.5 1.6 2.5-.6 2.5-1.6" strokeWidth="1.8" />
-        </g>
-      )}
-    </svg>
-  )
+const ICON: Record<Tab, string> = {
+  // Steuerrad
+  deck: 'M14 7a7 7 0 1 0 .01 0M14 11.8a2.2 2.2 0 1 0 .01 0M14 2v5M14 21v5M2 14h5M21 14h5M5.5 5.5 9 9M19 19l3.5 3.5M22.5 5.5 19 9M9 19l-3.5 3.5',
+  karte: 'M3 6l7-2.5 8 2.5 7-2.5v18l-7 2.5-8-2.5-7 2.5zM10 3.5v18M18 6v18',
+  crew: 'M10 12a4 4 0 1 0 .01 0M3 25c0-4 3-7 7-7s7 3 7 7M19 11a3 3 0 1 0 .01 0M18 17c4 0 7 3 7 7',
+  // Anker
+  hafen: 'M14 3a2.5 2.5 0 1 0 .01 0M14 8v17M8 12h12M4 17c0 5 4 8 10 8s10-3 10-8M4 17l-1.5 2M24 17l1.5 2',
+  logbuch: 'M5 4h13a3 3 0 0 1 3 3v17H8a3 3 0 0 1-3-3zM5 21a3 3 0 0 1 3-3h13M10 9h7M10 13h5',
 }
 
 interface Props {
@@ -53,14 +24,16 @@ interface Props {
 
 /** Untere Leiste aus Holz. Aufgeklappt ohne "Deck", weil die Habits links immer zu sehen sind. */
 export default function TabBar({ tab, wide, onTab, badges = {} }: Props) {
-  const tabs: Tab[] = wide ? ['karte', 'ausruestung', 'laden'] : ['deck', 'karte', 'ausruestung', 'laden']
+  const tabs: Tab[] = wide ? ['karte', 'crew', 'hafen', 'logbuch'] : ['deck', 'karte', 'crew', 'hafen', 'logbuch']
   return (
-    <nav className={`tabbar ${wide ? 'tabbar--wide' : ''}`} aria-label="Bereiche">
+    <nav className={`tabbar ${wide ? 'tabbar--wide' : ''}`} aria-label="Orte">
       {tabs.map((t) => (
         <button key={t} type="button" className="tabbar__btn" aria-current={tab === t ? 'page' : undefined} onClick={() => onTab(t)}>
           {tab === t && <motion.span layoutId="tabbar-plate" className="tabbar__plate" transition={{ type: 'spring', stiffness: 420, damping: 32 }} />}
           <span className="tabbar__icon">
-            <TabIcon tab={t} />
+            <svg width="26" height="26" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d={ICON[t]} />
+            </svg>
             {badges[t] && tab !== t && <span className="tabbar__badge" />}
           </span>
           <span className="tabbar__label">{LABEL[t]}</span>

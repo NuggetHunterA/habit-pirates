@@ -1,6 +1,18 @@
 /** Aenderungsliste fuer das Menue ("Was ist neu"). Neueste Version zuerst, knapp und sachlich, ohne Story-Spoiler. */
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
   {
+    version: '1.2.0',
+    date: '25.11.2026',
+    items: [
+      'Neuer Look: Holz, Pergament und Messing statt Blau und Weiß',
+      'Fünf Orte unten: Deck, Seekarte, Mannschaft, Hafen und Logbuch',
+      'Deck: Das Segel zeigt oben den Wind, darunter direkt die Habits',
+      'Abhaken mit Goldmünze, Funken und Münzflug ins Segel, beim letzten Habit „Volle Segel!“',
+      'Mannschaft: Tipp auf einen Platz zeigt alle passenden Items mit Vergleich',
+      'Logbuch statt Menü: Serie, Woche planen und Einstellungen an einem Ort',
+    ],
+  },
+  {
     version: '1.1.1',
     date: '24.11.2026',
     items: [

@@ -10,6 +10,7 @@ import { ROLE, fullName, onBoard, pirateStats } from '../game/crewinfo'
 import { portraitFor } from '../fight/art'
 import ItemIcon from './ItemIcon'
 import ItemSheet from './ItemSheet'
+import SlotPicker from './SlotPicker'
 import CrewFigure from './CrewFigure'
 import StatIcon from './StatIcon'
 import Collection from './Collection'
@@ -19,7 +20,7 @@ import './Gear.css'
 
 const ORDER: Rarity[] = ['legendaer', 'episch', 'selten', 'gewoehnlich']
 type View = 'ausruesten' | 'sammelbuch' | 'crew'
-const VIEW_LABEL: Record<View, string> = { ausruesten: 'Ausrüsten', sammelbuch: 'Sammelbuch', crew: 'Crew' }
+const VIEW_LABEL: Record<View, string> = { ausruesten: 'Ausrüstung', sammelbuch: 'Sammelbuch', crew: 'Crew' }
 
 /** Ausruestungs-Tab: Ausruesten je Pirat, Sammelbuch und Crewuebersicht */
 export default function Equipment({ game, say, onShop }: { game: Game; say: (m: string) => void; onShop: () => void }) {
@@ -29,6 +30,7 @@ export default function Equipment({ game, say, onShop }: { game: Game; say: (m: 
   const current = crew.includes(who) ? who : crew[0]
   return (
     <div className="gear">
+      <h1 className="place-title">Mannschaft</h1>
       <div className="seg seg--dark gear__views" role="group" aria-label="Ansicht">
         {(Object.keys(VIEW_LABEL) as View[]).map((v) => (
           <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}>
@@ -59,6 +61,7 @@ function Outfit({ game, say, onShop, who, setWho }: { game: Game; say: (m: strin
   const crew = onBoard(save)
   const [filter, setFilter] = useState<Slot | 'alle'>('alle')
   const [open, setOpen] = useState<Item | null>(null)
+  const [pick, setPick] = useState<Slot | null>(null)
   const [dir, setDir] = useState(1)
   const eq = equippedItems(save, who)
   const { stats, base } = pirateStats(save, who)
@@ -88,7 +91,7 @@ function Outfit({ game, say, onShop, who, setWho }: { game: Game; say: (m: strin
         key={s}
         type="button"
         className={`gear-slot gear-slot--${s}`}
-        onClick={() => (it ? setOpen(it) : setFilter(s))}
+        onClick={() => setPick(s)}
         aria-label={it ? `${SLOT_LABEL[s]}: ${it.name}` : `${SLOT_LABEL[s]}: leer`}
       >
         <ItemIcon itemKey={it?.key} slot={s} rarity={it?.rarity} size={62} stars={it?.stars} />
@@ -250,7 +253,12 @@ function Outfit({ game, say, onShop, who, setWho }: { game: Game; say: (m: strin
         )}
       </div>
 
-      <AnimatePresence>{open && <ItemSheet game={game} item={open} who={who} say={say} onClose={() => setOpen(null)} />}</AnimatePresence>
+      <AnimatePresence>
+        {pick && !open && (
+          <SlotPicker key="pick" game={game} slot={pick} who={who} say={say} onClose={() => setPick(null)} onDetails={(it) => setOpen(it)} />
+        )}
+        {open && <ItemSheet key="item" game={game} item={open} who={who} say={say} onClose={() => setOpen(null)} />}
+      </AnimatePresence>
     </>
   )
 }
