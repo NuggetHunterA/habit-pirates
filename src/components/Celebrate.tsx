@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { BACK, useBack } from '../game/back'
 import { ART } from '../assets'
 import { GUST_EVENT } from './SailStrip'
 
@@ -61,6 +62,7 @@ export function CoinFlight() {
 
 /** "Volle Segel!": Szene, wenn der letzte Habit des Tages abgehakt ist */
 export function FullSail({ show, bonus, onClose }: { show: boolean; bonus: number; onClose: () => void }) {
+  useBack(show, BACK.sheet, onClose)
   useEffect(() => {
     if (!show) return
     const t = setTimeout(onClose, 4200)

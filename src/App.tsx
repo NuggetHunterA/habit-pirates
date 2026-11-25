@@ -32,6 +32,7 @@ import Equipment from './components/Equipment'
 import Shop from './components/Shop'
 import TabBar, { type Tab } from './components/TabBar'
 import { RULES, windAvailable } from './game/rules'
+import { BACK, useBack } from './game/back'
 
 type Left = 'woche' | 'tag'
 type Right = 'karte' | 'truhe'
@@ -62,7 +63,15 @@ export default function App() {
   const [left, setLeft] = useState<Left>('tag')
   const [right, setRight] = useState<Right>('karte')
   /** Untere Tab-Leiste. Aufgeklappt steht "Deck" immer links, rechts die anderen Tabs. */
-  const [tab, setTab] = useState<Tab>('deck')
+  const [tab, setTabNow] = useState<Tab>('deck')
+  /** Zuvor besuchte Orte, für die Zurück-Taste. Das Deck ist der Start und leert die Spur. */
+  const trail = useRef<Tab[]>([])
+  /** Aufgeklappt zeigen Deck und Karte dasselbe */
+  const same = (a: Tab, b: Tab) => a === b || (wide && a !== b && (a === 'deck' || a === 'karte') && (b === 'deck' || b === 'karte'))
+  const setTab = (t: Tab) => {
+    if (!same(t, tab)) trail.current = t === 'deck' ? [] : [...trail.current.filter((x) => !same(x, t) && !same(x, tab)), tab].slice(-8)
+    setTabNow(t)
+  }
   const [toast, setToast] = useState('')
   const [sheet, setSheet] = useState<null | 'add'>(null)
   /** Habit, der gerade bearbeitet wird */
@@ -205,6 +214,22 @@ export default function App() {
   const showRight = wide || tab !== 'deck'
   const wind = save ? windAvailable(save) : 0
   const streak = save ? streakInfo(save, game.today) : null
+
+  // Android-Zurück-Taste: erst Truhe, Wochenplanung oder Einführung schließen, dann zum vorherigen Ort
+  const chestOpen = showRight && rightTab === 'karte' && !scene && rightShown === 'truhe'
+  const weekOpen = showLeft && left === 'woche' && !needsWeek
+  const home = same(tab, 'deck')
+  const inGame = !!save && save.introDone !== false
+  useBack(inGame && (introReplay || chestOpen || weekOpen || !home), BACK.place, () => {
+    if (introReplay) return setIntroReplay(false)
+    if (chestOpen) return setRight('karte')
+    if (weekOpen) return setLeft('tag')
+    let prev = trail.current.pop()
+    while (prev && same(prev, tab)) prev = trail.current.pop()
+    setTabNow(prev ?? 'deck')
+  })
+  // Geschichten, Ereignisse und Belohnungen laufen zu Ende; Zurück schließt dort nicht die App
+  useBack(showRight && rightTab === 'karte' && !!scene && scene.k !== 'fight', BACK.scene, () => {})
 
   const openReward = (r: PendingReward) => {
     setTab('karte')
