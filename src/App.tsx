@@ -25,8 +25,8 @@ import Today from './components/Today'
 import MapPanel from './components/MapPanel'
 import ChestScene from './components/ChestScene'
 import HabitSheet from './components/HabitSheet'
-import MenuSheet from './components/MenuSheet'
-import StreakSheet, { FlameIcon, RingIcon } from './components/StreakSheet'
+import Logbuch from './components/Logbuch'
+import { FlameIcon, RingIcon } from './components/Streak'
 import { streakInfo, type PendingReward } from './game/motivation'
 import Equipment from './components/Equipment'
 import Shop from './components/Shop'
@@ -64,7 +64,7 @@ export default function App() {
   /** Untere Tab-Leiste. Aufgeklappt steht "Deck" immer links, rechts die anderen Tabs. */
   const [tab, setTab] = useState<Tab>('deck')
   const [toast, setToast] = useState('')
-  const [sheet, setSheet] = useState<null | 'add' | 'menu' | 'streak'>(null)
+  const [sheet, setSheet] = useState<null | 'add'>(null)
   /** Habit, der gerade bearbeitet wird */
   const [editId, setEditId] = useState<string | null>(null)
   /** Einfuehrung aus dem Menue nochmal ansehen */
@@ -215,36 +215,28 @@ export default function App() {
   return (
     <div className={`app ${wide ? 'app--open' : ''}`}>
       <header className="topbar">
-        <div className="topbar__title">Habit Pirates</div>
+        <div className="topbar__brand">
+          <img src={ART.logo} alt="" className="topbar__logo" />
+          <div className="topbar__title">Habit Pirates</div>
+        </div>
         {game.save && (
           <div className="topbar__right">
             <button
               type="button"
               className="pill pill--streak"
-              onClick={() => setSheet('streak')}
-              aria-label={`Serie: ${streak?.days ?? 0} Tage${streak?.ringFree ? ', Rettungsring bereit' : ''}`}
+              onClick={() => setTab('logbuch')}
+              aria-label={`Serie: ${streak?.days ?? 0} Tage${streak?.ringFree ? ', Rettungsring bereit' : ''}. Logbuch öffnen`}
             >
               <FlameIcon />
               {streak?.days ?? 0}
               {streak?.ringFree && <RingIcon size={16} />}
             </button>
-            <div className="pill pill--wind" aria-label={`${Math.max(0, wind)} Wind`}>
-              <svg className="pill__icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M3 9h11a3 3 0 1 0-3-3M3 14h15a3 3 0 1 1-3 3M3 19h7" />
-              </svg>
-              <motion.span key={wind} initial={{ scale: 1.5 }} animate={{ scale: 1 }}>
-                {Math.max(0, wind)}
-              </motion.span>
-            </div>
             <div className="pill" aria-label={`${game.save.game.gold} Gold`}>
               <span className="coin" />
               <motion.span key={game.save.game.gold} initial={{ scale: 1.5 }} animate={{ scale: 1 }}>
                 {game.save.game.gold}
               </motion.span>
             </div>
-            <button type="button" className="avatar-btn" onClick={() => setSheet('menu')} aria-label="Menü und Profil">
-              <img src={ART.portrait} alt="" />
-            </button>
           </div>
         )}
       </header>
@@ -289,7 +281,7 @@ export default function App() {
                   {leftShown === 'woche' ? (
                     <WeekStart game={game} say={say} onAddHabit={(cb) => openAdd(cb)} onEditHabit={setEditId} onDone={() => setLeft('tag')} />
                   ) : (
-                    <Today game={game} wide={wide} onMap={goMap} onWeek={() => setLeft('woche')} onAddHabit={() => openAdd()} onEditHabit={setEditId} onReward={openReward} />
+                    <Today game={game} onMap={goMap} onAddHabit={() => openAdd()} onEditHabit={setEditId} onReward={openReward} />
                   )}
                 </motion.div>
               </AnimatePresence>
@@ -350,10 +342,20 @@ export default function App() {
                 />
               ) : rightTab === 'karte' && scene?.k === 'story' ? (
                 <StoryScene key={scene.id} id={scene.id} chapter={chapter.n} onDone={(gold, items) => endStory(scene.id, gold, items)} />
-              ) : rightTab === 'ausruestung' ? (
-                <Equipment game={game} say={say} onShop={() => setTab('laden')} />
-              ) : rightTab === 'laden' ? (
-                <Shop game={game} say={say} onGear={() => setTab('ausruestung')} />
+              ) : rightTab === 'crew' ? (
+                <Equipment game={game} say={say} onShop={() => setTab('hafen')} />
+              ) : rightTab === 'hafen' ? (
+                <Shop game={game} say={say} onGear={() => setTab('crew')} />
+              ) : rightTab === 'logbuch' ? (
+                <Logbuch
+                  game={game}
+                  say={say}
+                  onIntro={() => setIntroReplay(true)}
+                  onWeek={() => {
+                    setLeft('woche')
+                    setTab('deck')
+                  }}
+                />
               ) : rightShown === 'truhe' ? (
                 <ChestScene
                   key={`${field}-${(save!.game.guardWon ?? []).includes(field)}`}
@@ -383,7 +385,7 @@ export default function App() {
                   game={game}
                   say={say}
                   onChest={() => setRight('truhe')}
-                  onShop={() => setTab('laden')}
+                  onShop={() => setTab('hafen')}
                   onFight={(req) => setScene({ k: 'fight', req, n: Date.now() })}
                   onStory={openStory}
                 />
@@ -440,8 +442,6 @@ export default function App() {
             }}
           />
         )}
-        {sheet === 'menu' && <MenuSheet game={game} say={say} onClose={() => setSheet(null)} onIntro={() => setIntroReplay(true)} />}
-        {sheet === 'streak' && <StreakSheet game={game} onClose={() => setSheet(null)} />}
       </AnimatePresence>
     </div>
   )

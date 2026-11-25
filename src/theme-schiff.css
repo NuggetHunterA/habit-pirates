@@ -1,0 +1,1016 @@
+/*
+ * Look "Schiff als Zuhause": Holz fuer Leisten und Knoepfe, Pergament fuer alles,
+ * was man liest und abhakt, Messing fuer Rahmen und Zahlen. Liegt ueber styles.css.
+ */
+
+:root {
+  --num: 'Lilita One', 'Nunito', system-ui, sans-serif;
+  --parch-grad: radial-gradient(ellipse at 25% 20%, #fdf3da, #f4e4c1 55%, #e6cf9b);
+  --wood-grain: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.1) 0 1px, transparent 1px 14px);
+}
+
+/* ---------- Kopfleiste ---------- */
+.topbar__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.topbar__logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  flex: none;
+}
+
+.topbar__title {
+  white-space: nowrap;
+  font-size: 25px;
+}
+
+@media (max-width: 380px) {
+  .topbar__title {
+    font-size: 21px;
+  }
+}
+
+.pill {
+  font-family: var(--num);
+  font-weight: 400;
+  font-size: 16px;
+  padding: 0 11px 0 6px;
+}
+
+.pill--streak {
+  cursor: pointer;
+  color: var(--gold-hi);
+  padding: 0 10px 0 8px;
+  gap: 4px;
+}
+
+/* ---------- Tab-Leiste: fuenf Orte ---------- */
+.tabbar {
+  background: var(--wood-grain), linear-gradient(var(--wood-2), var(--wood-1));
+  justify-content: stretch;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.tabbar__btn {
+  max-width: none;
+  color: var(--gold-text);
+}
+
+.tabbar--wide .tabbar__btn {
+  flex: 0 0 112px;
+}
+
+.tabbar__label {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* ---------- Ueberschriften der Orte ---------- */
+.place-title {
+  margin: 12px 14px 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--gold-text);
+  text-shadow: 0 2px 0 rgba(42, 25, 13, 0.9);
+}
+
+/* ---------- Deck: Segel ---------- */
+.sailstrip {
+  position: relative;
+  min-height: 150px;
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 3px solid var(--brass);
+  box-shadow: 0 5px 0 #062631;
+  background: linear-gradient(180deg, #8fd3e8 0%, #5fb3d3 52%, #1f6f8b 53%, #10495c 100%);
+}
+
+.sailstrip__ship {
+  width: 118px;
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 8px;
+}
+
+.sailstrip__ship img {
+  width: 110px;
+  max-height: 124px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.3));
+}
+
+.sailstrip__info {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #06222c;
+}
+
+.sailstrip__kicker {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sailstrip__count {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.sailstrip__count b {
+  display: inline-block;
+  font-family: var(--num);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.sailstrip__bar {
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(6, 34, 44, 0.25);
+  overflow: hidden;
+}
+
+.sailstrip__bar span {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--gold-hi), var(--gold));
+}
+
+.sailstrip__day {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #0b3a4a;
+}
+
+.sailstrip__btn {
+  margin-top: auto;
+  min-height: 42px;
+  padding: 0 12px;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sailstrip__btn--off {
+  filter: saturate(0.4);
+  opacity: 0.8;
+}
+
+.today__count {
+  font-family: var(--num);
+  font-size: 19px;
+  color: var(--gold-text);
+  padding-bottom: 4px;
+}
+
+.catchup-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1.5px dashed var(--wood-3);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--parch);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: left;
+}
+
+.catchup-chip svg {
+  color: var(--gold-text);
+  flex: none;
+}
+
+.catchup-chip span:nth-child(2) {
+  flex: 1;
+}
+
+.catchup-chip span:last-child {
+  color: var(--gold-text);
+}
+
+/* ---------- Habits auf Pergament ---------- */
+.habit {
+  background: var(--parch-grad);
+  border: none;
+  border-radius: 6px 14px 8px 12px;
+  box-shadow: inset 0 0 0 1px rgba(139, 90, 43, 0.35), 0 3px 0 rgba(0, 0, 0, 0.4);
+  padding: 8px 10px 8px 16px;
+}
+
+.habit--done {
+  background: linear-gradient(180deg, #e6d3a5, #d9c08a);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+.habit--focus:not(.habit--done) {
+  box-shadow: inset 6px 0 0 var(--red), inset 0 0 0 1px rgba(139, 90, 43, 0.35), 0 3px 0 rgba(0, 0, 0, 0.4);
+}
+
+.habit--burst {
+  animation: hp-bounce 420ms ease-out 150ms both;
+}
+
+.habit__name {
+  font-size: 17px;
+}
+
+.tag-focus {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  justify-content: center;
+  background: radial-gradient(circle at 40% 35%, #c0432c, var(--red) 70%);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+  color: var(--gold-hi);
+  font-family: var(--display);
+  font-size: 14px;
+  transform: rotate(-12deg);
+}
+
+.coin-wrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex: none;
+}
+
+.coin-btn:not(.coin-btn--done) {
+  background: rgba(139, 90, 43, 0.08);
+}
+
+.coin-btn--stamp {
+  animation: hp-stamp 480ms cubic-bezier(0.3, 1.3, 0.5, 1) both;
+}
+
+.habit__shine {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.habit__shine span {
+  position: absolute;
+  top: -10px;
+  bottom: -10px;
+  left: 0;
+  width: 70px;
+  background: linear-gradient(90deg, rgba(255, 233, 168, 0), rgba(255, 244, 210, 0.95), rgba(255, 233, 168, 0));
+  animation: hp-shine 700ms ease-out 120ms both;
+}
+
+.burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.burst__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid var(--gold-hi);
+  animation: hp-ring 600ms ease-out 180ms both;
+}
+
+.burst__ray {
+  position: absolute;
+  left: 22px;
+  top: 22px;
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+  transform-origin: 2px 2px;
+  animation: hp-ray 520ms ease-out both;
+}
+
+.burst__gain {
+  position: absolute;
+  right: 0;
+  top: -10px;
+  white-space: nowrap;
+  font-family: var(--num);
+  font-size: 17px;
+  color: var(--gold);
+  text-shadow: 0 2px 0 var(--wood-1), 0 0 8px rgba(255, 233, 168, 0.9);
+  animation: hp-float 1000ms ease-out 200ms both;
+}
+
+@keyframes hp-stamp {
+  0% { transform: scale(1.8) rotateY(0deg); }
+  45% { transform: scale(0.88) rotateY(360deg); }
+  65% { transform: scale(1.12) rotateY(360deg); }
+  100% { transform: scale(1) rotateY(360deg); }
+}
+
+@keyframes hp-ring {
+  0% { transform: scale(0.6); opacity: 0.95; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+@keyframes hp-ray {
+  0% { transform: rotate(var(--a)) translateY(-14px) scaleY(0.3); opacity: 1; }
+  100% { transform: rotate(var(--a)) translateY(-44px) scaleY(1); opacity: 0; }
+}
+
+@keyframes hp-shine {
+  0% { transform: translateX(-140%) skewX(-20deg); }
+  100% { transform: translateX(600%) skewX(-20deg); }
+}
+
+@keyframes hp-bounce {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.035); }
+  60% { transform: scale(0.99); }
+  100% { transform: scale(1); }
+}
+
+@keyframes hp-float {
+  0% { transform: translateY(6px); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(-48px); opacity: 0; }
+}
+
+/* Muenze fliegt ins Segel */
+.coinflight {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+}
+
+.coinflight__coin {
+  position: fixed;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--gold-lo);
+  background: radial-gradient(circle at 35% 30%, var(--gold-hi), var(--gold) 60%, var(--gold-lo));
+  box-shadow: 0 0 14px 4px rgba(255, 233, 168, 0.8);
+}
+
+/* "Volle Segel!" */
+.fullsail {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: rgba(6, 34, 44, 0.8);
+}
+
+.fullsail__card {
+  position: relative;
+  width: min(320px, 90vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.fullsail__rays {
+  position: absolute;
+  top: -40px;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255, 233, 168, 0.35) 0deg 10deg, rgba(255, 233, 168, 0) 10deg 24deg);
+  -webkit-mask: radial-gradient(circle, #000 30%, transparent 70%);
+  mask: radial-gradient(circle, #000 30%, transparent 70%);
+  animation: hp-spin 9s linear infinite;
+}
+
+.fullsail__ship {
+  position: relative;
+  width: 170px;
+}
+
+.fullsail__title {
+  position: relative;
+  font-family: var(--display);
+  font-size: 52px;
+  line-height: 1;
+  color: var(--gold-hi);
+  text-shadow: 0 3px 0 var(--wood-1), 0 0 18px rgba(226, 167, 58, 0.8);
+}
+
+.fullsail__text {
+  position: relative;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--parch);
+  text-align: center;
+}
+
+.fullsail__bonus {
+  position: relative;
+  margin-top: 4px;
+  padding: 6px 16px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--gold-hi), var(--gold));
+  color: var(--ink);
+  font-family: var(--num);
+  font-size: 18px;
+  box-shadow: inset 0 -3px 0 var(--gold-lo);
+}
+
+.fullsail__btn {
+  position: relative;
+  margin-top: 14px;
+  min-width: 140px;
+}
+
+.fullsail__coin {
+  position: absolute;
+  top: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--gold-lo);
+  background: radial-gradient(circle at 35% 30%, var(--gold-hi), var(--gold) 60%, var(--gold-lo));
+  animation-name: hp-fall;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+
+@keyframes hp-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes hp-fall {
+  0% { transform: translateY(-80px) rotate(0deg); }
+  100% { transform: translateY(110vh) rotate(540deg); }
+}
+
+/* ---------- Belohnungs-Karten und Hinweise ---------- */
+.reward-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--brass);
+  border-radius: 14px;
+  background: var(--parch-grad);
+  color: var(--ink);
+  box-shadow: 0 4px 0 var(--wood-1), 0 10px 22px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+.reward-card__chest {
+  width: 58px;
+  height: 50px;
+  flex: none;
+  background: center / contain no-repeat;
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.35));
+  animation: reward-wiggle 1.8s ease-in-out infinite;
+}
+
+.reward-card__chest--holz { background-image: url('./assets/truhen/truhe_holz.webp'); }
+
+.reward-card__chest--silber { background-image: url('./assets/truhen/truhe_silber.webp'); }
+
+.reward-card__chest--gold { background-image: url('./assets/truhen/truhe_gold.webp'); }
+
+@keyframes reward-wiggle {
+  0%, 70%, 100% { transform: rotate(0); }
+  76% { transform: rotate(-6deg) translateY(-2px); }
+  84% { transform: rotate(6deg) translateY(-2px); }
+  92% { transform: rotate(-3deg); }
+}
+
+.reward-card__title {
+  font-family: var(--display);
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.reward-card__text {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  line-height: 1.3;
+}
+
+.reward-card__btn {
+  min-height: 42px;
+  padding: 0 14px;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  border-radius: 14px;
+}
+
+.banner-wind {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--wood-grain), linear-gradient(var(--wood-2), var(--wood-1));
+  border: 2px solid var(--brass);
+  color: var(--parch);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.banner-wind--on {
+  background: linear-gradient(90deg, #0c6f85, #1f6f8b);
+  color: #fff;
+}
+
+.streak-flame {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff922b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-6 1-9z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* ---------- Serie (im Logbuch) ---------- */
+.streak-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.streak-track {
+  position: relative;
+  height: 64px;
+  margin: 0 22px;
+}
+
+.streak-track__line,
+.streak-track__fill {
+  position: absolute;
+  left: 0;
+  top: 22px;
+  height: 8px;
+  border-radius: 99px;
+}
+
+.streak-track__line {
+  right: 0;
+  background: rgba(139, 90, 43, 0.25);
+}
+
+.streak-track__fill {
+  background: linear-gradient(90deg, #d9480f, var(--gold));
+}
+
+.streak-track__marks {
+  position: absolute;
+  inset: 0;
+}
+
+.streak-track__mark {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.streak-track__mark img {
+  width: 40px;
+  height: auto;
+}
+
+.streak-track__mark--done img {
+  opacity: 0.45;
+}
+
+.streak-track__mark--done span {
+  color: #2b7a3e;
+}
+
+.glow-episch {
+  filter: drop-shadow(0 0 5px #9c36b5);
+}
+
+.glow-legendaer {
+  filter: drop-shadow(0 0 6px #f08c00);
+}
+
+.ring-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(139, 90, 43, 0.12);
+  border: 1.5px solid rgba(139, 90, 43, 0.4);
+}
+
+.ring-box--used svg {
+  opacity: 0.4;
+}
+
+.week-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--ink-soft);
+}
+
+.week-dot span {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 2px dashed var(--brass);
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.week-dot--ok span {
+  border: 2px solid var(--gold-lo);
+  background: radial-gradient(circle at 35% 30%, var(--gold-hi), var(--gold) 55%, var(--gold-lo));
+}
+
+.week-dot--ring span {
+  border: 2.5px solid #ff6b6b;
+  background: #fff0f0;
+}
+
+.week-dot--today span {
+  border: 2.5px solid var(--red);
+}
+
+.week-dot--today {
+  color: var(--red);
+}
+
+.week-dot--miss span {
+  border-style: solid;
+  background: rgba(139, 90, 43, 0.18);
+}
+
+/* ---------- Logbuch ---------- */
+.logbuch {
+  min-height: 100%;
+  padding: 12px 12px 24px 22px;
+  background: linear-gradient(90deg, #4a1f14, #6b2c1c 8%, #5a2518);
+}
+
+.logbuch__page {
+  padding: 16px 16px 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-radius: 4px 16px 16px 4px;
+  background: radial-gradient(ellipse at 30% 10%, #fdf3da, #f4e4c1 50%, #e6cf9b);
+  box-shadow: -6px 0 0 var(--brass), 0 6px 16px rgba(0, 0, 0, 0.5);
+  color: var(--ink);
+}
+
+.logbuch__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logbuch__avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 3px solid var(--brass);
+  object-fit: cover;
+  background: var(--sea-1);
+}
+
+.logbuch__title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.logbuch__sub {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+.logbuch__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 2px dashed rgba(139, 90, 43, 0.5);
+}
+
+.logbuch__h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 24px;
+}
+
+.logbuch__test {
+  display: flex;
+  flex-direction: column;
+}
+
+.logbuch__row {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+  border: none;
+  border-bottom: 1px solid rgba(139, 90, 43, 0.25);
+  background: none;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 800;
+  text-align: left;
+}
+
+.logbuch__row::after {
+  content: '›';
+  color: var(--wood-3);
+  font-size: 20px;
+}
+
+.logbuch__row--danger {
+  color: var(--red);
+}
+
+.logbuch__news {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+  padding: 4px 6px;
+}
+
+.logbuch__version {
+  border: none;
+  background: none;
+  padding: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--wood-3);
+}
+
+/* ---------- Mannschaft: Auswahl fuer einen Platz ---------- */
+.sheet {
+  background: var(--parch-grad);
+  border: none;
+  border-top: 4px solid var(--brass);
+}
+
+.sheet h2 {
+  color: var(--ink);
+}
+
+.picker__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.picker__head > div {
+  flex: 1;
+}
+
+.picker__close {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--wood-3);
+  background: transparent;
+  color: var(--wood-2);
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.picker__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 52vh;
+  overflow-y: auto;
+}
+
+.picker__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.35);
+  border: 2px solid transparent;
+}
+
+.picker__row--cur {
+  background: rgba(200, 155, 74, 0.25);
+  border-color: var(--brass);
+}
+
+.picker__item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+  color: var(--ink);
+}
+
+.picker__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.picker__rarity {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.picker__name {
+  font-family: var(--display);
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.picker__diffs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--ink-soft);
+}
+
+.picker__diffs em {
+  font-style: normal;
+}
+
+.picker__diffs .up {
+  color: #2b7a3e;
+}
+
+.picker__diffs .down {
+  color: var(--red);
+}
+
+.picker__btn {
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+.picker__empty {
+  padding: 18px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  border: 2px dashed var(--brass);
+  border-radius: 14px;
+}
+
+/* ---------- Hafen ---------- */
+.hafen__hero {
+  position: relative;
+  height: 150px;
+  overflow: hidden;
+  border-bottom: 3px solid var(--brass);
+}
+
+.hafen__hero img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 60%;
+}
+
+.hafen__hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(6, 34, 44, 0) 40%, rgba(6, 34, 44, 0.85));
+}
+
+.hafen__hero .place-title {
+  position: absolute;
+  left: 0;
+  bottom: 12px;
+  z-index: 1;
+  font-size: 38px;
+  color: var(--gold-hi);
+}
+
+.hafen__stands {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 14px;
+}
+
+.hafen__stand {
+  position: relative;
+  min-height: 70px;
+  padding: 8px 4px;
+  border-radius: 12px;
+  border: 3px solid var(--brass);
+  background: var(--wood-grain), linear-gradient(var(--wood-2), var(--wood-1));
+  color: var(--parch);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.hafen__stand[aria-pressed='true'] {
+  border-color: var(--gold-hi);
+  background: linear-gradient(180deg, var(--gold-hi), var(--gold));
+  box-shadow: inset 0 -3px 0 var(--gold-lo);
+  color: var(--ink);
+}
+
+.hafen__stand-name {
+  font-family: var(--display);
+  font-size: 21px;
+  line-height: 1;
+}
+
+.hafen__stand-sub {
+  font-size: 11px;
+  font-weight: 800;
+  opacity: 0.85;
+  text-align: center;
+}
+
+.hafen__stand .seg__dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .habit--burst,
+  .coin-btn--stamp,
+  .habit__shine span,
+  .burst__ring,
+  .burst__ray,
+  .fullsail__rays,
+  .fullsail__coin {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
+}

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Game } from '../game/store'
 import { activeHabits, afterPause, currentRhythm, dayResult, freeHabits, isDone, nextDueText, rhythmText, windAvailable, RULES } from '../game/rules'
 import { focusGoldPossible, nextMilestone, pendingRewards, streakInfo, type PendingReward } from '../game/motivation'
@@ -7,16 +7,13 @@ import { CHEST_LABEL } from '../game/loot'
 import { RARITY_LABEL } from '../game/loot'
 import { addDays, longDate, weekStartOf } from '../game/dates'
 import { chapterOf } from '../game/map'
-import { doneFields } from '../game/store'
 import HabitCard from './HabitCard'
-import SailMeter from './SailMeter'
-import SeaMap from './SeaMap'
+import SailStrip from './SailStrip'
+import { CoinFlight, FullSail } from './Celebrate'
 
 interface Props {
   game: Game
-  wide: boolean
   onMap: () => void
-  onWeek: () => void
   onAddHabit: () => void
   onEditHabit: (id: string) => void
   /** Serien- oder Fokus-Truhe oeffnen */
@@ -36,7 +33,7 @@ function useHour(): number {
   return h
 }
 
-export default function Today({ game, wide, onMap, onWeek, onAddHabit, onEditHabit, onReward }: Props) {
+export default function Today({ game, onMap, onAddHabit, onEditHabit, onReward }: Props) {
   const save = game.save!
   const hour = useHour()
   const yesterday = addDays(game.today, -1)
@@ -63,20 +60,36 @@ export default function Today({ game, wide, onMap, onWeek, onAddHabit, onEditHab
   const pause = afterPause(save, game.today)
   const goldHint = focusGoldPossible(save, game.today)
   const toNext = nextMilestone(streak.days) - streak.days
-  const dayPct = res.max ? Math.min(1, res.wind / (res.max + (res.backwind ? RULES.backwindBonus : 0))) : 0
+  // Wind-Zuwachs durch das letzte Abhaken (fuer "+x Wind" an der Karte)
+  const prevWind = useRef({ day, wind: res.wind })
+  const gain = prevWind.current.day === day ? res.wind - prevWind.current.wind : 0
+  useEffect(() => {
+    prevWind.current = { day, wind: res.wind }
+  })
+  // "Volle Segel!", sobald der letzte Habit des Tages erledigt ist (nicht beim Oeffnen der App)
+  const [fullSail, setFullSail] = useState(false)
+  const wasAll = useRef({ day, all: res.allDone })
+  useEffect(() => {
+    if (wasAll.current.day === day && !wasAll.current.all && res.allDone && res.total > 0) setFullSail(true)
+    wasAll.current = { day, all: res.allDone }
+  }, [day, res.allDone, res.total])
+  const closeFull = useCallback(() => setFullSail(false), [])
 
   return (
     <div className="screen">
-      {!wide && (
-        <div style={{ position: 'relative', height: 190, borderRadius: 18, border: '3px solid var(--brass)', overflow: 'hidden', boxShadow: '0 6px 0 #062631', flex: 'none' }}>
-          <SeaMap key={chapter.n} chapter={chapter} field={ship} done={doneFields(save)} mini />
-          <div className="minimap-label">
-            Kapitel {chapter.n} · Feld {ship + 1} von {fields.length}{ship < fields.length - 1 ? ` · nächstes: ${next.name}` : ''}
-          </div>
-          <button type="button" className="btn-gold" onClick={onMap} style={{ position: 'absolute', right: 10, bottom: 10, minHeight: 42, fontSize: 14, padding: '0 14px', boxShadow: '0 4px 0 var(--gold-lo)' }}>
-            Zur Karte
-          </button>
-        </div>
+      {!past && (
+        <SailStrip
+          wind={wind}
+          next={ship < fields.length - 1 ? next.name : null}
+          day={
+            res.total > 0
+              ? res.allDone
+                ? `Heute ${res.wind} Wind · voller Tag geschafft`
+                : `Heute ${res.wind} von ${res.max} Wind · voller Tag +${RULES.fullDayBonus}`
+              : 'Heute ist nichts fällig'
+          }
+          onSail={onMap}
+        />
       )}
 
       {past && (
@@ -92,26 +105,23 @@ export default function Today({ game, wide, onMap, onWeek, onAddHabit, onEditHab
           </div>
           <h1 className="h1">{past ? 'Gestern nachtragen' : 'Heute an Deck'}</h1>
         </div>
-        {!wide && !past && (
-          <button type="button" className="btn-wood" onClick={onWeek}>
-            Woche planen
-          </button>
+        {!past && res.total > 0 && (
+          <div className="today__count" aria-label={`${res.done} von ${res.total} erledigt`}>
+            {res.done} / {res.total}
+          </div>
         )}
       </div>
 
       {!past && canCatchUp && yOpen > 0 && (
-        <div className="banner-wind banner-catchup" role="status">
-          <div style={{ flex: 1 }}>
-            <b>
-              Gestern noch offen: {yOpen} {yOpen === 1 ? 'Habit' : 'Habits'}.
-            </b>
-            <br />
-            Nachtragen geht bis {CATCH_UP_UNTIL} Uhr.
-          </div>
-          <button type="button" className="btn-gold banner-catchup__btn" onClick={() => setWantPast(true)}>
-            Gestern
-          </button>
-        </div>
+        <button type="button" className="catchup-chip" onClick={() => setWantPast(true)}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5" />
+          </svg>
+          <span>
+            Gestern noch {yOpen} offen · nachtragen bis {CATCH_UP_UNTIL} Uhr
+          </span>
+          <span aria-hidden="true">›</span>
+        </button>
       )}
 
       {past && (
@@ -170,32 +180,12 @@ export default function Today({ game, wide, onMap, onWeek, onAddHabit, onEditHab
         </div>
       )}
 
-      {!past && <SailMeter wind={wind} onSail={onMap} label={wide ? 'Zur Karte' : 'Segeln!'} />}
-
-      {res.total > 0 && (
-        <div className="daywind" aria-label={`Tageswind ${past ? 'gestern' : 'heute'}: ${res.wind} von ${res.max}`}>
-          <div className="daywind__row">
-            <span>{past ? 'Tageswind gestern' : 'Tageswind heute'}</span>
-            <b>
-              {res.wind} von {res.max}
-              {res.backwind ? ` + ${RULES.backwindBonus}` : ''}
-            </b>
-          </div>
-          <div className="daywind__bar">
-            <motion.span initial={false} animate={{ width: `${dayPct * 100}%` }} transition={{ type: 'spring', stiffness: 120, damping: 18 }} />
-          </div>
-          {res.total < RULES.fullWindHabits && (
-            <div className="daywind__hint">Mit {RULES.fullWindHabits} oder mehr Habits gibt ein voller Tag {RULES.dayWind + RULES.fullDayBonus} Wind.</div>
-          )}
-        </div>
-      )}
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {habits.map((h) => {
           const r = currentRhythm(h)
           return (
             <HabitCard
-              key={h.id}
+              key={`${day}|${h.id}`}
               habit={h}
               done={isDone(h, log)}
               focus={!!dayPlan?.focusIds.includes(h.id)}
@@ -205,6 +195,7 @@ export default function Today({ game, wide, onMap, onWeek, onAddHabit, onEditHab
               onAddGlass={(g) => game.addGlass(g, day)}
               onPopGlass={() => game.popGlass(day)}
               onEdit={() => onEditHabit(h.id)}
+              gain={gain}
             />
           )
         })}
@@ -233,6 +224,7 @@ export default function Today({ game, wide, onMap, onWeek, onAddHabit, onEditHab
                     onAddGlass={(g) => game.addGlass(g, day)}
                     onPopGlass={() => game.popGlass(day)}
                     onEdit={() => onEditHabit(h.id)}
+                    gain={gain}
                   />
                 </motion.div>
               ))}
@@ -241,23 +233,14 @@ export default function Today({ game, wide, onMap, onWeek, onAddHabit, onEditHab
         </div>
       )}
 
-      {res.total > 0 && (
-      <motion.div
-        className={`full-wind ${res.allDone ? 'full-wind--on' : ''}`}
-        animate={res.allDone ? { scale: [1, 1.06, 1] } : { scale: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        {res.allDone
-          ? `Voller Wind! Alles erledigt: +${RULES.fullDayBonus} Bonus-Wind.`
-          : `Voller Wind bei allen ${res.total} Habits: +${RULES.fullDayBonus} Bonus · ${res.done} von ${res.total} erledigt`}
-      </motion.div>
-      )}
-
       {!past && (
       <button type="button" className="btn-dashed" onClick={onAddHabit}>
         + Habit für diese Woche
       </button>
       )}
+
+      <CoinFlight />
+      <FullSail show={fullSail} bonus={RULES.fullDayBonus} onClose={closeFull} />
     </div>
   )
 }
