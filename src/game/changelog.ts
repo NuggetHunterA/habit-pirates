@@ -1,6 +1,14 @@
 /** Aenderungsliste fuer das Menue ("Was ist neu"). Neueste Version zuerst, knapp und sachlich, ohne Story-Spoiler. */
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
   {
+    version: '1.2.1',
+    date: '25.11.2026',
+    items: [
+      'Android: Die Zurück-Taste schließt offene Blätter und führt zum vorherigen Ort, statt die App zu beenden',
+      'Erst auf dem Deck beendet Zurück die App',
+    ],
+  },
+  {
     version: '1.2.0',
     date: '25.11.2026',
     items: [

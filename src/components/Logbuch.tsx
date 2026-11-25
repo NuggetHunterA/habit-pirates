@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { BACK, useBack } from '../game/back'
 import type { Game, SyncState } from '../game/store'
 import { ART } from '../assets'
 import { StreakPanel } from './Streak'
@@ -49,6 +50,7 @@ interface Props {
 export default function Logbuch({ game, say, onIntro, onWeek }: Props) {
   const [confirmReset, setConfirmReset] = useState(false)
   const [news, setNews] = useState(false)
+  useBack(confirmReset, BACK.view, () => setConfirmReset(false))
   // Testmodus: in der Vorschau immer, sonst per 7-mal Tippen auf die Versionszeile
   const [testMode, setTestMode] = useState(() => __PREVIEW__ || testModeStored())
   const [taps, setTaps] = useState(0)

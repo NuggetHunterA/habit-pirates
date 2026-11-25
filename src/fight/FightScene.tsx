@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { BACK, useBack } from '../game/back'
 import {
   ABILITIES,
   TRAIT_TEXT,
@@ -111,6 +112,11 @@ export default function FightScene({ encounter, crew = START_CREW, level = 1, bo
     setRunId((n) => n + 1)
     setPhase('kampf')
   }
+  // Zurück-Taste: in der Vorbereitung zurück zur Karte, nach dem Kampf wie der Haupt-Knopf, im Kampf passiert nichts
+  useBack(true, BACK.scene, () => {
+    if (phase === 'vorbereitung') onExit(null)
+    else if (phase === 'ende' && result) onExit(result)
+  })
   const lvBefore = xp != null && cap ? levelFor(xp, cap) : 0
   const lvAfter = xp != null && cap && result?.sieg ? levelFor(xp + result.xp, cap) : 0
 

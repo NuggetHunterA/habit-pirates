@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useMemo, useState } from 'react'
+import { BACK, useBack } from '../game/back'
 import type { Game } from '../game/store'
 import { PRICE, itemBonus, shopOffer, traderOpen } from '../game/items'
 import Werft from './Werft'
@@ -23,6 +24,7 @@ const STAND_SUB: Record<View, (open: boolean) => string> = {
 /** Laden-Tab: Hafenladen, Werft und Spezialhaendler */
 export default function Shop({ game, say, onGear }: { game: Game; say: (m: string) => void; onGear: () => void }) {
   const [view, setView] = useState<View>('laden')
+  useBack(view !== 'laden', BACK.view, () => setView('laden'))
   return (
     <div className="gear hafen">
       <div className="hafen__hero">

@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { BACK, useBack } from '../game/back'
 import type { Game } from '../game/store'
 import { activeHabits, afterPause, currentRhythm, dayResult, freeHabits, isDone, nextDueText, rhythmText, windAvailable, RULES } from '../game/rules'
 import { focusGoldPossible, nextMilestone, pendingRewards, streakInfo, type PendingReward } from '../game/motivation'
@@ -44,6 +45,7 @@ export default function Today({ game, onMap, onAddHabit, onEditHabit, onReward }
   const [freeOpen, setFreeOpen] = useState(false)
   /** Gestern nachtragen: nur bis Mittag */
   const past = wantPast && canCatchUp
+  useBack(past, BACK.view, () => setWantPast(false))
   const day = past ? yesterday : game.today
   const dayPlan = save.weeks[weekStartOf(day)]
   const habits = activeHabits(save, day)

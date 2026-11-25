@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useMemo, useRef, useState } from 'react'
+import { BACK, useBack } from '../game/back'
 import type { Item, Rarity, Slot } from '../game/types'
 import type { Game } from '../game/store'
 import { SLOTS, equippedItems, power, wearer } from '../game/equipment'
@@ -25,6 +26,7 @@ const VIEW_LABEL: Record<View, string> = { ausruesten: 'Ausrüstung', sammelbuch
 /** Ausruestungs-Tab: Ausruesten je Pirat, Sammelbuch und Crewuebersicht */
 export default function Equipment({ game, say, onShop }: { game: Game; say: (m: string) => void; onShop: () => void }) {
   const [view, setView] = useState<View>('ausruesten')
+  useBack(view !== 'ausruesten', BACK.view, () => setView('ausruesten'))
   const crew = onBoard(game.save!)
   const [who, setWho] = useState<CrewId>('jonte')
   const current = crew.includes(who) ? who : crew[0]

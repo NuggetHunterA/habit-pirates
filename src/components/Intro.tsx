@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useState, type ReactNode } from 'react'
+import { BACK, useBack } from '../game/back'
 import type { HabitKind } from '../game/types'
 import { ART } from '../assets'
 import holz from '../assets/truhen/truhe_holz.webp'
@@ -114,6 +115,12 @@ export default function Intro({ replay, onDone }: Props) {
     setStep(n)
   }
   const skip = () => (replay ? onDone([]) : setStep(SLIDES.length))
+  // Zurück-Taste: eigenes Feld zu, sonst eine Karte zurück
+  useBack(ownOpen || step > 0, BACK.view, () => {
+    if (ownOpen) return setOwnOpen(false)
+    if (step >= SLIDES.length) return setStep(last)
+    go(step - 1)
+  })
 
   const addOwn = () => {
     const name = ownName.trim()
